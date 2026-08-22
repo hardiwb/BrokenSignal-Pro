@@ -1,10 +1,10 @@
-# BrokenSignal NEXT
+# BrokenSignal Pro - WORK IN PROGRESS
 
 An audio player and web radio for the **Cardputer ADV**. 
 
-This project is a fork of the original **BrokenSignal** by MarcoRR, refactored from Arduino IDE `.ino` sketches into a organized **PlatformIO** project. It adds a settings menu, adjustable rewind steps, WiFi power-saving settings, screen brightness options, a live debug overlay, and more stable AAC radio stream playback.
+This project is a fork of the original **BrokenSignal** by MarcoRR, refactored from Arduino IDE `.ino` sketches into a organized **PlatformIO** project. It adds a settings menu, adjustable rewind steps, WiFi power-saving settings, screen brightness options, a live debug overlay, and more stable AAC radio stream playback. 
 
-> ⚠️ **Status:** Fully operational work-in-progress. All features work as intended, with plans to add more features over time.
+> ⚠️ **Status:** (Work In Progress adding calculator and digital diary)
 
 <img src="./images/BS-NEXT.jpg" width="400" alt="Screenshot">
 
