@@ -1,5 +1,5 @@
 #pragma once
-#include "State.h"
+#include "core/State.h"
 void drawSplash(const char *statusLine);
 void drawAll();
 void drawHeader();
@@ -7,17 +7,7 @@ void drawTrackList();
 void drawStatus();
 void toggleHelp();
 void drawHelp();
-void drawRadioAll();
-void drawRadioHeader();
-void drawRadioRow(int idx);
-void drawRadioList();
-void drawRadioStatus();
 void drawOverlayFrame(const char *title);
-void drawWifiOverlay();
-void drawWifiPassOverlay(bool inputOnly = false);
-void drawAddUrlOverlay(bool inputOnly = false);
-void drawAddNameOverlay(bool inputOnly = false);
-void drawRemoveConfirm();
 void showHdrMsg(const char *msg);
 void showToast();
 void cycleRepeat();
@@ -31,3 +21,13 @@ void drawSettingsMenu();
 void handleSettingsInput(Keyboard_Class::KeysState &ks);
 void toggleDebug();
 void drawDebug();
+void setTheme(uint8_t idx);
+void drawMarquee(
+    M5Canvas& c,
+    const String& text,
+    int x,
+    int y,
+    int width,
+    uint32_t color,
+    uint32_t startMs
+);

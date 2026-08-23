@@ -7,6 +7,10 @@
 #define SD_CLK 40
 #define SD_MISO 39
 
+// DS3231 RTC pins on the Cardputer ADV wiring
+#define RTC_SDA 13
+#define RTC_SCL 15
+
 // Screen layout
 #define SCREEN_W 240
 #define SCREEN_H 135

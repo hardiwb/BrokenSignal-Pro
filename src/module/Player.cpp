@@ -1,7 +1,13 @@
-#include "Player.h"
-#include "Browser.h"
-#include "UI.h"
+#include "UI/UI.h"
+#include <M5Cardputer.h>
+#include "module/Player.h"
+#include "module/Browser.h"
+#include "module/Clock.h"
 #include <algorithm>
+
+//==================================================
+// DURATION
+//==================================================
 
 unsigned long readM4ADuration(const char *path)
 {
@@ -172,6 +178,10 @@ unsigned long estimateDuration(int idx)
     return max(5000UL, dur);
 }
 
+//==================================================
+// PLAYBACK
+//==================================================
+
 void startTrack(int idx)
 {
     stopAudio();
@@ -232,6 +242,10 @@ void startTrack(int idx)
     drawAll();
 }
 
+//==================================================
+// TRACK SELECTION
+//==================================================
+
 int pickNextTrack()
 {
     std::vector<int> tracks;
@@ -259,6 +273,10 @@ int pickNextTrack()
         return tracks[0];
     return -1;
 }
+
+//==================================================
+// PLAYBACK CONTROL
+//==================================================
 
 void stopAudio()
 {
@@ -322,6 +340,10 @@ void resumeAudio()
     drawStatus();
 }
 
+//==================================================
+// AUDIO LOOP
+//==================================================
+
 void pumpAudio()
 {
     if (!isPlaying)
@@ -346,21 +368,9 @@ void pumpAudio()
     }
 }
 
-void saveSettings()
-{
-    File f = SD.open("/Music/settings.cfg", FILE_WRITE);
-    if (!f)
-        return;
-    f.printf("theme=%d\n", themeIdx);
-    f.printf("volume=%d\n", volume);
-    f.printf("repeat=%d\n", repeatMode);
-    f.printf("shuffle=%d\n", shuffleOn ? 1 : 0);
-    f.printf("seek=%d\n", seekSeconds);
-    f.printf("wifipowersave=%d\n", wifiPowerSave ? 1 : 0);
-    f.printf("brightness=%d\n", screenBrightness);
-    f.printf("autoscreenoff=%d\n", autoScreenOffSec);
-    f.close();
-}
+//==================================================
+// SEEK
+//==================================================
 
 void seekTrack(int delta_ms)
 {
@@ -373,6 +383,10 @@ void seekTrack(int delta_ms)
     unsigned long dur = trackDurationMs;
     if (dur == 0)
         return;
+
+    // ----------------------------------------------
+    // M4A / AAC
+    // ----------------------------------------------
 
     if (m4aSrc)
     {
@@ -419,6 +433,11 @@ void seekTrack(int delta_ms)
 
         drawStatus();
     }
+
+    // ----------------------------------------------
+    // MP3
+    // ----------------------------------------------
+
     else if (mp3)
     {
         size_t sz = items[currentTrack].fileSize;
@@ -484,42 +503,49 @@ void seekTrack(int delta_ms)
     }
 }
 
-void loadSettings()
+//==================================================
+// KEYBOARD INPUT
+//==================================================
+
+void handlePlayerInput(Keyboard_Class::KeysState &ks)
 {
-    File f = SD.open("/Music/settings.cfg", FILE_READ);
-    if (!f)
-        return;
-    while (f.available())
+    for (auto c : ks.word)
     {
-        String line = f.readStringUntil('\n');
-        line.trim();
-        int eq = line.indexOf('=');
-        if (eq < 0)
-            continue;
-        String key = line.substring(0, eq);
-        int val = line.substring(eq + 1).toInt();
-        if (key == "theme" && val >= 0 && val < 5)
+        switch (c)
         {
-            themeIdx = val;
-            T = THEMES[val];
-        }
-        if (key == "volume" && val >= 0 && val <= 255)
-        {
-            volume = (uint8_t)val;
+        case ' ':
+            if (isPlaying)
+                pauseAudio();
+            else if (isPaused)
+                resumeAudio();
+            break;
+
+        case 'r':
+        case 'R':
+            cycleRepeat();
+            break;
+
+        case 's':
+        case 'S':
+            toggleShuffle();
+            break;
+
+        case '+':
+        case '=':
+            volume = (uint8_t)min(255, (int)volume + 10);
             M5Cardputer.Speaker.setVolume(volume);
+            settingsDirty = true;
+            settingsDirtyMs = millis();
+            drawStatus();
+            break;
+
+        case '-':
+            volume = (uint8_t)max(0, (int)volume - 10);
+            M5Cardputer.Speaker.setVolume(volume);
+            settingsDirty = true;
+            settingsDirtyMs = millis();
+            drawStatus();
+            break;
         }
-        if (key == "repeat" && val >= 0 && val <= 2)
-            repeatMode = (uint8_t)val;
-        if (key == "shuffle")
-            shuffleOn = (val != 0);
-        if (key == "seek" && val >= 5 && val <= 60)
-            seekSeconds = (uint8_t)val;
-        if (key == "wifipowersave")
-            wifiPowerSave = (val != 0);
-        if (key == "brightness" && val >= 0 && val <= 255)
-            screenBrightness = (uint8_t)val;
-        if (key == "autoscreenoff" && val >= 0 && val <= 600)
-            autoScreenOffSec = (uint16_t)val;
     }
-    f.close();
 }

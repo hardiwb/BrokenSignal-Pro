@@ -13,17 +13,18 @@ struct Theme
 };
 
 static const Theme T_NEON = {
-    rgb(2, 4, 8),       // bg
-    rgb(5, 14, 24),     // hdrBg
-    rgb(255, 45, 120),  // accent1
-    rgb(0, 245, 255),   // accent2
-    rgb(245, 230, 66),  // accent3
-    rgb(200, 234, 245), // textBright
-    rgb(58, 106, 122),  // textMid
-    rgb(14, 48, 64),    // textDim
-    rgb(9, 21, 32),     // barBg
-    rgb(10, 30, 46),    // selRow
-    "NEON NOIR"};
+    rgb(  2,  4,  8),   // bg        #020408
+    rgb(  5, 14, 24),   // hdrBg     #050e18
+    rgb(255, 45,120),   // accent1   #ff2d78  magenta  (playing, bar fill tip)
+    rgb(  0,245,255),   // accent2   #00f5ff  cyan     (selected, bar fill)
+    rgb(245,230, 66),   // accent3   #f5e642  yellow   (counter, volume)
+    rgb(200,234,245),   // textBright #c8eaf5
+    rgb( 58,106,122),   // textMid   mid blue-grey
+    rgb( 14, 48, 64),   // textDim   #0e3040  very dim
+    rgb(  9, 21, 32),   // barBg     #091520
+    rgb( 10, 30, 46),   // selRow    #0a1e2e  (mockup gradient start)
+    "NEON NOIR"
+};
 
 static const Theme T_TERM = {
     rgb(0, 4, 0),       // bg
@@ -52,16 +53,16 @@ static const Theme T_CORP = {
     "CORPO CHROME"};
 
 static const Theme T_MIAMI = {
-    rgb(4, 2, 14),      // bg
-    rgb(14, 6, 26),     // hdrBg
-    rgb(255, 0, 128),   // accent1
-    rgb(0, 240, 255),   // accent2n
-    rgb(255, 215, 0),   // accent3w
-    rgb(255, 225, 248), // textBrightp
-    rgb(140, 115, 185), // textMide
-    rgb(55, 35, 80),    // textDims
-    rgb(16, 8, 32),     // barBg
-    rgb(28, 8, 48),     // selRow
+    rgb(  2,  6, 16),   // bg        very dark navy
+    rgb(  5, 12, 30),   // hdrBg     deep navy
+    rgb(255, 62,181),   // accent1   #ff3eb5  hot pink  (playing, bar tip)
+    rgb(  0,229,204),   // accent2   #00e5cc  turquoise (selected, bar fill)
+    rgb(255,210,  0),   // accent3   #ffd200  gold      (counter, volume)
+    rgb(255,200,235),   // textBright pale pink-white
+    rgb(120, 80,140),   // textMid   muted violet
+    rgb( 40, 20, 55),   // textDim   dark purple
+    rgb(  8, 10, 28),   // barBg     near-black navy
+    rgb( 20, 10, 38),   // selRow    deep violet tint
     "MIAMI VICE"};
 
 static const Theme T_ASH = {

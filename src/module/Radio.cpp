@@ -1,7 +1,11 @@
-#include "AudioFileSourceHTTPSStream.h"
-#include "Radio.h"
-#include "Browser.h"
-#include "UI.h"
+#include "UI/UI.h"
+#include "UI/WiFiUI.h"
+#include "UI/RadioUI.h"
+#include "core/AudioFileSourceHTTPSStream.h"
+#include "module/Browser.h"
+#include "module/Radio.h"
+#include "module/WiFi.h"
+#include "module/Notes.h"
 
 extern bool radioForceAac;
 
@@ -10,6 +14,10 @@ extern bool radioForceAac;
 #else
 #define RDBG(...) ((void)0)
 #endif
+
+//==================================================
+// RADIO CONFIG
+//==================================================
 
 void loadRadioList()
 {
@@ -51,41 +59,6 @@ void saveRadioList()
     f.close();
 }
 
-bool loadWifiConfig(String &ssid, String &pass)
-{
-    ssid = "";
-    pass = "";
-    File f = SD.open("/Music/_radio/wifi.cfg", FILE_READ);
-    if (!f)
-        return false;
-    while (f.available())
-    {
-        String line = f.readStringUntil('\n');
-        line.trim();
-        int eq = line.indexOf('=');
-        if (eq < 0)
-            continue;
-        String key = line.substring(0, eq);
-        String val = line.substring(eq + 1);
-        if (key == "ssid")
-            ssid = val;
-        if (key == "password")
-            pass = val;
-    }
-    f.close();
-    return ssid.length() > 0;
-}
-
-void saveWifiConfig(const String &ssid, const String &pass)
-{
-    SD.mkdir("/Music/_radio");
-    File f = SD.open("/Music/_radio/wifi.cfg", FILE_WRITE);
-    if (!f)
-        return;
-    f.printf("ssid=%s\npassword=%s\n", ssid.c_str(), pass.c_str());
-    f.close();
-}
-
 String generateRadioName(const String &url, int n)
 {
     int start = url.indexOf("://");
@@ -109,6 +82,10 @@ String generateRadioName(const String &url, int n)
     return "Radio " + String(n);
 }
 
+//==================================================
+// RADIO MEMORY
+//==================================================
+
 void purgeRadioMemory()
 {
     stopRadioStream();
@@ -118,15 +95,9 @@ void purgeRadioMemory()
     delay(100);
 }
 
-void applyWifiPowerSave()
-{
-    if (!wifiConnected)
-        return;
-    if (radioIsPlaying)
-        WiFi.setSleep(WIFI_PS_NONE);
-    else
-        WiFi.setSleep(wifiPowerSave ? WIFI_PS_MIN_MODEM : WIFI_PS_NONE);
-}
+//==================================================
+// RADIO STREAM
+//==================================================
 
 void startRadioStream(int idx)
 {
@@ -242,6 +213,9 @@ void startRadioStream(int idx)
     drawRadioStatus();
 }
 
+//==================================================
+// RADIO STREAM
+//==================================================
 void stopRadioStream()
 {
     if (radioMp3)
@@ -308,16 +282,9 @@ void pumpRadioAudio()
     }
 }
 
-void radioScrollEnsureVisible()
-{
-    if (radioSelected < radioScrollTop)
-        radioScrollTop = radioSelected;
-    if (radioSelected >= radioScrollTop + VISIBLE_TRACKS)
-        radioScrollTop = radioSelected - VISIBLE_TRACKS + 1;
-    if (radioScrollTop < 0)
-        radioScrollTop = 0;
-}
-
+//==================================================
+// WIFI
+//==================================================
 void scanWifiNetworks()
 {
     WiFi.mode(WIFI_STA);
@@ -335,110 +302,9 @@ void scanWifiNetworks()
     WiFi.scanDelete();
 }
 
-bool connectWifi(const String &ssid, const String &pass)
-{
-    String truncSsid = ssid;
-    if ((int)truncSsid.length() > 26)
-        truncSsid = truncSsid.substring(0, 25) + ">";
-
-    auto drawConnScreen = [&](uint8_t dotCount)
-    {
-        auto &D = M5Cardputer.Display;
-        if (dotCount == 0)
-        {
-            D.fillRect(0, 0, SCREEN_W, SCREEN_H, T->hdrBg);
-            D.drawRect(4, 4, SCREEN_W - 8, SCREEN_H - 8, T->accent1);
-            D.setTextDatum(middle_center);
-            D.setTextColor(T->accent2);
-            D.drawString("WEB RADIO", SCREEN_W / 2, 18, 2);
-            D.setTextColor(T->textMid);
-            D.drawString(truncSsid, SCREEN_W / 2, SCREEN_H / 2, 1);
-            D.setTextColor(T->textDim);
-            D.drawString("DEL to cancel", SCREEN_W / 2, SCREEN_H / 2 + 16, 1);
-        }
-        D.fillRect(5, SCREEN_H / 2 - 24, SCREEN_W - 10, 16, T->hdrBg);
-        char msg[18];
-        snprintf(msg, sizeof(msg), "CONNECTING%.*s", dotCount, "...");
-        D.setTextDatum(middle_center);
-        D.setTextColor(T->accent1);
-        D.drawString(msg, SCREEN_W / 2, SCREEN_H / 2 - 16, 1);
-    };
-
-    drawConnScreen(0);
-    WiFi.persistent(false);
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid.c_str(), pass.c_str());
-
-    unsigned long t = millis();
-    unsigned long lastAnim = millis();
-    uint8_t dots = 0;
-
-    while (WiFi.status() != WL_CONNECTED && millis() - t < WIFI_TIMEOUT)
-    {
-        M5Cardputer.update();
-        if (millis() - lastAnim >= 500)
-        {
-            dots = (dots % 3) + 1;
-            drawConnScreen(dots);
-            lastAnim = millis();
-        }
-        if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed())
-        {
-            Keyboard_Class::KeysState ks = M5Cardputer.Keyboard.keysState();
-            if (ks.del)
-            {
-                WiFi.disconnect();
-                return false;
-            }
-        }
-        delay(50);
-    }
-
-    if (WiFi.status() == WL_CONNECTED)
-    {
-        wifiConnected = true;
-        wifiSSID = ssid;
-        applyWifiPowerSave();
-        RDBG("[WIFI] connected '%s' rssi=%d ip=%s free=%u\n",
-             ssid.c_str(), WiFi.RSSI(), WiFi.localIP().toString().c_str(), ESP.getFreeHeap());
-        saveWifiConfig(ssid, pass);
-        return true;
-    }
-    WiFi.disconnect();
-    wifiConnected = false;
-    auto &D = M5Cardputer.Display;
-    D.fillRect(0, 0, SCREEN_W, SCREEN_H, T->hdrBg);
-    D.drawRect(4, 4, SCREEN_W - 8, SCREEN_H - 8, T->accent1);
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->accent1);
-    D.drawString("CONNECT FAILED", SCREEN_W / 2, SCREEN_H / 2 - 8, 1);
-    D.setTextColor(T->textDim);
-    D.drawString("any key to retry", SCREEN_W / 2, SCREEN_H / 2 + 8, 1);
-    delay(2000);
-    return false;
-}
-
-void showWifiOverlay()
-{
-    M5Cardputer.Display.fillRect(0, 0, SCREEN_W, SCREEN_H, T->hdrBg);
-    M5Cardputer.Display.setTextDatum(middle_center);
-    M5Cardputer.Display.setTextColor(T->accent1);
-    M5Cardputer.Display.drawString("SCANNING WIFI...", SCREEN_W / 2, SCREEN_H / 2, 1);
-    scanWifiNetworks();
-    wifiNetSel = 0;
-    wifiNetScroll = 0;
-    wifiOverlayVisible = true;
-    drawWifiOverlay();
-}
-
-void showWifiPassOverlay(const String &ssid)
-{
-    inputSaved = ssid;
-    inputBuf[0] = '\0';
-    inputLen = 0;
-    wifiPassOverlayVisible = true;
-    drawWifiPassOverlay();
-}
+//==================================================
+// RADIO OVERLAYS
+//==================================================
 
 void showAddUrlOverlay()
 {
@@ -462,6 +328,10 @@ void showRemoveConfirm()
     removeConfirmVisible = true;
     drawRemoveConfirm();
 }
+
+//==================================================
+// OVERLAY INPUT
+//==================================================
 
 void handleOverlayInput(Keyboard_Class::KeysState &ks)
 {
@@ -643,13 +513,35 @@ void handleOverlayInput(Keyboard_Class::KeysState &ks)
     }
 }
 
+//==================================================
+// RADIO NAVIGATION / INPUT
+//==================================================
+
+void radioScrollEnsureVisible()
+{
+    if (radioSelected < radioScrollTop)
+        radioScrollTop = radioSelected;
+    if (radioSelected >= radioScrollTop + VISIBLE_TRACKS)
+        radioScrollTop = radioSelected - VISIBLE_TRACKS + 1;
+    if (radioScrollTop < 0)
+        radioScrollTop = 0;
+}
+
 void handleRadioInput(Keyboard_Class::KeysState &ks)
 {
+    //==================================================
+    // BACK / EXIT RADIO
+    //==================================================
+
     if (ks.del)
     {
         exitWebRadioMode();
         return;
     }
+
+    //==================================================
+    // ENTER - PLAY / STOP
+    //==================================================
 
     if (ks.enter)
     {
@@ -658,10 +550,14 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             showAddUrlOverlay();
             return;
         }
-        if (radioIsPlaying && radioPlaying == radioSelected)
+
+        if (radioIsPlaying &&
+            radioPlaying == radioSelected)
         {
             int oldPlaying = radioPlaying;
+
             stopRadioStream();
+
             drawRadioRow(oldPlaying);
             drawRadioHeader();
             drawRadioStatus();
@@ -670,47 +566,88 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
         {
             startRadioStream(radioSelected);
         }
+
+        return;
     }
+
+    //==================================================
+    // KEYBOARD COMMANDS
+    //==================================================
 
     for (auto c : ks.word)
     {
         switch (c)
         {
+            //==================================================
+            // UP
+            //==================================================
+
         case ';':
             if (radioCount > 0)
             {
-                int oldSel = radioSelected, oldScroll = radioScrollTop;
-                radioSelected = (radioSelected - 1 + radioCount) % radioCount;
+                int oldSel = radioSelected;
+                int oldScroll = radioScrollTop;
+
+                radioSelected =
+                    (radioSelected - 1 + radioCount) %
+                    radioCount;
+
                 radioScrollEnsureVisible();
+
                 if (radioScrollTop != oldScroll)
+                {
                     drawRadioList();
+                }
                 else
                 {
                     drawRadioRow(oldSel);
                     drawRadioRow(radioSelected);
                 }
             }
-            break;
+
+            return;
+
+            //==================================================
+            // DOWN
+            //==================================================
+
         case '.':
             if (radioCount > 0)
             {
-                int oldSel = radioSelected, oldScroll = radioScrollTop;
-                radioSelected = (radioSelected + 1) % radioCount;
+                int oldSel = radioSelected;
+                int oldScroll = radioScrollTop;
+
+                radioSelected =
+                    (radioSelected + 1) %
+                    radioCount;
+
                 radioScrollEnsureVisible();
+
                 if (radioScrollTop != oldScroll)
+                {
                     drawRadioList();
+                }
                 else
                 {
                     drawRadioRow(oldSel);
                     drawRadioRow(radioSelected);
                 }
             }
-            break;
+
+            return;
+
+            //==================================================
+            // SPACE - PLAY / STOP
+            //==================================================
+
         case ' ':
-            if (radioIsPlaying && radioPlaying == radioSelected)
+            if (radioIsPlaying &&
+                radioPlaying == radioSelected)
             {
                 int oldPlaying = radioPlaying;
+
                 stopRadioStream();
+
                 drawRadioRow(oldPlaying);
                 drawRadioHeader();
                 drawRadioStatus();
@@ -719,88 +656,121 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             {
                 startRadioStream(radioSelected);
             }
-            break;
+
+            return;
+
+            //==================================================
+            // ADD RADIO
+            //==================================================
+
         case 'a':
         case 'A':
             if (radioCount < RADIO_MAX)
                 showAddUrlOverlay();
             else
                 showHdrMsg("LIST FULL");
-            break;
+
+            return;
+
+            //==================================================
+            // REMOVE RADIO
+            //==================================================
+
         case 'x':
         case 'X':
             if (radioCount > 0)
                 showRemoveConfirm();
-            break;
+
+            return;
+
+            //==================================================
+            // RECONNECT
+            //==================================================
+
         case 'r':
         case 'R':
-            // Manual reconnect - helps with flaky modern streams that drop.
             if (!wifiConnected)
+            {
                 showHdrMsg("NO WIFI");
-            else if (radioIsPlaying && radioPlaying >= 0)
+            }
+            else if (radioIsPlaying &&
+                     radioPlaying >= 0)
+            {
                 startRadioStream(radioPlaying);
+            }
             else
+            {
                 showHdrMsg("NOT PLAYING");
-            break;
-        case 'w':
-        case 'W':
-            exitWebRadioMode();
+            }
+
             return;
+
+            //==================================================
+            // VOLUME UP
+            //==================================================
+
         case '+':
         case '=':
-            volume = (uint8_t)min(255, (int)volume + 10);
+            volume =
+                (uint8_t)min(255, (int)volume + 10);
+
             M5Cardputer.Speaker.setVolume(volume);
+
             settingsDirty = true;
             settingsDirtyMs = millis();
+
             drawRadioStatus();
-            break;
+
+            return;
+
+            //==================================================
+            // VOLUME DOWN
+            //==================================================
+
         case '-':
-            volume = (uint8_t)max(0, (int)volume - 10);
+            volume =
+                (uint8_t)max(0, (int)volume - 10);
+
             M5Cardputer.Speaker.setVolume(volume);
+
             settingsDirty = true;
             settingsDirtyMs = millis();
+
             drawRadioStatus();
-            break;
-        case '1':
-            setTheme(0);
-            break;
-        case '2':
-            setTheme(1);
-            break;
-        case '3':
-            setTheme(2);
-            break;
-        case '4':
-            setTheme(3);
-            break;
-        case '5':
-            setTheme(4);
-            break;
-        case 'o':
-        case 'O':
-            toggleScreen();
-            break;
-        case 'h':
-        case 'H':
-            toggleHelp();
-            break;
-        case 'm':
-        case 'M':
-            enterSettingsMenu();
+
             return;
-        case 'd':
-        case 'D':
-            toggleDebug();
-            return;
+
+            //==================================================
+            // FORCE AAC
+            //==================================================
+
         case 'i':
         case 'I':
             radioForceAac = !radioForceAac;
-            showHdrMsg(radioForceAac ? "FORCE AAC" : "AAC OFF");
+
+            showHdrMsg(
+                radioForceAac
+                    ? "FORCE AAC"
+                    : "AAC OFF");
+
             drawRadioStatus();
-            break;
+
+            return;
+            //==================================================
+            // WIFI / CONNECTION
+            //==================================================
+
+        case 'c':
+        case 'C':
+            showWifiOverlay();
+            return;
         }
     }
 }
+
+//==================================================
+// RADIO MODE
+//==================================================
 
 void enterWebRadioMode()
 {

@@ -1,7 +1,56 @@
-#include "Browser.h"
-#include "Player.h"
-#include "UI.h"
+#include "UI/UI.h"
+#include "module/Browser.h"
+#include "module/Player.h"
 #include <algorithm>
+
+
+//==================================================
+// CACHE / LRU
+//==================================================
+
+bool naturalLess(const String &a, const String &b)
+{
+    int ia = 0;
+    int ib = 0;
+
+    while (ia < (int)a.length() &&
+           ib < (int)b.length())
+    {
+        if (isdigit(a[ia]) && isdigit(b[ib]))
+        {
+            unsigned long na = 0;
+            unsigned long nb = 0;
+
+            while (ia < (int)a.length() && isdigit(a[ia]))
+            {
+                na = na * 10 + (a[ia] - '0');
+                ia++;
+            }
+
+            while (ib < (int)b.length() && isdigit(b[ib]))
+            {
+                nb = nb * 10 + (b[ib] - '0');
+                ib++;
+            }
+
+            if (na != nb)
+                return na < nb;
+        }
+        else
+        {
+            char ca = tolower(a[ia]);
+            char cb = tolower(b[ib]);
+
+            if (ca != cb)
+                return ca < cb;
+
+            ia++;
+            ib++;
+        }
+    }
+
+    return a.length() < b.length();
+}
 
 static void lruMoveToFront(int idx)
 {
@@ -17,6 +66,9 @@ static void lruMoveToFront(int idx)
     }
 }
 
+//==================================================
+// FOLDER SCANNING
+//==================================================
 void scanFolderNow(int idx)
 {
     if (idx < 0 || idx >= (int)allFolders.size())
@@ -114,9 +166,14 @@ void scanFolderNow(int idx)
                 int dot = nm.lastIndexOf('.');
                 ne.label = (dot > 0) ? nm.substring(0, dot) : nm;
                 ne.label.replace('_', ' ');
-                auto pos = std::lower_bound(fe.nameCache.begin(), fe.nameCache.end(), ne,
-                                            [](const NameEntry &a, const NameEntry &b)
-                                            { return a.label < b.label; });
+                auto pos = std::lower_bound(
+                    fe.nameCache.begin(),
+                    fe.nameCache.end(),
+                    ne,
+                    [](const NameEntry &a, const NameEntry &b)
+                    {
+                        return naturalLess(a.label, b.label);
+                    });
                 fe.nameCache.insert(pos, ne);
                 if ((int)fe.nameCache.size() > cacheStartTrack + NAME_CACHE_MAX)
                     fe.nameCache.pop_back();
@@ -134,9 +191,14 @@ void scanFolderNow(int idx)
         std::vector<std::pair<String, String>> pairs;
         for (int i = 0; i < (int)subDirs.size(); i++)
             pairs.push_back({subDirNames[i], subDirs[i]});
-        std::sort(pairs.begin(), pairs.end(),
-                  [](const std::pair<String, String> &a, const std::pair<String, String> &b)
-                  { return a.first < b.first; });
+        std::sort(
+            pairs.begin(),
+            pairs.end(),
+            [](const std::pair<String, String> &a,
+               const std::pair<String, String> &b)
+            {
+                return naturalLess(a.first, b.first);
+            });
         for (int i = 0; i < (int)pairs.size(); i++)
         {
             subDirNames[i] = pairs[i].first;
@@ -210,6 +272,10 @@ int scanDir(const String &path, const String &label)
     scanFolderNow(myIdx);
     return myIdx;
 }
+
+//==================================================
+// FOLDER LOADING
+//==================================================
 
 void loadFolderIdx(int idx)
 {
@@ -319,6 +385,10 @@ void loadFolder(const String &path)
     loadFolderIdx(0);
 }
 
+//==================================================
+// NAVIGATION
+//==================================================
+
 void enterItem(int idx)
 {
     if (idx < 0 || idx >= (int)items.size())
@@ -385,6 +455,10 @@ void goBack()
     loadFolderIdx(parentIdx);
     drawAll();
 }
+
+//==================================================
+// RECENT TRACKS
+//==================================================
 
 void loadRecentView()
 {
@@ -500,6 +574,10 @@ void loadRecentFromSD()
     f.close();
 }
 
+//==================================================
+// MEMORY MANAGEMENT
+//==================================================
+
 void evictFolderCachesForHeap(uint32_t threshold)
 {
     int pass = 0;
@@ -540,4 +618,162 @@ void purgeAudioPlayerMemory()
     currentFolderIdx = 0;
     folderPage = 0;
     isRecentView = false;
+}
+//==================================================
+// KEYBOARD INPUT
+//==================================================
+
+bool handleBrowserInput(Keyboard_Class::KeysState &ks)
+{
+    //==================================================
+    // ENTER
+    // PLAY / STOP / OPEN
+    //==================================================
+
+    if (ks.enter)
+    {
+        if (selectedItem >= 0 &&
+            selectedItem < (int)items.size())
+        {
+            BrowserItem &item = items[selectedItem];
+
+            // Folder / special item
+            if (item.isFolder)
+            {
+                enterItem(selectedItem);
+                return true;
+            }
+
+            // Track
+            if (isPlaying || isPaused)
+            {
+                if (currentTrack == selectedItem)
+                {
+                    // ENTER on current track = STOP
+                    stopAudio();
+                }
+                else
+                {
+                    // ENTER on another track = switch track
+                    stopAudio();
+                    startTrack(selectedItem);
+                }
+            }
+            else
+            {
+                // Nothing playing = PLAY
+                startTrack(selectedItem);
+            }
+
+            return true;
+        }
+
+        // ENTER was pressed, even if there is no item.
+        return true;
+    }
+
+    //==================================================
+    // BACK
+    //==================================================
+
+    if (ks.del)
+    {
+        goBack();
+        return true;
+    }
+
+    //==================================================
+    // NAVIGATION
+    //==================================================
+
+    for (auto c : ks.word)
+    {
+        switch (c)
+        {
+        //==================================================
+        // UP
+        //==================================================
+
+        case ';':
+            if (!items.empty())
+            {
+                selectedItem =
+                    (selectedItem - 1 + (int)items.size()) %
+                    (int)items.size();
+
+                drawTrackList();
+            }
+
+            return true;
+
+        //==================================================
+        // DOWN
+        //==================================================
+
+        case '.':
+            if (!items.empty())
+            {
+                selectedItem =
+                    (selectedItem + 1) %
+                    (int)items.size();
+
+                drawTrackList();
+            }
+
+            return true;
+
+        //==================================================
+        // LEFT
+        // SEEK BACK / PREVIOUS PAGE
+        //==================================================
+
+        case ',':
+            if (isPlaying || isPaused)
+            {
+                seekTrack(-(int)seekSeconds * 1000);
+            }
+            else if (folderPage > 0)
+            {
+                stopAudio();
+                folderPage--;
+                loadFolderIdx(currentFolderIdx);
+                selectedItem = 0;
+                drawAll();
+            }
+            else
+            {
+                goBack();
+            }
+            return true;
+
+        //==================================================
+        // RIGHT
+        // SEEK FORWARD / NEXT PAGE
+        //==================================================
+
+        case '/':
+            if (isPlaying || isPaused)
+            {
+                seekTrack((int)seekSeconds * 1000);
+            }
+            else
+            {
+                int total =
+                    allFolders[currentFolderIdx].totalItems;
+                if ((folderPage + 1) * PAGE_SIZE < total)
+                {
+                    stopAudio();
+                    folderPage++;
+                    loadFolderIdx(currentFolderIdx);
+                    selectedItem = 0;
+                    drawAll();
+                }
+            }
+            return true;
+        }
+    }
+    //==================================================
+    // NOT HANDLED BY BROWSER
+    //==================================================
+    return false;
 }

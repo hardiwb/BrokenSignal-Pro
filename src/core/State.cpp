@@ -1,4 +1,4 @@
-#include "State.h"
+#include "core/State.h"
 
 AudioGeneratorMP3 *mp3 = nullptr;
 AudioGeneratorAAC *aac = nullptr;
@@ -85,3 +85,9 @@ unsigned long lastActivityMs = 0;
 bool settingsMenuVisible = false;
 int settingsSel = 0;
 bool debugOverlayVisible = false;
+
+//notes
+bool notesMode = false;
+int notesSelected = 0;
+int notesScrollTop = 0;
+uint32_t notesMarqueeStartMs = 0;

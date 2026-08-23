@@ -1,5 +1,6 @@
 #pragma once
-#include "State.h"
+#include <M5Cardputer.h>
+#include "core/State.h"
 unsigned long readM4ADuration(const char *path);
 unsigned long readMP3Duration(const char *path, size_t fileSize);
 void startTrack(int idx);
@@ -12,3 +13,4 @@ unsigned long estimateDuration(int idx);
 void saveSettings();
 void loadSettings();
 void seekTrack(int delta_ms);
+void handlePlayerInput(Keyboard_Class::KeysState &ks);

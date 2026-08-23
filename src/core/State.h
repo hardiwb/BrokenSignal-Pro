@@ -12,7 +12,7 @@
 #include <AudioFileSourceBuffer.h>
 #include "Config.h"
 #include "Types.h"
-#include "Themes.h"
+#include "UI/Themes.h"
 #include "AudioCodecs.h"
 
 extern AudioGeneratorMP3 *mp3;
@@ -100,3 +100,9 @@ extern unsigned long lastActivityMs;
 extern bool settingsMenuVisible;
 extern int settingsSel;
 extern bool debugOverlayVisible;
+
+// Notes app
+extern bool notesMode;
+extern int notesSelected;
+extern int notesScrollTop;
+extern uint32_t notesMarqueeStartMs;
