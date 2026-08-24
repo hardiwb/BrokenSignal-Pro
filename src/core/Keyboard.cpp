@@ -34,6 +34,54 @@ void keyboardLoop()
     }
 
     // -------------------------
+    // System overlays
+    // -------------------------
+
+    if (settingsMenuVisible)
+    {
+        handleSettingsInput(ks);
+        return;
+    }
+
+    if (debugOverlayVisible)
+    {
+        for (auto c : ks.word)
+        {
+            if (c == 'd' || c == 'D')
+            {
+                toggleDebug();
+                return;
+            }
+        }
+
+        return;
+    }
+
+    if (helpVisible)
+    {
+        for (auto c : ks.word)
+        {
+            if (c == 'h' || c == 'H')
+            {
+                toggleHelp();
+                return;
+            }
+        }
+
+        return;
+    }
+
+    // -------------------------
+    // Notes application
+    // -------------------------
+
+    if (notesMode)
+    {
+        handleNotesInput(ks);
+        return;
+    }
+
+    // -------------------------
     // Global hotkeys
     // -------------------------
 
@@ -97,53 +145,6 @@ void keyboardLoop()
         }
     }
 
-    // -------------------------
-    // System overlays
-    // -------------------------
-
-    if (settingsMenuVisible)
-    {
-        handleSettingsInput(ks);
-        return;
-    }
-
-    if (debugOverlayVisible)
-    {
-        for (auto c : ks.word)
-        {
-            if (c == 'd' || c == 'D')
-            {
-                toggleDebug();
-                return;
-            }
-        }
-
-        return;
-    }
-
-    if (helpVisible)
-    {
-        for (auto c : ks.word)
-        {
-            if (c == 'h' || c == 'H')
-            {
-                toggleHelp();
-                return;
-            }
-        }
-
-        return;
-    }
-
-    // -------------------------
-    // Notes application
-    // -------------------------
-
-    if (notesMode)
-    {
-        handleNotesInput(ks);
-        return;
-    }
 
     // -------------------------
     // Radio application
