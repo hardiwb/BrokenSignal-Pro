@@ -5,8 +5,10 @@
 
 void notesBegin();
 void notesLoop();
-void notesDraw();
-bool notesHandleKey(char key);
 void notesOpen();
+void notesQuickOpen();
 void notesClose();
+void drawNotes();
+void drawNotesEditor();
+bool notesInputActive();
 void handleNotesInput(Keyboard_Class::KeysState &ks);

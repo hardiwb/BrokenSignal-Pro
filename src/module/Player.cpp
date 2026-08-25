@@ -1,9 +1,28 @@
-#include "UI/UI.h"
+#include "core/System.h"
 #include <M5Cardputer.h>
 #include "module/Player.h"
 #include "module/Browser.h"
-#include "module/Clock.h"
+#include "core/Utils.h"
+#include "UI/Footer.h"
+#include "UI/Header.h"
+#include "UI/List.h"
 #include <algorithm>
+#include <climits>
+
+static int playerMarqueeSelected = -1;
+static unsigned long playerMarqueeStartMs = 0;
+static unsigned long playerStatusLastShownSecond = ULONG_MAX;
+
+static unsigned long currentPlayerMarqueeStartMs()
+{
+    if (playerMarqueeSelected != selectedItem)
+    {
+        playerMarqueeSelected = selectedItem;
+        playerMarqueeStartMs = millis();
+    }
+
+    return playerMarqueeStartMs;
+}
 
 //==================================================
 // DURATION
@@ -178,6 +197,226 @@ unsigned long estimateDuration(int idx)
     return max(5000UL, dur);
 }
 
+void drawPlayerHeader()
+{
+    if (T == nullptr)
+    {
+        T = THEMES[0];
+        themeIdx = 0;
+    }
+
+    String name;
+    if (currentTrack >= 0 && currentTrack < (int)items.size())
+        name = shortName(items[currentTrack].path, 18);
+    else if (viewFolder == "**RECENT**")
+        name = "RECENT";
+    else if (viewFolder != "/Music")
+        name = folderName(viewFolder, 24);
+    else
+        name = "---";
+
+    String mode;
+    if (!isPlaying && !isPaused && currentFolderIdx != 0)
+        mode = isRecentView ? "RECENT" : folderName(viewFolder, 10);
+    else
+        mode = isPlaying ? "PLAYING" : (isPaused ? "PAUSED" : "STOPPED");
+
+    HeaderModel model;
+    model.mode = mode;
+    model.title = name;
+    model.cursor = cursorVisible;
+
+    drawHeader(model);
+
+    if (hdrMsgEnd > 0 && millis() < hdrMsgEnd)
+        drawHeaderMessage(hdrMsg);
+}
+
+static int getPlayerListTopForSelection(int selection)
+{
+    if (items.empty())
+        return 0;
+
+    int top = selection - VISIBLE_TRACKS / 2;
+    top = max(0, min(top, (int)items.size() - VISIBLE_TRACKS));
+    return max(0, top);
+}
+
+static int getPlayerListTop()
+{
+    return getPlayerListTopForSelection(selectedItem);
+}
+
+static void populatePlayerListModel(ListModel &model)
+{
+    int trackNumber = 0;
+    for (int i = 0; i < (int)items.size(); i++)
+    {
+        ListItemModel item;
+        item.label = items[i].label;
+        item.isSelected = i == selectedItem;
+        item.isPlaying = !items[i].isFolder && i == currentTrack;
+        item.durationMs = items[i].durationMs;
+
+        if (items[i].isFolder)
+        {
+            item.type = ListItemType::Folder;
+        }
+        else
+        {
+            trackNumber++;
+
+            char prefix[4];
+            snprintf(prefix, sizeof(prefix), "%02d", trackNumber);
+            item.label = String(prefix) + " " + item.label;
+        }
+
+        if (items[i].path == "__PREV__" || items[i].path == "__MORE__")
+        {
+            item.type = ListItemType::Normal;
+            item.label = items[i].label;
+            item.durationMs = 0;
+        }
+
+        model.items.push_back(item);
+    }
+}
+
+void drawPlayerList()
+{
+    if (items.empty())
+    {
+        M5Cardputer.Display.fillRect(
+            0,
+            LIST_Y,
+            SCREEN_W,
+            LIST_HEIGHT,
+            T->bg);
+        return;
+    }
+
+    ListModel model;
+    model.selected = selectedItem;
+    model.scrollTop = getPlayerListTop();
+    model.marqueeStartMs = currentPlayerMarqueeStartMs();
+    populatePlayerListModel(model);
+
+    drawList(model);
+}
+
+void drawPlayerRow(int idx)
+{
+    if (items.empty())
+        return;
+
+    ListModel model;
+    model.selected = selectedItem;
+    model.scrollTop = getPlayerListTop();
+    model.marqueeStartMs = currentPlayerMarqueeStartMs();
+    populatePlayerListModel(model);
+
+    drawListRow(model, idx);
+}
+
+void drawPlayerSelection(int oldSelected)
+{
+    if (items.empty())
+        return;
+
+    int oldTop =
+        getPlayerListTopForSelection(oldSelected);
+    int newTop =
+        getPlayerListTop();
+
+    if (oldTop != newTop)
+    {
+        drawPlayerList();
+        return;
+    }
+
+    ListModel model;
+    model.selected = selectedItem;
+    model.scrollTop = newTop;
+    model.marqueeStartMs = currentPlayerMarqueeStartMs();
+    populatePlayerListModel(model);
+
+    drawListSelection(
+        model,
+        oldSelected,
+        selectedItem);
+}
+
+void drawPlayerStatus()
+{
+    unsigned long elapsed =
+        pausedElapsedMs +
+        (isPlaying ? millis() - trackStartMs : 0UL);
+
+    if (elapsed > trackDurationMs && trackDurationMs > 0)
+        elapsed = trackDurationMs;
+
+    float progress =
+        (trackDurationMs > 0)
+            ? min(1.0f, (float)elapsed / (float)trackDurationMs)
+            : 0.0f;
+
+    FooterModel model;
+    model.left = "POS> " + formatTime(elapsed) + "/" + formatTime(trackDurationMs);
+    model.battery = footerBatteryText();
+    model.showProgress = true;
+    model.progress = progress;
+
+    drawFooter(model);
+    playerStatusLastShownSecond = elapsed / 1000;
+}
+
+void updatePlayerStatus()
+{
+    unsigned long elapsed =
+        pausedElapsedMs +
+        (isPlaying ? millis() - trackStartMs : 0UL);
+
+    if (elapsed > trackDurationMs && trackDurationMs > 0)
+        elapsed = trackDurationMs;
+
+    unsigned long shownSecond =
+        elapsed / 1000;
+
+    if (shownSecond != playerStatusLastShownSecond)
+    {
+        playerStatusLastShownSecond = shownSecond;
+        drawFooterLeft(
+            "POS> " +
+            formatTime(elapsed) +
+            "/" +
+            formatTime(trackDurationMs));
+    }
+
+    float progress =
+        (trackDurationMs > 0)
+            ? min(1.0f, (float)elapsed / (float)trackDurationMs)
+            : 0.0f;
+
+    drawFooterProgress(progress);
+}
+
+void cycleRepeat()
+{
+    repeatMode = (repeatMode + 1) % 3;
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+    const char *labels[] = {"REPEAT OFF", "REPEAT ONE", "REPEAT ALL"};
+    showHdrMsg(labels[repeatMode]);
+}
+
+void toggleShuffle()
+{
+    shuffleOn = !shuffleOn;
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+    showHdrMsg(shuffleOn ? "SHUFFLE ON" : "SHUFFLE OFF");
+}
+
 //==================================================
 // PLAYBACK
 //==================================================
@@ -324,8 +563,8 @@ void pauseAudio()
     M5Cardputer.Speaker.stop(0);
     isPlaying = false;
     isPaused = true;
-    drawHeader();
-    drawStatus();
+    drawPlayerHeader();
+    drawPlayerStatus();
 }
 
 void resumeAudio()
@@ -336,8 +575,8 @@ void resumeAudio()
     trackStartMs = millis();
     isPlaying = true;
     isPaused = false;
-    drawHeader();
-    drawStatus();
+    drawPlayerHeader();
+    drawPlayerStatus();
 }
 
 //==================================================
@@ -431,7 +670,7 @@ void seekTrack(int delta_ms)
             }
         }
 
-        drawStatus();
+        drawPlayerStatus();
     }
 
     // ----------------------------------------------
@@ -499,7 +738,7 @@ void seekTrack(int delta_ms)
             trackStartMs -= delta_ms;
         }
 
-        drawStatus();
+        drawPlayerStatus();
     }
 }
 
@@ -536,7 +775,8 @@ void handlePlayerInput(Keyboard_Class::KeysState &ks)
             M5Cardputer.Speaker.setVolume(volume);
             settingsDirty = true;
             settingsDirtyMs = millis();
-            drawStatus();
+            drawPlayerStatus();
+            showVolumeMessage();
             break;
 
         case '-':
@@ -544,7 +784,8 @@ void handlePlayerInput(Keyboard_Class::KeysState &ks)
             M5Cardputer.Speaker.setVolume(volume);
             settingsDirty = true;
             settingsDirtyMs = millis();
-            drawStatus();
+            drawPlayerStatus();
+            showVolumeMessage();
             break;
         }
     }

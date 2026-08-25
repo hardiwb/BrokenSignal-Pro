@@ -4,7 +4,65 @@
 #include "core/State.h"
 #include "core/Config.h"
 #include "UI/Themes.h"
-#include "../module/Clock.h"
+#include "UI/Toast.h"
+#include "module/Player.h"
+#include "module/Radio.h"
+#include "../module/service/Clock.h"
+
+void drawAll()
+{
+    if (webRadioMode)
+    {
+        drawRadioAll();
+        return;
+    }
+    drawPlayerHeader();
+    pumpAudio();
+    drawPlayerList();
+    pumpAudio();
+    drawPlayerStatus();
+}
+
+void showHdrMsg(const char *msg)
+{
+    hdrMsg = String(msg);
+    hdrMsgEnd = millis() + 1000;
+    if (webRadioMode)
+        drawRadioHeader();
+    else
+        drawPlayerHeader();
+}
+
+void setTheme(uint8_t idx)
+{
+    if (idx >= 5)
+        return;
+    themeIdx = idx;
+    T = THEMES[idx];
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+    drawAll();
+    showToast(T->name);
+}
+
+void toggleScreen()
+{
+    screenOn = !screenOn;
+    M5Cardputer.Display.setBrightness(screenOn ? screenBrightness : 0);
+    if (screenOn)
+    {
+        lastActivityMs = millis();
+        drawAll();
+    }
+}
+
+void wakeScreen()
+{
+    screenOn = true;
+    M5Cardputer.Display.setBrightness(screenBrightness);
+    lastActivityMs = millis();
+    drawAll();
+}
 
 void loadSettings()
 {

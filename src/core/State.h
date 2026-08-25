@@ -64,7 +64,7 @@ extern int wifiNetCount;
 extern int wifiNetSel;
 extern int wifiNetScroll;
 
-extern bool wifiOverlayVisible;
+extern bool wifiMenuVisible;
 extern bool wifiPassOverlayVisible;
 extern bool addUrlOverlayVisible;
 extern bool addNameOverlayVisible;
@@ -73,12 +73,9 @@ extern char inputBuf[RADIO_INPUT_MAX + 1];
 extern int inputLen;
 extern String inputSaved;
 
-extern M5Canvas statusCanvas;
-extern M5Canvas headerCanvas;
-
 extern bool toastActive;
 extern unsigned long toastEnd;
-extern char hdrMsg[20];
+extern String hdrMsg;
 extern unsigned long hdrMsgEnd;
 extern bool helpVisible;
 extern bool screenOn;
@@ -100,6 +97,7 @@ extern unsigned long lastActivityMs;
 extern bool settingsMenuVisible;
 extern int settingsSel;
 extern bool debugOverlayVisible;
+extern bool calculatorVisible;
 
 // Notes app
 extern bool notesMode;

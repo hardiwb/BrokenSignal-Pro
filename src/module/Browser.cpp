@@ -1,4 +1,4 @@
-#include "UI/UI.h"
+#include "core/System.h"
 #include "module/Browser.h"
 #include "module/Player.h"
 #include <algorithm>
@@ -294,11 +294,11 @@ void loadFolderIdx(int idx)
     if (needsScan)
     {
         hdrMsgEnd = 0;
-        hdrMsg[0] = '\0';
+        hdrMsg = "";
         M5Cardputer.Display.fillRect(SCREEN_W / 2, 15, SCREEN_W / 2, 14, T->hdrBg);
         M5Cardputer.Display.setTextDatum(middle_right);
         M5Cardputer.Display.setTextColor(T->accent2);
-        M5Cardputer.Display.drawString("SCAN...", SCREEN_W - 4, 22, 1);
+        M5Cardputer.Display.drawString("SCAN...", SCREEN_W - 4, 22, &fonts::Font0);
     }
 
     isScanning = true;
@@ -697,11 +697,14 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
         case ';':
             if (!items.empty())
             {
+                int oldSelected =
+                    selectedItem;
+
                 selectedItem =
                     (selectedItem - 1 + (int)items.size()) %
                     (int)items.size();
 
-                drawTrackList();
+                drawPlayerSelection(oldSelected);
             }
 
             return true;
@@ -713,11 +716,14 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
         case '.':
             if (!items.empty())
             {
+                int oldSelected =
+                    selectedItem;
+
                 selectedItem =
                     (selectedItem + 1) %
                     (int)items.size();
 
-                drawTrackList();
+                drawPlayerSelection(oldSelected);
             }
 
             return true;

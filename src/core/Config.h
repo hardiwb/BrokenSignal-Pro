@@ -11,15 +11,9 @@
 #define RTC_SDA 13
 #define RTC_SCL 15
 
-// Screen layout
-#define SCREEN_W 240
-#define SCREEN_H 135
-#define HEADER_H 32
-#define LIST_Y 33
-#define LIST_ITEM_H 14
-#define VISIBLE_TRACKS 6
-#define STATUS_H 17
-#define STATUS_Y (SCREEN_H - STATUS_H)
+// Screen size
+constexpr int SCREEN_W = 240;
+constexpr int SCREEN_H = 135;
 
 // Memory limits
 #define RECENT_MAX 10

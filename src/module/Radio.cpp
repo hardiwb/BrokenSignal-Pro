@@ -1,11 +1,15 @@
-#include "UI/UI.h"
-#include "UI/WiFiUI.h"
-#include "UI/RadioUI.h"
+#include "core/System.h"
 #include "core/AudioFileSourceHTTPSStream.h"
+#include "core/Keyboard.h"
+#include "core/Utils.h"
 #include "module/Browser.h"
 #include "module/Radio.h"
-#include "module/WiFi.h"
-#include "module/Notes.h"
+#include "module/service/WiFi.h"
+#include "UI/Footer.h"
+#include "UI/Header.h"
+#include "UI/List.h"
+#include "UI/Overlay.h"
+#include "UI/Themes.h"
 
 extern bool radioForceAac;
 
@@ -16,7 +20,57 @@ extern bool radioForceAac;
 #endif
 
 //==================================================
-// RADIO CONFIG
+// RADIO LOGIC HELPERS
+//==================================================
+
+static void populateRadioListModel(ListModel &model)
+{
+    model.selected = radioSelected;
+    model.scrollTop = radioScrollTop;
+
+    for (int i = 0; i < radioCount; i++)
+    {
+        ListItemModel item;
+        item.label = radioList[i].name;
+        item.isSelected = i == radioSelected;
+        item.isPlaying = i == radioPlaying && radioIsPlaying;
+        model.items.push_back(item);
+    }
+}
+
+static void redrawRadioSelection(int oldSel, int oldScroll)
+{
+    if (radioScrollTop != oldScroll)
+    {
+        drawRadioList();
+        return;
+    }
+
+    drawRadioRow(oldSel);
+    drawRadioRow(radioSelected);
+}
+
+static void toggleSelectedRadioPlayback()
+{
+    if (radioIsPlaying &&
+        radioPlaying == radioSelected)
+    {
+        int oldPlaying = radioPlaying;
+
+        stopRadioStream();
+
+        drawRadioRow(oldPlaying);
+        drawRadioHeader();
+        drawRadioStatus();
+        return;
+    }
+
+    if (radioCount > 0)
+        startRadioStream(radioSelected);
+}
+
+//==================================================
+// RADIO DATABASE
 //==================================================
 
 void loadRadioList()
@@ -83,7 +137,7 @@ String generateRadioName(const String &url, int n)
 }
 
 //==================================================
-// RADIO MEMORY
+// RADIO STREAM LOGIC
 //==================================================
 
 void purgeRadioMemory()
@@ -94,10 +148,6 @@ void purgeRadioMemory()
     wifiConnected = false;
     delay(100);
 }
-
-//==================================================
-// RADIO STREAM
-//==================================================
 
 void startRadioStream(int idx)
 {
@@ -118,8 +168,8 @@ void startRadioStream(int idx)
         return;
     }
 
-    // Use the FIXED class for BOTH HTTP and HTTPS to prevent aggressive reconnects
-    // and ICY metadata issues (SomaFM uses chunked encoding with micro-pauses)
+    // Use the fixed stream for both HTTP and HTTPS to avoid aggressive reconnects
+    // and ICY metadata issues on chunked streams.
     httpSrc = new AudioFileSourceHTTPSStream(url.c_str());
     if (!httpSrc)
     {
@@ -160,15 +210,12 @@ void startRadioStream(int idx)
             delete radioMp3;
             radioMp3 = nullptr;
 
-            // CRITICAL: The MP3 parser consumed bytes from radioBuf.
-            // We must recreate the stream so AAC gets a fresh ADTS header.
             delete radioBuf;
             radioBuf = nullptr;
             httpSrc->close();
             delete httpSrc;
             httpSrc = nullptr;
 
-            // Use the fixed class for both HTTP and HTTPS
             httpSrc = new AudioFileSourceHTTPSStream(url.c_str());
             static_cast<AudioFileSourceHTTPSStream *>(httpSrc)->SetReconnect(true, 0);
             radioBuf = new AudioFileSourceBuffer(httpSrc, RADIO_HTTP_BUF);
@@ -213,9 +260,6 @@ void startRadioStream(int idx)
     drawRadioStatus();
 }
 
-//==================================================
-// RADIO STREAM
-//==================================================
 void stopRadioStream()
 {
     if (radioMp3)
@@ -283,27 +327,118 @@ void pumpRadioAudio()
 }
 
 //==================================================
-// WIFI
+// RADIO UI
 //==================================================
-void scanWifiNetworks()
+
+void drawRadioHeader()
 {
-    WiFi.mode(WIFI_STA);
-    WiFi.disconnect();
-    int n = WiFi.scanNetworks(false, false, false, 300);
-    wifiNetCount = 0;
-    for (int i = 0; i < n && wifiNetCount < WIFI_SCAN_MAX; i++)
-    {
-        wifiNets[wifiNetCount].ssid = WiFi.SSID(i);
-        wifiNets[wifiNetCount].rssi = WiFi.RSSI(i);
-        wifiNets[wifiNetCount].encrypted = (WiFi.encryptionType(i) != WIFI_AUTH_OPEN);
-        if (wifiNets[wifiNetCount].ssid.length() > 0)
-            wifiNetCount++;
-    }
-    WiFi.scanDelete();
+    String stationLine = "SELECT STATION";
+    if (radioIsPlaying && radioPlaying >= 0 && radioPlaying < radioCount)
+        stationLine = radioList[radioPlaying].name;
+
+    HeaderModel model;
+    model.mode = "RADIO";
+    model.title = stationLine;
+    model.cursor = radioIsPlaying && cursorVisible;
+
+    drawHeader(model);
+
+    if (hdrMsgEnd > 0 && millis() < hdrMsgEnd)
+        drawHeaderMessage(hdrMsg);
+}
+
+void drawRadioRow(int idx)
+{
+    if (idx < 0 || idx >= radioCount)
+        return;
+
+    ListModel model;
+    populateRadioListModel(model);
+    drawListRow(model, idx);
+}
+
+void drawRadioList()
+{
+    ListModel model;
+    populateRadioListModel(model);
+    drawList(model);
+}
+
+void drawRadioStatus()
+{
+    FooterModel model;
+    model.left = "[A]Add [X]Rm";
+    model.center = radioIsPlaying ? "Live" : "Idle";
+    model.battery = footerBatteryText();
+
+    drawFooter(model);
+}
+
+void drawRadioAll()
+{
+    drawRadioHeader();
+    drawRadioList();
+    drawRadioStatus();
 }
 
 //==================================================
-// RADIO OVERLAYS
+// RADIO OVERLAY UI
+//==================================================
+
+void drawAddUrlOverlay(bool inputOnly)
+{
+    OverlayModel model;
+    model.type = OverlayType::TextInput;
+    model.title = "ADD RADIO STATION";
+    model.prompt = "Enter stream URL";
+    model.value = String(inputBuf);
+    model.confirmText = "[Ent]Next   [Del]Back   [Esc]Cancel";
+
+    if (inputOnly)
+        drawOverlayInputValue(model.value);
+    else
+        drawOverlay(model);
+}
+
+void drawAddNameOverlay(bool inputOnly)
+{
+    OverlayModel model;
+    model.type = OverlayType::TextInput;
+    model.title = "STATION NAME";
+    model.prompt = "Name or ENTER to accept";
+    model.value = String(inputBuf);
+    model.confirmText = "[Ent]Add   [Del]Back   [Esc]Cancel";
+
+    if (inputOnly)
+        drawOverlayInputValue(model.value);
+    else
+        drawOverlay(model);
+}
+
+void drawRemoveConfirm()
+{
+    auto &D = M5Cardputer.Display;
+    drawOverlayFrame("REMOVE STATION?");
+
+    String name = (radioCount > 0 && radioSelected < radioCount)
+                      ? radioList[radioSelected].name
+                      : "?";
+    if ((int)name.length() > 28)
+        name = name.substring(0, 27) + ">";
+
+    D.setTextDatum(middle_center);
+    D.setTextColor(T->textBright);
+    D.drawString(name, SCREEN_W / 2, 55, &fonts::Font0);
+    D.setTextColor(T->textDim);
+    D.drawString("This will be deleted.", SCREEN_W / 2, 75, &fonts::Font0);
+    D.setTextColor(T->accent1);
+    D.drawString("[Ent]Remove", SCREEN_W / 2, 100, &fonts::Font0);
+    D.setTextColor(T->textMid);
+    D.drawString("[Esc/Del]Cancel", SCREEN_W / 2, 114, &fonts::Font0);
+}
+
+//==================================================
+// RADIO OVERLAY STATE
 //==================================================
 
 void showAddUrlOverlay()
@@ -329,112 +464,52 @@ void showRemoveConfirm()
     drawRemoveConfirm();
 }
 
+bool radioOverlayActive()
+{
+    return addUrlOverlayVisible ||
+           addNameOverlayVisible ||
+           removeConfirmVisible;
+}
+
 //==================================================
-// OVERLAY INPUT
+// RADIO NAVIGATION
 //==================================================
 
-void handleOverlayInput(Keyboard_Class::KeysState &ks)
+void radioScrollEnsureVisible()
 {
-    if (wifiOverlayVisible)
+    if (radioSelected < radioScrollTop)
+        radioScrollTop = radioSelected;
+    if (radioSelected >= radioScrollTop + VISIBLE_TRACKS)
+        radioScrollTop = radioSelected - VISIBLE_TRACKS + 1;
+    if (radioScrollTop < 0)
+        radioScrollTop = 0;
+}
+
+//==================================================
+// RADIO OVERLAY INPUT
+//==================================================
+
+void handleRadioOverlayInput(Keyboard_Class::KeysState &ks)
+{
+    if (addUrlOverlayVisible)
     {
+        if (keyboardBackPressed(ks))
+        {
+            addUrlOverlayVisible = false;
+            drawRadioAll();
+            return;
+        }
+
         for (auto c : ks.word)
         {
-            if (c == ';' && wifiNetCount > 0)
-            {
-                wifiNetSel = (wifiNetSel - 1 + wifiNetCount) % wifiNetCount;
-                if (wifiNetSel < wifiNetScroll)
-                    wifiNetScroll = wifiNetSel;
-                drawWifiOverlay();
-            }
-            if (c == '.' && wifiNetCount > 0)
-            {
-                wifiNetSel = (wifiNetSel + 1) % wifiNetCount;
-                if (wifiNetSel >= wifiNetScroll + 6)
-                    wifiNetScroll = wifiNetSel - 5;
-                drawWifiOverlay();
-            }
-            if (c == 's' || c == 'S')
-            {
-                M5Cardputer.Display.setTextDatum(middle_center);
-                M5Cardputer.Display.setTextColor(T->accent2);
-                M5Cardputer.Display.drawString("SCANNING...", SCREEN_W / 2, 68, 1);
-                scanWifiNetworks();
-                wifiNetSel = 0;
-                wifiNetScroll = 0;
-                drawWifiOverlay();
-            }
-        }
-        if (ks.enter && wifiNetCount > 0)
-        {
-            String ssid = wifiNets[wifiNetSel].ssid;
-            String cfgSsid, cfgPass;
-            wifiOverlayVisible = false;
-            if (loadWifiConfig(cfgSsid, cfgPass) && cfgSsid == ssid)
-            {
-                if (connectWifi(ssid, cfgPass))
-                    drawRadioAll();
-                else
-                    showWifiOverlay();
-            }
-            else
-            {
-                showWifiPassOverlay(ssid);
-            }
-        }
-        if (ks.del)
-        {
-            wifiOverlayVisible = false;
-            if (!wifiConnected)
-                exitWebRadioMode();
-            else
-                drawRadioAll();
-        }
-    }
-    else if (wifiPassOverlayVisible)
-    {
-        for (auto c : ks.word)
-        {
-            if (c >= 32 && c < 127 && inputLen < RADIO_INPUT_MAX)
-            {
-                inputBuf[inputLen++] = c;
-                inputBuf[inputLen] = '\0';
-                drawWifiPassOverlay(true);
-            }
-        }
-        if (ks.del)
-        {
-            if (inputLen > 0)
-            {
-                inputBuf[--inputLen] = '\0';
-                drawWifiPassOverlay(true);
-            }
-            else
-            {
-                wifiPassOverlayVisible = false;
-                showWifiOverlay();
-            }
-        }
-        if (ks.enter)
-        {
-            String pass = String(inputBuf);
-            wifiPassOverlayVisible = false;
-            if (connectWifi(inputSaved, pass))
-                drawRadioAll();
-            else
-                showWifiOverlay();
-        }
-    }
-    else if (addUrlOverlayVisible)
-    {
-        for (auto c : ks.word)
-        {
-            if (c >= 32 && c < 127 && inputLen < RADIO_INPUT_MAX)
+            if (keyboardTextInputChar(ks, c) && inputLen < RADIO_INPUT_MAX)
             {
                 inputBuf[inputLen++] = c;
                 inputBuf[inputLen] = '\0';
                 drawAddUrlOverlay(true);
             }
         }
+
         if (ks.del)
         {
             if (inputLen > 0)
@@ -458,15 +533,23 @@ void handleOverlayInput(Keyboard_Class::KeysState &ks)
     }
     else if (addNameOverlayVisible)
     {
+        if (keyboardBackPressed(ks))
+        {
+            addNameOverlayVisible = false;
+            drawRadioAll();
+            return;
+        }
+
         for (auto c : ks.word)
         {
-            if (c >= 32 && c < 127 && inputLen < 31)
+            if (keyboardTextInputChar(ks, c) && inputLen < 31)
             {
                 inputBuf[inputLen++] = c;
                 inputBuf[inputLen] = '\0';
                 drawAddNameOverlay(true);
             }
         }
+
         if (ks.del && inputLen > 0)
         {
             inputBuf[--inputLen] = '\0';
@@ -505,7 +588,7 @@ void handleOverlayInput(Keyboard_Class::KeysState &ks)
             removeConfirmVisible = false;
             drawRadioAll();
         }
-        if (ks.del)
+        if (keyboardBackPressed(ks) || ks.del)
         {
             removeConfirmVisible = false;
             drawRadioAll();
@@ -514,34 +597,16 @@ void handleOverlayInput(Keyboard_Class::KeysState &ks)
 }
 
 //==================================================
-// RADIO NAVIGATION / INPUT
+// RADIO INPUT
 //==================================================
-
-void radioScrollEnsureVisible()
-{
-    if (radioSelected < radioScrollTop)
-        radioScrollTop = radioSelected;
-    if (radioSelected >= radioScrollTop + VISIBLE_TRACKS)
-        radioScrollTop = radioSelected - VISIBLE_TRACKS + 1;
-    if (radioScrollTop < 0)
-        radioScrollTop = 0;
-}
 
 void handleRadioInput(Keyboard_Class::KeysState &ks)
 {
-    //==================================================
-    // BACK / EXIT RADIO
-    //==================================================
-
-    if (ks.del)
+    if (keyboardBackPressed(ks))
     {
         exitWebRadioMode();
         return;
     }
-
-    //==================================================
-    // ENTER - PLAY / STOP
-    //==================================================
 
     if (ks.enter)
     {
@@ -551,37 +616,15 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             return;
         }
 
-        if (radioIsPlaying &&
-            radioPlaying == radioSelected)
-        {
-            int oldPlaying = radioPlaying;
-
-            stopRadioStream();
-
-            drawRadioRow(oldPlaying);
-            drawRadioHeader();
-            drawRadioStatus();
-        }
-        else
-        {
-            startRadioStream(radioSelected);
-        }
+        toggleSelectedRadioPlayback();
 
         return;
     }
-
-    //==================================================
-    // KEYBOARD COMMANDS
-    //==================================================
 
     for (auto c : ks.word)
     {
         switch (c)
         {
-            //==================================================
-            // UP
-            //==================================================
-
         case ';':
             if (radioCount > 0)
             {
@@ -593,23 +636,10 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
                     radioCount;
 
                 radioScrollEnsureVisible();
-
-                if (radioScrollTop != oldScroll)
-                {
-                    drawRadioList();
-                }
-                else
-                {
-                    drawRadioRow(oldSel);
-                    drawRadioRow(radioSelected);
-                }
+                redrawRadioSelection(oldSel, oldScroll);
             }
 
             return;
-
-            //==================================================
-            // DOWN
-            //==================================================
 
         case '.':
             if (radioCount > 0)
@@ -622,46 +652,14 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
                     radioCount;
 
                 radioScrollEnsureVisible();
-
-                if (radioScrollTop != oldScroll)
-                {
-                    drawRadioList();
-                }
-                else
-                {
-                    drawRadioRow(oldSel);
-                    drawRadioRow(radioSelected);
-                }
+                redrawRadioSelection(oldSel, oldScroll);
             }
 
             return;
-
-            //==================================================
-            // SPACE - PLAY / STOP
-            //==================================================
 
         case ' ':
-            if (radioIsPlaying &&
-                radioPlaying == radioSelected)
-            {
-                int oldPlaying = radioPlaying;
-
-                stopRadioStream();
-
-                drawRadioRow(oldPlaying);
-                drawRadioHeader();
-                drawRadioStatus();
-            }
-            else if (radioCount > 0)
-            {
-                startRadioStream(radioSelected);
-            }
-
+            toggleSelectedRadioPlayback();
             return;
-
-            //==================================================
-            // ADD RADIO
-            //==================================================
 
         case 'a':
         case 'A':
@@ -672,20 +670,12 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
 
             return;
 
-            //==================================================
-            // REMOVE RADIO
-            //==================================================
-
         case 'x':
         case 'X':
             if (radioCount > 0)
                 showRemoveConfirm();
 
             return;
-
-            //==================================================
-            // RECONNECT
-            //==================================================
 
         case 'r':
         case 'R':
@@ -705,10 +695,6 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
 
             return;
 
-            //==================================================
-            // VOLUME UP
-            //==================================================
-
         case '+':
         case '=':
             volume =
@@ -720,12 +706,9 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             settingsDirtyMs = millis();
 
             drawRadioStatus();
+            showVolumeMessage();
 
             return;
-
-            //==================================================
-            // VOLUME DOWN
-            //==================================================
 
         case '-':
             volume =
@@ -737,12 +720,9 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             settingsDirtyMs = millis();
 
             drawRadioStatus();
+            showVolumeMessage();
 
             return;
-
-            //==================================================
-            // FORCE AAC
-            //==================================================
 
         case 'i':
         case 'I':
@@ -756,14 +736,7 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
             drawRadioStatus();
 
             return;
-            //==================================================
-            // WIFI / CONNECTION
-            //==================================================
 
-        case 'c':
-        case 'C':
-            showWifiOverlay();
-            return;
         }
     }
 }
@@ -780,32 +753,18 @@ void enterWebRadioMode()
     radioScrollTop = 0;
     loadRadioList();
 
-    if (WiFi.status() == WL_CONNECTED)
+    if (ensureWifiForRadio() == WifiStartupResult::Connected)
     {
-        wifiConnected = true;
-        wifiSSID = WiFi.SSID();
         drawRadioAll();
         return;
     }
-
-    String cfgSsid, cfgPass;
-    if (loadWifiConfig(cfgSsid, cfgPass) && cfgSsid.length() > 0)
-    {
-        if (connectWifi(cfgSsid, cfgPass))
-        {
-            drawRadioAll();
-            return;
-        }
-    }
-    showWifiOverlay();
 }
 
 void exitWebRadioMode()
 {
     purgeRadioMemory();
     webRadioMode = false;
-    wifiOverlayVisible = false;
-    wifiPassOverlayVisible = false;
+    closeWifiInput();
     addUrlOverlayVisible = false;
     addNameOverlayVisible = false;
     removeConfirmVisible = false;

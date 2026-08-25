@@ -1,443 +1,561 @@
-#include "core/Config.h"
-#include "core/Types.h"
-#include "UI/Themes.h"
-#include "UI/UI.h"
-#include "core/State.h"
-#include "module/Clock.h"
 #include "module/Notes.h"
+
 #include <SD.h>
 #include <vector>
-#include <M5Cardputer.h>
+
+#include "core/Config.h"
+#include "core/Keyboard.h"
+#include "core/State.h"
+#include "core/System.h"
+#include "module/Help.h"
+#include "module/service/Clock.h"
+#include "UI/Footer.h"
+#include "UI/Header.h"
+#include "UI/List.h"
+#include "UI/Overlay.h"
+#include "UI/Themes.h"
+
+void drawNotes();
+void drawNotesEditor();
 
 namespace
 {
-    M5Canvas notesCanvas(&M5Cardputer.Display);
-    M5Canvas notesHeaderCanvas(&M5Cardputer.Display);
-    M5Canvas noteRowCanvas(&M5Cardputer.Display);
-    M5Canvas notesStatusCanvas(&M5Cardputer.Display);
-    std::vector<String> noteLines;
+struct NoteEntry
+{
+    String stamp;
+    String text;
+};
 
-    String currentDate;
-    String notePath;
+std::vector<NoteEntry> noteEntries;
 
-    const int NOTES_HEADER_H = HEADER_H;
-    const int NOTES_STATUS_H = 18;
+String currentMonth;
+String notePath;
+String noteEditText;
 
-    const int NOTES_FIRST_Y = 40;
-    const int NOTES_LINE_H = 15;
+bool initialized = false;
+bool noteEditorVisible = false;
+int noteEditIndex = -1;
+int notesMonthOffset = 0;
 
-    const int NOTES_X = 18;
-    const int NOTES_TEXT_W = 210;
+void viewedDateParts(
+    int &year,
+    int &month,
+    int &day,
+    int &hour,
+    int &minute)
+{
+    struct tm now{};
 
-    bool initialized = false;
-    bool notesNeedsFullRedraw = true;
-    int lastNotesMinute = -1;
-    unsigned long lastNotesMarqueeDraw = 0;
-
-    String getTodayString()
+    if (!getCurrentTime(now))
     {
-        struct tm now{};
-
-        if (!getCurrentTime(now))
-        {
-            Serial.println("Notes: clock unavailable");
-            return "2000-01-01";
-        }
-
-        char buf[16];
-
-        snprintf(
-            buf,
-            sizeof(buf),
-            "%04d-%02d-%02d",
-            now.tm_year + 1900,
-            now.tm_mon + 1,
-            now.tm_mday);
-
-        return String(buf);
+        year = 2000;
+        month = 1;
+        day = 1;
+        hour = 0;
+        minute = 0;
+        return;
     }
 
-    //====================
-    // Logic
-    //====================
+    int monthIndex =
+        now.tm_mon +
+        notesMonthOffset;
 
-    void loadNote()
+    year =
+        now.tm_year +
+        1900 +
+        monthIndex / 12;
+
+    monthIndex %= 12;
+    if (monthIndex < 0)
     {
-        noteLines.clear();
-
-        currentDate = getTodayString();
-        notePath = "/Notes/" + currentDate + ".txt";
-
-        Serial.print("Notes: ");
-        Serial.println(notePath);
-
-        File f = SD.open(notePath, FILE_READ);
-
-        if (!f)
-        {
-            Serial.println("Notes: no note for today");
-            return;
-        }
-
-        while (f.available())
-        {
-            String line = f.readStringUntil('\n');
-
-            // Remove CR from Windows-style CRLF
-            line.trim();
-
-            noteLines.push_back(line);
-        }
-
-        f.close();
-
-        Serial.print("Notes lines: ");
-        Serial.println(noteLines.size());
-
-        if (notesSelected >= (int)noteLines.size())
-            notesSelected = max(0, (int)noteLines.size() - 1);
-
-        if (notesScrollTop >= (int)noteLines.size())
-            notesScrollTop = max(0, (int)noteLines.size() - 1);
+        monthIndex += 12;
+        year--;
     }
 
-    //====================
-    // UI
-    //====================
-    void drawNotesHeader()
-    {
-        notesHeaderCanvas.fillRect(
-            0,
-            0,
-            SCREEN_W,
-            NOTES_HEADER_H,
-            T->hdrBg);
-
-        //==================================================
-        // HEADER TITLE
-        //==================================================
-
-        notesHeaderCanvas.setTextDatum(middle_left);
-        notesHeaderCanvas.setTextColor(T->textDim);
-
-        notesHeaderCanvas.drawString(
-            "BRKN_SIGNAL // NOTES",
-            4,
-            7,
-            1);
-
-        //==================================================
-        // CLOCK
-        //==================================================
-
-        char clockBuf[6];
-        formatClock(clockBuf, sizeof(clockBuf));
-
-        notesHeaderCanvas.setTextDatum(middle_right);
-        notesHeaderCanvas.setTextColor(T->accent2);
-
-        notesHeaderCanvas.setTextDatum(middle_right);
-        notesHeaderCanvas.setTextColor(T->accent2);
-
-        notesHeaderCanvas.drawString(
-            clockBuf,
-            SCREEN_W - 4,
-            7,
-            1);
-
-        //==================================================
-        // DATE
-        //==================================================
-        struct tm now{};
-        char dateText[32];
-
-        if (getCurrentTime(now))
-        {
-            strftime(
-                dateText,
-                sizeof(dateText),
-                "%A, %b %d %Y",
-                &now);
-        }
-        else
-        {
-            strcpy(dateText, "Date unavailable");
-        }
-
-        notesHeaderCanvas.setTextDatum(middle_left);
-        notesHeaderCanvas.setTextColor(T->accent1);
-
-        notesHeaderCanvas.drawString(
-            dateText,
-            8,
-            21,
-            2);
-
-        //==================================================
-        // HEADER LINE
-        //==================================================
-
-        notesHeaderCanvas.drawFastHLine(
-            0,
-            NOTES_HEADER_H - 1,
-            SCREEN_W,
-            T->textDim);
-    }
-
-    void drawNoteRow(int index)
-    {
-        const int visibleLines =
-            (SCREEN_H - NOTES_HEADER_H - NOTES_STATUS_H) /
-            NOTES_LINE_H;
-
-        if (index < notesScrollTop ||
-            index >= notesScrollTop + visibleLines)
-            return;
-
-        int y =
-            NOTES_FIRST_Y +
-            (index - notesScrollTop) * NOTES_LINE_H;
-
-        bool selected =
-            (index == notesSelected);
-
-        noteRowCanvas.fillSprite(T->bg);
-
-        if (selected)
-        {
-            noteRowCanvas.fillRect(
-                0,
-                0,
-                SCREEN_W,
-                NOTES_LINE_H,
-                T->hdrBg);
-
-            noteRowCanvas.fillRect(
-                2,
-                2,
-                5,
-                10,
-                T->accent1);
-
-            noteRowCanvas.setTextColor(T->accent1);
-
-            drawMarquee(
-                noteRowCanvas,
-                noteLines[index],
-                NOTES_X,
-                7,
-                NOTES_TEXT_W,
-                T->accent1,
-                notesMarqueeStartMs);
-        }
-        else
-        {
-            noteRowCanvas.setTextColor(T->textDim);
-
-            noteRowCanvas.drawString(
-                noteLines[index],
-                NOTES_X,
-                7,
-                1);
-        }
-
-        noteRowCanvas.pushSprite(
-            &M5Cardputer.Display,
-            0,
-            y - 7);
-    }
-
-    void drawNotesList()
-    {
-        const int visibleLines =
-            (SCREEN_H - NOTES_HEADER_H - NOTES_STATUS_H) /
-            NOTES_LINE_H;
-
-        for (int i = 0; i < visibleLines; i++)
-        {
-            int index = notesScrollTop + i;
-
-            if (index >= (int)noteLines.size())
-                break;
-
-            drawNoteRow(index);
-        }
-    }
-
-    void drawNotesStatus()
-    {
-        const int y = NOTES_STATUS_H / 2;
-
-        notesStatusCanvas.fillSprite(T->hdrBg);
-
-        notesStatusCanvas.drawFastHLine(
-            0,
-            0,
-            SCREEN_W,
-            T->textDim);
-
-        notesStatusCanvas.setTextDatum(middle_left);
-        notesStatusCanvas.setTextColor(T->textDim);
-
-        notesStatusCanvas.drawString(
-            "UP/DN",
-            4,
-            y,
-            1);
-
-        notesStatusCanvas.setTextColor(T->accent1);
-
-        notesStatusCanvas.drawString(
-            "ENTER EDIT",
-            48,
-            y,
-            1);
-
-        notesStatusCanvas.setTextColor(T->textDim);
-        notesStatusCanvas.setTextDatum(middle_right);
-
-        char pos[16];
-
-        snprintf(
-            pos,
-            sizeof(pos),
-            "%d/%d",
-            noteLines.empty() ? 0 : notesSelected + 1,
-            noteLines.size());
-
-        notesStatusCanvas.drawString(
-            pos,
-            SCREEN_W - 4,
-            y,
-            1);
-    }
-
-    void drawNotesFull()
-    {
-        // Header
-        drawNotesHeader();
-
-        notesHeaderCanvas.pushSprite(
-            &M5Cardputer.Display,
-            0,
-            0);
-
-        // List
-        drawNotesList();
-
-        // Status
-        drawNotesStatus();
-
-        notesStatusCanvas.pushSprite(
-            &M5Cardputer.Display,
-            0,
-            SCREEN_H - NOTES_STATUS_H);
-    }
+    month = monthIndex + 1;
+    day = now.tm_mday;
+    hour = now.tm_hour;
+    minute = now.tm_min;
 }
 
-//============================
-// State
-//============================
+String getMonthString()
+{
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    viewedDateParts(
+        year,
+        month,
+        day,
+        hour,
+        minute);
+
+    char buf[8];
+    snprintf(
+        buf,
+        sizeof(buf),
+        "%04d-%02d",
+        year,
+        month);
+
+    return String(buf);
+}
+
+String getDisplayDateString()
+{
+    struct tm now{};
+    if (!getCurrentTime(now))
+        return "DATE UNAVAILABLE";
+
+    if (notesMonthOffset != 0)
+    {
+        int year;
+        int month;
+        int day;
+        int hour;
+        int minute;
+        viewedDateParts(
+            year,
+            month,
+            day,
+            hour,
+            minute);
+
+        static const char *monthNames[] = {
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec"};
+
+        return String(monthNames[month - 1]) + " " + String(year);
+    }
+
+    char buf[32];
+    strftime(buf, sizeof(buf), "%a, %b %d %Y", &now);
+    return String(buf);
+}
+
+String getEntryStamp()
+{
+    int year;
+    int month;
+    int day;
+    int hour;
+    int minute;
+    viewedDateParts(
+        year,
+        month,
+        day,
+        hour,
+        minute);
+
+    char buf[20];
+    snprintf(
+        buf,
+        sizeof(buf),
+        "%04d-%02d-%02d %02d:%02d",
+        year,
+        month,
+        day,
+        hour,
+        minute);
+
+    return String(buf);
+}
+
+String formatEntryLabel(const NoteEntry &entry, int index)
+{
+    char prefix[4];
+    snprintf(prefix, sizeof(prefix), "%02d", index + 1);
+
+    return String(prefix) + " " + entry.text;
+}
+
+void clampNotesSelection()
+{
+    if (noteEntries.empty())
+    {
+        notesSelected = 0;
+        notesScrollTop = 0;
+        return;
+    }
+
+    notesSelected = max(0, min(notesSelected, (int)noteEntries.size() - 1));
+    if (notesSelected < notesScrollTop)
+        notesScrollTop = notesSelected;
+    if (notesSelected >= notesScrollTop + VISIBLE_TRACKS)
+        notesScrollTop = notesSelected - VISIBLE_TRACKS + 1;
+    notesScrollTop = max(0, notesScrollTop);
+}
+
+void loadNote()
+{
+    noteEntries.clear();
+
+    currentMonth = getMonthString();
+    notePath = "/Notes/" + currentMonth + ".txt";
+
+    Serial.print("Notes: ");
+    Serial.println(notePath);
+
+    File f = SD.open(notePath, FILE_READ);
+    if (!f)
+    {
+        Serial.println("Notes: no note for this month");
+        clampNotesSelection();
+        return;
+    }
+
+    while (f.available())
+    {
+        String line = f.readStringUntil('\n');
+        line.trim();
+        if (line.length() == 0)
+            continue;
+
+        int sep = line.indexOf('|');
+        NoteEntry entry;
+        if (sep >= 0)
+        {
+            entry.stamp = line.substring(0, sep);
+            entry.text = line.substring(sep + 1);
+        }
+        else
+        {
+            // Backward-compatible import for older daily/plain note files.
+            entry.stamp = getEntryStamp();
+            entry.text = line;
+        }
+
+        entry.text.trim();
+        if (entry.text.length() > 0)
+            noteEntries.push_back(entry);
+    }
+
+    f.close();
+    clampNotesSelection();
+
+    Serial.print("Notes lines: ");
+    Serial.println(noteEntries.size());
+}
+
+void saveNote()
+{
+    SD.mkdir("/Notes");
+
+    File f = SD.open(notePath, FILE_WRITE);
+    if (!f)
+    {
+        showHdrMsg("NOTE SAVE FAIL");
+        return;
+    }
+
+    for (const NoteEntry &entry : noteEntries)
+        f.printf("%s|%s\n", entry.stamp.c_str(), entry.text.c_str());
+
+    f.close();
+}
+
+void removeSelectedNote()
+{
+    if (noteEntries.empty())
+        return;
+
+    noteEntries.erase(noteEntries.begin() + notesSelected);
+    clampNotesSelection();
+    saveNote();
+    drawNotes();
+}
+
+void changeNotesMonth(int delta)
+{
+    notesMonthOffset += delta;
+    notesSelected = 0;
+    notesScrollTop = 0;
+    notesMarqueeStartMs = millis();
+    loadNote();
+    drawNotes();
+}
+
+void beginNoteEditor(int editIndex)
+{
+    noteEditIndex = editIndex;
+    noteEditText = "";
+    if (editIndex >= 0 && editIndex < (int)noteEntries.size())
+        noteEditText = noteEntries[editIndex].text;
+
+    noteEditorVisible = true;
+    drawNotesEditor();
+}
+
+void saveNoteEditor()
+{
+    noteEditText.trim();
+    if (noteEditText.length() > 0)
+    {
+        if (noteEditIndex >= 0 && noteEditIndex < (int)noteEntries.size())
+            noteEntries[noteEditIndex].text = noteEditText;
+        else
+            noteEntries.push_back({getEntryStamp(), noteEditText});
+
+        notesSelected = max(0, (int)noteEntries.size() - 1);
+        clampNotesSelection();
+        saveNote();
+    }
+
+    noteEditorVisible = false;
+    noteEditIndex = -1;
+
+    if (notesMode)
+        drawNotes();
+    else
+        drawAll();
+}
+
+void cancelNoteEditor()
+{
+    noteEditorVisible = false;
+    noteEditIndex = -1;
+
+    if (notesMode)
+        drawNotes();
+    else
+        drawAll();
+}
+
+String editorDisplayText()
+{
+    String value = noteEditText;
+    if ((int)value.length() > 116)
+        value = value.substring((int)value.length() - 116);
+    return value;
+}
+
+void drawNotesHeader()
+{
+    HeaderModel model;
+    model.mode = "NOTES";
+    model.title = getDisplayDateString();
+    model.cursor = true;
+    drawHeader(model);
+}
+
+ListModel buildNotesListModel()
+{
+    ListModel model;
+    model.selected = notesSelected;
+    model.scrollTop = notesScrollTop;
+    model.marqueeStartMs = notesMarqueeStartMs;
+
+    if (noteEntries.empty())
+    {
+        ListItemModel item;
+        item.label = "No notes this month";
+        item.value = "A";
+        item.type = ListItemType::Property;
+        item.isSelected = true;
+        model.items.push_back(item);
+    }
+    else
+    {
+        for (int i = 0; i < (int)noteEntries.size(); i++)
+        {
+            ListItemModel item;
+            item.label = formatEntryLabel(noteEntries[i], i);
+            item.type = ListItemType::Normal;
+            item.isSelected = i == notesSelected;
+            model.items.push_back(item);
+        }
+    }
+
+    return model;
+}
+
+void drawNotesList()
+{
+    drawList(
+        buildNotesListModel());
+}
+
+void redrawNotesSelection(
+    int oldSelected,
+    int oldScrollTop)
+{
+    clampNotesSelection();
+
+    if (notesScrollTop != oldScrollTop)
+    {
+        drawNotesList();
+        return;
+    }
+
+    ListModel model =
+        buildNotesListModel();
+
+    drawListSelection(
+        model,
+        oldSelected,
+        notesSelected);
+}
+
+void drawNotesFooter()
+{
+    FooterModel model;
+    model.left = "[A]Add [R]Rm [Ent]Ed";
+    model.center = "";
+    model.battery = footerBatteryText();
+    drawFooter(model);
+}
+} // namespace
 
 void notesBegin()
 {
-
     if (initialized)
         return;
 
     Serial.println("Notes: begin");
-
-    notesHeaderCanvas.setColorDepth(16);
-    notesHeaderCanvas.createSprite(
-        SCREEN_W,
-        NOTES_HEADER_H);
-
-    noteRowCanvas.setColorDepth(16);
-    noteRowCanvas.createSprite(
-        SCREEN_W,
-        NOTES_LINE_H);
-
-    notesStatusCanvas.setColorDepth(16);
-    notesStatusCanvas.createSprite(
-        SCREEN_W,
-        NOTES_STATUS_H);
-
     initialized = true;
-
     loadNote();
 }
 
 void notesOpen()
 {
     notesBegin();
+    notesMonthOffset = 0;
     loadNote();
 
     notesMode = true;
+    noteEditorVisible = false;
     notesSelected = 0;
     notesScrollTop = 0;
     notesMarqueeStartMs = millis();
 
-    notesNeedsFullRedraw = true;
-
     Serial.println("Notes: OPEN");
+    drawNotes();
+}
+
+void notesQuickOpen()
+{
+    notesBegin();
+    notesMonthOffset = 0;
+    loadNote();
+
+    notesMode = false;
+    notesSelected = 0;
+    notesScrollTop = 0;
+    notesMarqueeStartMs = millis();
+
+    Serial.println("Notes: QUICK");
+    beginNoteEditor(-1);
 }
 
 void notesClose()
 {
     notesMode = false;
+    noteEditorVisible = false;
+    noteEditIndex = -1;
 
     Serial.println("Notes: CLOSE");
+
+    drawAll();
 }
 
-void notesDraw()
+void drawNotes()
 {
     if (!notesMode)
         return;
 
-    if (notesNeedsFullRedraw)
-    {
-        drawNotesFull();
-        notesNeedsFullRedraw = false;
-        return;
-    }
-
-    struct tm now{};
-
-    if (getCurrentTime(now))
-    {
-        if (now.tm_min != lastNotesMinute)
-        {
-            lastNotesMinute = now.tm_min;
-
-            drawNotesHeader();
-
-            notesHeaderCanvas.pushSprite(
-                &M5Cardputer.Display,
-                0,
-                0);
-        }
-    }
+    clampNotesSelection();
+    drawNotesHeader();
+    drawNotesList();
+    drawNotesFooter();
 }
 
-//============================
-// Navigation
-//============================
+void drawNotesEditor()
+{
+    OverlayModel model;
+    model.type = OverlayType::TextInput;
+    model.title = getDisplayDateString();
+    model.prompt = "";
+    model.value = editorDisplayText();
+    model.confirmText = notesMode
+                            ? "[Esc]Close   [Ent]Save"
+                            : "[Ctrl+N]Notes   [Ent]Save";
+    model.tallInput = true;
+    drawOverlay(model);
+}
+
+bool notesInputActive()
+{
+    return notesMode || noteEditorVisible;
+}
+
 void handleNotesInput(Keyboard_Class::KeysState &ks)
 {
-    if (!notesMode)
+    if (!notesInputActive())
         return;
 
-    // ESC / DEL to close notes
-    if (ks.del)
+    if (noteEditorVisible)
+    {
+        if (keyboardBackPressed(ks))
+        {
+            cancelNoteEditor();
+            return;
+        }
+
+        if (!notesMode && ks.opt)
+        {
+            noteEditorVisible = false;
+            notesOpen();
+            return;
+        }
+
+        if (ks.enter)
+        {
+            saveNoteEditor();
+            return;
+        }
+
+        if (ks.del)
+        {
+            if (noteEditText.length() > 0)
+            {
+                noteEditText.remove(noteEditText.length() - 1);
+                drawOverlayInputValue(editorDisplayText());
+            }
+            return;
+        }
+
+        for (auto c : ks.word)
+        {
+            if (keyboardTextInputChar(ks, c) && noteEditText.length() < RADIO_INPUT_MAX)
+            {
+                noteEditText += c;
+                drawOverlayInputValue(editorDisplayText());
+            }
+        }
+        return;
+    }
+
+    if (keyboardBackPressed(ks))
     {
         notesClose();
         return;
     }
 
-    // ENTER editor
-    if (ks.enter)
+    if (ks.enter && !noteEntries.empty())
     {
-        // temporary
+        beginNoteEditor(notesSelected);
         return;
     }
 
@@ -445,97 +563,82 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
     {
         switch (c)
         {
-        // ';' = UP
+        case 'n':
+        case 'N':
+            notesClose();
+            return;
+
+        case 'h':
+        case 'H':
+            toggleHelp();
+            return;
+
+        case 'a':
+        case 'A':
+            beginNoteEditor(-1);
+            return;
+
+        case 'r':
+        case 'R':
+        case 'x':
+        case 'X':
+            removeSelectedNote();
+            return;
+
         case ';':
-            if (notesSelected > 0)
+            if (!noteEntries.empty())
             {
-                int oldSelected = notesSelected;
-                int oldScroll = notesScrollTop;
+                int oldSelected =
+                    notesSelected;
+                int oldScrollTop =
+                    notesScrollTop;
 
-                notesSelected--;
-
-                if (notesSelected < notesScrollTop)
-                {
-                    notesScrollTop = notesSelected;
-                }
-
+                notesSelected =
+                    (notesSelected - 1 + (int)noteEntries.size()) %
+                    (int)noteEntries.size();
                 notesMarqueeStartMs = millis();
-
-                // Scroll changed → redraw entire visible list
-                if (notesScrollTop != oldScroll)
-                {
-                    drawNotesList();
-                }
-                else
-                {
-                    drawNoteRow(oldSelected);
-                    drawNoteRow(notesSelected);
-                }
-
-                drawNotesStatus();
-
-                notesStatusCanvas.pushSprite(
-                    &M5Cardputer.Display,
-                    0,
-                    SCREEN_H - NOTES_STATUS_H);
+                redrawNotesSelection(
+                    oldSelected,
+                    oldScrollTop);
             }
-            break;
+            return;
 
-        // '.' = DOWN
         case '.':
-            if (!noteLines.empty() &&
-                notesSelected < (int)noteLines.size() - 1)
+            if (!noteEntries.empty())
             {
-                int oldSelected = notesSelected;
-                int oldScroll = notesScrollTop;
+                int oldSelected =
+                    notesSelected;
+                int oldScrollTop =
+                    notesScrollTop;
 
-                notesSelected++;
-
-                const int visibleLines =
-                    (SCREEN_H - NOTES_HEADER_H - NOTES_STATUS_H) /
-                    NOTES_LINE_H;
-
-                if (notesSelected >=
-                    notesScrollTop + visibleLines)
-                {
-                    notesScrollTop =
-                        notesSelected - visibleLines + 1;
-                }
-
+                notesSelected =
+                    (notesSelected + 1) %
+                    (int)noteEntries.size();
                 notesMarqueeStartMs = millis();
-
-                // Scroll changed → redraw entire visible list
-                if (notesScrollTop != oldScroll)
-                {
-                    drawNotesList();
-                }
-                else
-                {
-                    drawNoteRow(oldSelected);
-                    drawNoteRow(notesSelected);
-                }
-
-                drawNotesStatus();
-
-                notesStatusCanvas.pushSprite(
-                    &M5Cardputer.Display,
-                    0,
-                    SCREEN_H - NOTES_STATUS_H);
+                redrawNotesSelection(
+                    oldSelected,
+                    oldScrollTop);
             }
-            break;
+            return;
+
+        case ',':
+            changeNotesMonth(-1);
+            return;
+
+        case '/':
+            changeNotesMonth(1);
+            return;
         }
     }
 }
 
-//============================
-// Loop
-//============================
 void notesLoop()
 {
-    if (!notesMode)
-        return;
-
     static char lastClock[6] = "";
+    static unsigned long lastMarqueeDrawMs = 0;
+
+    if (!notesInputActive())
+        return;
 
     char clockBuf[6];
     formatClock(clockBuf, sizeof(clockBuf));
@@ -544,11 +647,25 @@ void notesLoop()
     {
         strcpy(lastClock, clockBuf);
 
-        drawNotesHeader();
-
-        notesHeaderCanvas.pushSprite(
-            &M5Cardputer.Display,
-            0,
-            0);
+        if (notesMode)
+            drawNotesHeader();
     }
+
+    if (!notesMode ||
+        noteEditorVisible ||
+        helpVisible ||
+        noteEntries.empty())
+        return;
+
+    if (millis() - lastMarqueeDrawMs < 80)
+        return;
+
+    lastMarqueeDrawMs = millis();
+
+    ListModel model =
+        buildNotesListModel();
+
+    drawListRow(
+        model,
+        notesSelected);
 }

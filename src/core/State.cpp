@@ -50,7 +50,7 @@ int wifiNetCount = 0;
 int wifiNetSel = 0;
 int wifiNetScroll = 0;
 
-bool wifiOverlayVisible = false;
+bool wifiMenuVisible = false;
 bool wifiPassOverlayVisible = false;
 bool addUrlOverlayVisible = false;
 bool addNameOverlayVisible = false;
@@ -59,12 +59,9 @@ char inputBuf[RADIO_INPUT_MAX + 1] = "";
 int inputLen = 0;
 String inputSaved = "";
 
-M5Canvas statusCanvas(&M5Cardputer.Display);
-M5Canvas headerCanvas(&M5Cardputer.Display);
-
 bool toastActive = false;
 unsigned long toastEnd = 0;
-char hdrMsg[20] = "";
+String hdrMsg = "";
 unsigned long hdrMsgEnd = 0;
 bool helpVisible = false;
 bool screenOn = true;
@@ -85,6 +82,7 @@ unsigned long lastActivityMs = 0;
 bool settingsMenuVisible = false;
 int settingsSel = 0;
 bool debugOverlayVisible = false;
+bool calculatorVisible = false;
 
 //notes
 bool notesMode = false;

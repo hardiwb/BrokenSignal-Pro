@@ -3,16 +3,70 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include <cstring>
-#include "UI/UI.h"
-#include "UI/RadioUI.h"
+#include "UI/SplashScreen.h"
+#include "UI/Header.h"
+#include "UI/Footer.h"
+#include "UI/Toast.h"
 #include "core/State.h"
 #include "core/Keyboard.h"
 #include "core/System.h"
 #include "module/Player.h"
 #include "module/Browser.h"
+#include "module/Calculator.h"
+#include "module/Debug.h"
 #include "module/Radio.h"
-#include "module/Clock.h"
+#include "module/Settings.h"
+#include "module/service/Clock.h"
+#include "module/service/WiFi.h"
 #include "module/Notes.h"
+
+namespace
+{
+bool loadBootThemeFrom(
+    const char *path)
+{
+  File f = SD.open(path, FILE_READ);
+  if (!f)
+    return false;
+
+  while (f.available())
+  {
+    String line = f.readStringUntil('\n');
+    line.trim();
+
+    int eq = line.indexOf('=');
+    if (eq < 0)
+      continue;
+
+    String key = line.substring(0, eq);
+    int val = line.substring(eq + 1).toInt();
+
+    if (key == "theme" && val >= 0 && val < 5)
+    {
+      themeIdx = val;
+      T = THEMES[val];
+      f.close();
+      Serial.print("Boot theme: ");
+      Serial.println(T->name);
+      return true;
+    }
+  }
+
+  f.close();
+  return false;
+}
+
+void loadBootTheme()
+{
+  if (loadBootThemeFrom("/Music/settings.cfg"))
+    return;
+
+  if (loadBootThemeFrom("/settings.cfg"))
+    return;
+
+  Serial.println("Boot theme: fallback");
+}
+}
 
 void setup()
 {
@@ -40,7 +94,6 @@ void setup()
 
   Serial.println("[5] Display");
   M5Cardputer.Display.setRotation(1);
-  drawSplash("> SCANNING /MUSIC/...");
 
   Serial.println("[6] SPI begin");
   SPI.begin(SD_CLK, SD_MISO, SD_MOSI, SD_CS);
@@ -55,26 +108,25 @@ void setup()
       delay(1000);
   }
 
+  loadBootTheme();
+  drawSplash("> SCANNING /MUSIC/...", true);
+
   Serial.println("[8] RTC");
   initRtcClock();
 
   Serial.println("[9] Audio");
   output = new AudioOutputM5Speaker(&M5Cardputer.Speaker, 0);
 
-  Serial.println("[10] Canvas");
-  statusCanvas.createSprite(SCREEN_W, STATUS_H);
-  headerCanvas.createSprite(SCREEN_W, HEADER_H);
-
-  Serial.println("[11] Scan music");
+  Serial.println("[10] Scan music");
   allFolders.clear();
   scanDir("/Music", "Music");
   Serial.printf("Folders found: %d\n", allFolders.size());
 
-  Serial.println("[12] Load settings");
+  Serial.println("[11] Load settings");
   loadRecentFromSD();
   loadSettings();
-
   M5Cardputer.Display.setBrightness(screenBrightness);
+
   lastActivityMs = millis();
 
   if (allFolders.empty())
@@ -120,62 +172,55 @@ void loop()
 
   keyboardLoop();
 
-  if (notesMode)
+  if (notesInputActive())
   {
     notesLoop();
   }
 
   // UI Update
   static unsigned long lastDraw = 0;
-  if (screenOn && !helpVisible && !settingsMenuVisible && millis() - lastDraw >= 500)
+  if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+      !calculatorInputActive() &&
+      millis() - lastDraw >= 500)
   {
     lastDraw = millis();
     cursorVisible = !cursorVisible;
 
     if (debugOverlayVisible)
     {
-      drawDebug();
+      drawHeaderCursor(cursorVisible);
     }
     else if (webRadioMode)
     {
-      bool overlayOpen = wifiOverlayVisible || wifiPassOverlayVisible ||
-                         addUrlOverlayVisible || addNameOverlayVisible ||
+      bool overlayOpen = wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
                          removeConfirmVisible;
-      if (!overlayOpen)
+      if (wifiMenuVisible)
       {
-        if (radioIsPlaying)
-        {
-          drawRadioHeader();
-        }
-        if (themeIdx == 1 && radioCount > 0)
-        {
-          if (!radioIsPlaying)
-            drawRadioHeader();
-          int visIdx = radioSelected - radioScrollTop;
-          if (visIdx >= 0 && visIdx < VISIBLE_TRACKS)
-          {
-            int y = LIST_Y + visIdx * LIST_ITEM_H;
-            uint16_t cur = cursorVisible ? T->accent1 : T->bg;
-            M5Cardputer.Display.fillRect(SCREEN_W - 7 - 8, y + 3, 5, LIST_ITEM_H - 6, cur);
-          }
-        }
+        drawHeaderCursor(cursorVisible);
+        if (wifiNetCount > 0)
+          drawWifiRow(wifiNetSel);
+      }
+      else if (!overlayOpen)
+      {
+        drawHeaderCursor(radioIsPlaying && cursorVisible);
+        if (radioCount > 0)
+          drawRadioRow(radioSelected);
       }
     }
     else
     {
-      bool terminalNeedsBlink = (themeIdx == 1) &&
-                                (isPlaying || isPaused ||
-                                 (selectedItem >= 0 && selectedItem < (int)items.size() &&
-                                  !items[selectedItem].isFolder));
-      bool headerNeedsBlink = terminalNeedsBlink || isPlaying;
-      if (headerNeedsBlink)
-        drawHeader();
+      drawHeaderCursor(cursorVisible);
+      if (selectedItem >= 0 && selectedItem < (int)items.size())
+        drawPlayerRow(selectedItem);
       if (isPlaying)
-        drawStatus();
+        updatePlayerStatus();
     }
   }
 
-  if (!webRadioMode && screenOn && !helpVisible && !settingsMenuVisible)
+  if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+      !calculatorInputActive() &&
+      !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
+      !removeConfirmVisible)
   {
     static char lastClockText[6] = "";
     char clockText[6];
@@ -184,26 +229,30 @@ void loop()
     {
       strncpy(lastClockText, clockText, sizeof(lastClockText) - 1);
       lastClockText[sizeof(lastClockText) - 1] = '\0';
-      drawHeader();
+      drawHeaderClock(String(clockText));
     }
   }
 
   if (toastActive && millis() > toastEnd)
   {
-    toastActive = false;
-    if (screenOn && !helpVisible && !settingsMenuVisible)
+    dismissToast();
+    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+        !calculatorInputActive() &&
+        !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
+        !removeConfirmVisible)
       drawAll();
   }
 
   if (hdrMsgEnd > 0 && millis() >= hdrMsgEnd)
   {
     hdrMsgEnd = 0;
-    if (screenOn && !helpVisible && !settingsMenuVisible)
+    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+        !calculatorInputActive())
     {
       if (webRadioMode)
         drawRadioHeader();
       else
-        drawHeader();
+        drawPlayerHeader();
     }
   }
 
@@ -218,19 +267,19 @@ void loop()
   {
     batteryLevel = (int)min((int32_t)99, M5.Power.getBatteryLevel());
     batteryLastMs = millis();
-    if (screenOn && !helpVisible && !settingsMenuVisible)
+    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+        !calculatorInputActive())
     {
-      if (webRadioMode)
-        drawRadioStatus();
-      else
-        drawStatus();
+      drawFooterBattery(footerBatteryText());
     }
   }
 
   // Battery-safe auto screen off: only when idle, never over an open menu/overlay.
   if (screenOn && autoScreenOffSec > 0 && !settingsMenuVisible && !helpVisible &&
+      !notesInputActive() &&
+      !calculatorInputActive() &&
       !debugOverlayVisible &&
-      !wifiOverlayVisible && !wifiPassOverlayVisible && !addUrlOverlayVisible &&
+      !wifiMenuVisible && !wifiPassOverlayVisible && !addUrlOverlayVisible &&
       !addNameOverlayVisible && !removeConfirmVisible &&
       millis() - lastActivityMs >= (unsigned long)autoScreenOffSec * 1000UL)
   {
