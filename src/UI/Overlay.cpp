@@ -12,6 +12,13 @@ static constexpr int OVERLAY_H = SCREEN_H - (OVERLAY_MARGIN * 2);
 static constexpr int OVERLAY_PAD = 8;
 static constexpr int OVERLAY_TITLE_Y = OVERLAY_Y + 10;
 static constexpr int OVERLAY_FOOTER_Y = OVERLAY_Y + OVERLAY_H - 7;
+static constexpr int OVERLAY_LIST_X = OVERLAY_X + OVERLAY_PAD;
+static constexpr int OVERLAY_LIST_Y = OVERLAY_Y + 30;
+static constexpr int OVERLAY_LIST_W = OVERLAY_W - (OVERLAY_PAD * 2);
+static constexpr int OVERLAY_LIST_ROW_H = 14;
+static constexpr int OVERLAY_LIST_ROW_TEXT_X = 4;
+static constexpr int OVERLAY_LIST_ROW_TOP_PAD = 6;
+static constexpr int OVERLAY_LIST_BOTTOM_GAP = 4;
 static constexpr int OVERLAY_INPUT_X = OVERLAY_X + OVERLAY_PAD;
 static constexpr int OVERLAY_INPUT_Y_WITH_PROMPT = OVERLAY_Y + 40;
 static constexpr int OVERLAY_INPUT_Y_COMPACT = OVERLAY_Y + 17;
@@ -69,11 +76,11 @@ void drawOverlay(const OverlayModel &model)
 
     switch (model.type)
     {
-    case OverlayType::WifiList:
+    case OverlayType::List:
         drawOverlayList(model);
         break;
 
-    case OverlayType::WifiPassword:
+    case OverlayType::PasswordInput:
     case OverlayType::TextInput:
         drawOverlayInput(model);
         break;
@@ -161,21 +168,22 @@ void drawOverlayList(
     auto &D = M5Cardputer.Display;
     D.setTextDatum(middle_left);
 
-    const int rowX = OVERLAY_X + OVERLAY_PAD;
-    const int rowY = OVERLAY_Y + 30;
-    const int rowW = OVERLAY_W - (OVERLAY_PAD * 2);
-    const int rowH = 14;
     const int maxRows =
-        (OVERLAY_FOOTER_Y - rowY - 4) / rowH;
+        (OVERLAY_FOOTER_Y - OVERLAY_LIST_Y - OVERLAY_LIST_BOTTOM_GAP) / OVERLAY_LIST_ROW_H;
 
     for (int i = 0; i < (int)model.items.size() && i < maxRows; i++)
     {
         const bool selected = i == model.selected;
-        const int y = rowY + i * rowH;
+        const int y = OVERLAY_LIST_Y + i * OVERLAY_LIST_ROW_H;
 
-        D.fillRect(rowX, y - 6, rowW, rowH, selected ? T->accent2 : T->hdrBg);
+        D.fillRect(
+            OVERLAY_LIST_X,
+            y - OVERLAY_LIST_ROW_TOP_PAD,
+            OVERLAY_LIST_W,
+            OVERLAY_LIST_ROW_H,
+            selected ? T->accent2 : T->hdrBg);
         D.setTextColor(selected ? T->bg : T->textMid);
-        D.drawString(model.items[i], rowX + 4, y, &fonts::Font0);
+        D.drawString(model.items[i], OVERLAY_LIST_X + OVERLAY_LIST_ROW_TEXT_X, y, &fonts::Font0);
     }
 }
 
@@ -333,13 +341,13 @@ void drawOverlayConfirm(
         OVERLAY_Y + 42,
         &fonts::Font0);
 
-    D.setTextColor(T->accent1);
+    D.setTextColor(T->textMid);
     D.drawString(
         fitOverlayText(
             model.confirmText,
             OVERLAY_W - (OVERLAY_PAD * 2)),
         SCREEN_W / 2,
-        OVERLAY_FOOTER_Y,
+        OVERLAY_FOOTER_Y - 2,
         &fonts::Font0);
 }
 

@@ -141,6 +141,26 @@ void drawCalculatorDisplay()
     D.clearClipRect();
 }
 
+void deleteCalcInput()
+{
+    if (calcInput.length() > 0)
+    {
+        calcInput.remove(calcInput.length() - 1);
+        calcDisplay = calcInput.length() > 0 ? calcInput : "0";
+        drawCalculatorDisplay();
+        return;
+    }
+
+    if (calcOperator != 0 || calcHasAccumulator || calcDisplay != "0")
+    {
+        resetCalculator();
+        drawCalculatorDisplay();
+        return;
+    }
+
+    closeCalculator();
+}
+
 void applyOperator()
 {
     double rhs = inputValue();
@@ -277,12 +297,12 @@ void drawCalculator()
 
     drawCalculatorDisplay();
 
-    D.setTextDatum(middle_left);
+    D.setTextDatum(middle_center);
     D.setTextColor(T->textMid);
     D.drawString(
         "[A]Add [S]Sub [X]Mul [D]Div",
-        CALC_X + CALC_PAD,
-        CALC_BOX_Y + CALC_BOX_H + 13,
+        SCREEN_W / 2,
+        CALC_BOX_Y + CALC_BOX_H + 11,
         &fonts::Font0);
 
     D.setTextDatum(middle_center);
@@ -301,16 +321,7 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
 
     if (keyboardBackPressed(ks))
     {
-        if (calcInput.length() == 0 &&
-            calcDisplay == "0" &&
-            calcOperator == 0)
-        {
-            closeCalculator();
-            return;
-        }
-
-        resetCalculator();
-        drawCalculatorDisplay();
+        deleteCalcInput();
         return;
     }
 
@@ -322,12 +333,7 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
 
     if (ks.del)
     {
-        if (calcInput.length() > 0)
-        {
-            calcInput.remove(calcInput.length() - 1);
-            calcDisplay = calcInput.length() > 0 ? calcInput : "0";
-            drawCalculatorDisplay();
-        }
+        deleteCalcInput();
         return;
     }
 

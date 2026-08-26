@@ -9,6 +9,18 @@ extern bool cursorVisible;
 
 namespace
 {
+String listItemNumber(
+    int index)
+{
+    int displayIndex = index + 1;
+    if (displayIndex > 99)
+        displayIndex = 99;
+
+    char buf[4];
+    snprintf(buf, sizeof(buf), "%02d", displayIndex);
+    return String(buf);
+}
+
 String fitTextToWidth(
     const String &text,
     int width)
@@ -92,7 +104,7 @@ void drawList(
     }
 
     const int listH =
-        VISIBLE_TRACKS *
+        LIST_VISIBLE_ITEM *
         LIST_ITEM_H;
 
     // --------------------------------------------------------
@@ -111,7 +123,7 @@ void drawList(
     // --------------------------------------------------------
 
     for (int i = 0;
-         i < VISIBLE_TRACKS;
+         i < LIST_VISIBLE_ITEM;
          i++)
     {
         int index =
@@ -155,7 +167,7 @@ void drawListRow(
         index - model.scrollTop;
 
     if (row < 0 ||
-        row >= VISIBLE_TRACKS)
+        row >= LIST_VISIBLE_ITEM)
         return;
 
     const int y =
@@ -191,6 +203,7 @@ void drawListRow(
         drawFolderItem(
             item,
             y,
+            index,
             selected,
             model.marqueeStartMs);
 
@@ -201,6 +214,7 @@ void drawListRow(
         drawPropertyItem(
             item,
             y,
+            index,
             selected,
             model.marqueeStartMs);
 
@@ -213,6 +227,7 @@ void drawListRow(
         drawNormalItem(
             item,
             y,
+            index,
             selected,
             model.marqueeStartMs);
 
@@ -234,6 +249,7 @@ void drawListRow(
 void drawNormalItem(
     const ListItemModel &item,
     int y,
+    int index,
     bool selected,
     unsigned long marqueeStartMs)
 {
@@ -244,7 +260,7 @@ void drawNormalItem(
     // Playing / selection indicator
     // --------------------------------------------------------
 
-    if (item.isPlaying)
+    if (item.isActive)
     {
         M5Cardputer.Display.fillRect(
             0,
@@ -263,21 +279,23 @@ void drawNormalItem(
             T->accent2);
     }
 
-    // --------------------------------------------------------
-    // Prefix
-    // --------------------------------------------------------
-
     M5Cardputer.Display.setTextDatum(
         middle_left);
+    M5Cardputer.Display.setTextColor(T->textDim);
+    M5Cardputer.Display.drawString(
+        listItemNumber(index),
+        LIST_INDEX_X,
+        midY,
+        &fonts::Font0);
 
-    if (item.isPlaying)
+    if (item.isActive)
     {
         M5Cardputer.Display.setTextColor(
             T->accent1);
 
         M5Cardputer.Display.drawString(
             ">",
-            4,
+            LIST_PREFIX_X,
             midY,
             &fonts::Font0);
     }
@@ -288,7 +306,7 @@ void drawNormalItem(
 
         M5Cardputer.Display.drawString(
             "|",
-            4,
+            LIST_PREFIX_X,
             midY,
             &fonts::Font0);
     }
@@ -297,7 +315,7 @@ void drawNormalItem(
     // Label
     // --------------------------------------------------------
 
-    const int NAME_X = 18;
+    const int NAME_X = LIST_CONTENT_X;
     const int DURATION_W =
         item.durationMs > 0
             ? 42
@@ -310,11 +328,13 @@ void drawNormalItem(
         DURATION_W;
 
     uint16_t textColor =
-        item.isPlaying
-            ? T->accent1
-            : selected
-                ? T->accent2
-                : T->textMid;
+        item.isDimmed
+            ? T->textDim
+            : item.isActive
+                ? T->accent1
+                : selected
+                    ? T->accent2
+                    : T->textMid;
 
     M5Cardputer.Display.setTextColor(
         textColor);
@@ -350,9 +370,11 @@ void drawNormalItem(
             middle_right);
 
         M5Cardputer.Display.setTextColor(
-            item.isPlaying
-                ? T->accent1
-                : T->textDim);
+            item.isDimmed
+                ? T->textDim
+                : item.isActive
+                    ? T->accent1
+                    : T->textDim);
 
         M5Cardputer.Display.drawString(
             duration,
@@ -401,6 +423,7 @@ void drawNormalItem(
 void drawFolderItem(
     const ListItemModel &item,
     int y,
+    int index,
     bool selected,
     unsigned long marqueeStartMs)
 {
@@ -421,14 +444,21 @@ void drawFolderItem(
             T->accent1);
     }
 
-    // --------------------------------------------------------
-    // Folder symbol
-    // --------------------------------------------------------
+    M5Cardputer.Display.setTextDatum(
+        middle_left);
+    M5Cardputer.Display.setTextColor(T->textDim);
+    M5Cardputer.Display.drawString(
+        listItemNumber(index),
+        LIST_INDEX_X,
+        midY,
+        &fonts::Font0);
 
     uint16_t folderColor =
-        selected
-            ? T->accent1
-            : T->accent2;
+        item.isDimmed
+            ? T->textDim
+            : selected
+                ? T->accent1
+                : T->accent2;
 
     M5Cardputer.Display.setTextDatum(
         middle_left);
@@ -437,14 +467,8 @@ void drawFolderItem(
         folderColor);
 
     M5Cardputer.Display.drawString(
-        "#",
-        4,
-        midY,
-        &fonts::Font0);
-
-    M5Cardputer.Display.drawString(
         "/",
-        18,
+        LIST_FOLDER_SLASH_X,
         midY,
         &fonts::Font0);
 
@@ -454,12 +478,12 @@ void drawFolderItem(
 
     drawTextOrMarquee(
         item.label,
-        28,
+        LIST_FOLDER_NAME_X,
         midY,
         SCREEN_W -
             LIST_SCROLLBAR_W -
             3 -
-            28,
+            LIST_FOLDER_NAME_X,
         folderColor,
         selected,
         marqueeStartMs);
@@ -480,6 +504,7 @@ void drawFolderItem(
 void drawPropertyItem(
     const ListItemModel &item,
     int y,
+    int index,
     bool selected,
     unsigned long marqueeStartMs)
 {
@@ -507,24 +532,32 @@ void drawPropertyItem(
 
         M5Cardputer.Display.drawString(
             ">",
-            4,
+            LIST_PREFIX_X,
             midY,
             &fonts::Font0);
     }
+
+    M5Cardputer.Display.setTextDatum(
+        middle_left);
+    M5Cardputer.Display.setTextColor(T->textDim);
+    M5Cardputer.Display.drawString(
+        listItemNumber(index),
+        LIST_INDEX_X,
+        midY,
+        &fonts::Font0);
 
     // --------------------------------------------------------
     // Property label
     // --------------------------------------------------------
 
-    M5Cardputer.Display.setTextDatum(
-        middle_left);
-
     M5Cardputer.Display.setTextColor(
-        selected
-            ? T->accent1
-            : T->textMid);
+        item.isDimmed
+            ? T->textDim
+            : selected
+                ? T->accent1
+                : T->textMid);
 
-    const int LABEL_X = 18;
+    const int LABEL_X = LIST_CONTENT_X;
     const int VALUE_W = 76;
     const int LABEL_W =
         SCREEN_W -
@@ -554,9 +587,11 @@ void drawPropertyItem(
             middle_right);
 
         M5Cardputer.Display.setTextColor(
-            selected
-                ? T->accent2
-                : T->textDim);
+            item.isDimmed
+                ? T->textDim
+                : selected
+                    ? T->accent2
+                    : T->textDim);
 
         String value =
             "<" +
@@ -617,7 +652,7 @@ void drawListScrollbar(
         LIST_SCROLLBAR_W;
 
     const int listH =
-        VISIBLE_TRACKS *
+        LIST_VISIBLE_ITEM *
         LIST_ITEM_H;
 
     // --------------------------------------------------------
@@ -636,7 +671,7 @@ void drawListScrollbar(
     // --------------------------------------------------------
 
     if ((int)model.items.size() <=
-        VISIBLE_TRACKS)
+        LIST_VISIBLE_ITEM)
         return;
 
     // --------------------------------------------------------
@@ -650,14 +685,14 @@ void drawListScrollbar(
         max(
             5,
             listH *
-                VISIBLE_TRACKS /
+                LIST_VISIBLE_ITEM /
                 total);
 
     const int maxScroll =
         max(
             1,
             total -
-                VISIBLE_TRACKS);
+                LIST_VISIBLE_ITEM);
 
     const int thumbY =
         LIST_Y +

@@ -237,8 +237,8 @@ static int getPlayerListTopForSelection(int selection)
     if (items.empty())
         return 0;
 
-    int top = selection - VISIBLE_TRACKS / 2;
-    top = max(0, min(top, (int)items.size() - VISIBLE_TRACKS));
+    int top = selection - LIST_VISIBLE_ITEM / 2;
+    top = max(0, min(top, (int)items.size() - LIST_VISIBLE_ITEM));
     return max(0, top);
 }
 
@@ -249,13 +249,12 @@ static int getPlayerListTop()
 
 static void populatePlayerListModel(ListModel &model)
 {
-    int trackNumber = 0;
     for (int i = 0; i < (int)items.size(); i++)
     {
         ListItemModel item;
         item.label = items[i].label;
         item.isSelected = i == selectedItem;
-        item.isPlaying = !items[i].isFolder && i == currentTrack;
+        item.isActive = !items[i].isFolder && i == currentTrack;
         item.durationMs = items[i].durationMs;
 
         if (items[i].isFolder)
@@ -264,11 +263,6 @@ static void populatePlayerListModel(ListModel &model)
         }
         else
         {
-            trackNumber++;
-
-            char prefix[4];
-            snprintf(prefix, sizeof(prefix), "%02d", trackNumber);
-            item.label = String(prefix) + " " + item.label;
         }
 
         if (items[i].path == "__PREV__" || items[i].path == "__MORE__")

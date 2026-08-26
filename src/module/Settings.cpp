@@ -94,8 +94,8 @@ static void clampSettingsSelection()
 
     if (settingsSel < settingsScrollTop)
         settingsScrollTop = settingsSel;
-    if (settingsSel >= settingsScrollTop + VISIBLE_TRACKS)
-        settingsScrollTop = settingsSel - VISIBLE_TRACKS + 1;
+    if (settingsSel >= settingsScrollTop + LIST_VISIBLE_ITEM)
+        settingsScrollTop = settingsSel - LIST_VISIBLE_ITEM + 1;
 
     settingsScrollTop = max(0, settingsScrollTop);
 }

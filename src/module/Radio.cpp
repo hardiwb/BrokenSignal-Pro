@@ -33,7 +33,7 @@ static void populateRadioListModel(ListModel &model)
         ListItemModel item;
         item.label = radioList[i].name;
         item.isSelected = i == radioSelected;
-        item.isPlaying = i == radioPlaying && radioIsPlaying;
+        item.isActive = i == radioPlaying && radioIsPlaying;
         model.items.push_back(item);
     }
 }
@@ -479,8 +479,8 @@ void radioScrollEnsureVisible()
 {
     if (radioSelected < radioScrollTop)
         radioScrollTop = radioSelected;
-    if (radioSelected >= radioScrollTop + VISIBLE_TRACKS)
-        radioScrollTop = radioSelected - VISIBLE_TRACKS + 1;
+    if (radioSelected >= radioScrollTop + LIST_VISIBLE_ITEM)
+        radioScrollTop = radioSelected - LIST_VISIBLE_ITEM + 1;
     if (radioScrollTop < 0)
         radioScrollTop = 0;
 }
@@ -564,7 +564,7 @@ void handleRadioOverlayInput(Keyboard_Class::KeysState &ks)
                 radioCount++;
                 saveRadioList();
                 radioSelected = radioCount - 1;
-                radioScrollTop = max(0, radioSelected - VISIBLE_TRACKS + 1);
+                radioScrollTop = max(0, radioSelected - LIST_VISIBLE_ITEM + 1);
             }
             addNameOverlayVisible = false;
             drawRadioAll();

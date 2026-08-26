@@ -1,6 +1,7 @@
 #include "module/Notes.h"
 
 #include <SD.h>
+#include <time.h>
 #include <vector>
 
 #include "core/Config.h"
@@ -20,109 +21,115 @@ void drawNotesEditor();
 
 namespace
 {
+void loadNote();
+void drawNotesList();
+
+enum class NotesViewMode
+{
+    Day,
+    Month
+};
+
 struct NoteEntry
 {
     String stamp;
+    bool done = false;
     String text;
 };
 
 std::vector<NoteEntry> noteEntries;
+std::vector<int> visibleNoteIndices;
 
 String currentMonth;
+String currentDay;
 String notePath;
 String noteEditText;
 
 bool initialized = false;
 bool noteEditorVisible = false;
 int noteEditIndex = -1;
+NotesViewMode notesViewMode = NotesViewMode::Day;
+int notesDayOffset = 0;
 int notesMonthOffset = 0;
 
-void viewedDateParts(
-    int &year,
-    int &month,
-    int &day,
-    int &hour,
-    int &minute)
+bool getViewedTime(struct tm &viewed)
 {
-    struct tm now{};
-
-    if (!getCurrentTime(now))
+    if (!getCurrentTime(viewed))
     {
-        year = 2000;
-        month = 1;
-        day = 1;
-        hour = 0;
-        minute = 0;
-        return;
+        memset(&viewed, 0, sizeof(viewed));
+        viewed.tm_year = 100;
+        viewed.tm_mon = 0;
+        viewed.tm_mday = 1;
+        viewed.tm_hour = 0;
+        viewed.tm_min = 0;
+        viewed.tm_sec = 0;
+        viewed.tm_isdst = -1;
+        return false;
     }
 
-    int monthIndex =
-        now.tm_mon +
-        notesMonthOffset;
-
-    year =
-        now.tm_year +
-        1900 +
-        monthIndex / 12;
-
-    monthIndex %= 12;
-    if (monthIndex < 0)
+    if (notesViewMode == NotesViewMode::Day)
     {
-        monthIndex += 12;
-        year--;
+        viewed.tm_mday += notesDayOffset;
+    }
+    else
+    {
+        viewed.tm_mon += notesMonthOffset;
     }
 
-    month = monthIndex + 1;
-    day = now.tm_mday;
-    hour = now.tm_hour;
-    minute = now.tm_min;
+    viewed.tm_isdst = -1;
+    mktime(&viewed);
+    return true;
 }
 
-String getMonthString()
+String viewedDateKey()
 {
-    int year;
-    int month;
-    int day;
-    int hour;
-    int minute;
-    viewedDateParts(
-        year,
-        month,
-        day,
-        hour,
-        minute);
+    struct tm viewed{};
+    getViewedTime(viewed);
+
+    char buf[16];
+    snprintf(
+        buf,
+        sizeof(buf),
+        "%04d-%02d-%02d",
+        viewed.tm_year + 1900,
+        viewed.tm_mon + 1,
+        viewed.tm_mday);
+
+    return String(buf);
+}
+
+String viewedMonthKey()
+{
+    struct tm viewed{};
+    getViewedTime(viewed);
 
     char buf[8];
     snprintf(
         buf,
         sizeof(buf),
         "%04d-%02d",
-        year,
-        month);
+        viewed.tm_year + 1900,
+        viewed.tm_mon + 1);
 
     return String(buf);
 }
 
+void updateViewedDateCache()
+{
+    struct tm viewed{};
+    getViewedTime(viewed);
+    currentDay = viewedDateKey();
+    currentMonth = viewedMonthKey();
+}
+
 String getDisplayDateString()
 {
-    struct tm now{};
-    if (!getCurrentTime(now))
+    struct tm viewed{};
+    if (!getViewedTime(viewed))
         return "DATE UNAVAILABLE";
 
-    if (notesMonthOffset != 0)
+    if (notesViewMode == NotesViewMode::Month)
     {
-        int year;
-        int month;
-        int day;
-        int hour;
-        int minute;
-        viewedDateParts(
-            year,
-            month,
-            day,
-            hour,
-            minute);
-
         static const char *monthNames[] = {
             "Jan",
             "Feb",
@@ -137,64 +144,193 @@ String getDisplayDateString()
             "Nov",
             "Dec"};
 
-        return String(monthNames[month - 1]) + " " + String(year);
+        return String(monthNames[viewed.tm_mon]) + " " + String(viewed.tm_year + 1900);
     }
 
     char buf[32];
-    strftime(buf, sizeof(buf), "%a, %b %d %Y", &now);
+    strftime(buf, sizeof(buf), "%a, %b %d %Y", &viewed);
     return String(buf);
 }
 
 String getEntryStamp()
 {
-    int year;
-    int month;
-    int day;
-    int hour;
-    int minute;
-    viewedDateParts(
-        year,
-        month,
-        day,
-        hour,
-        minute);
+    struct tm viewed{};
+    getViewedTime(viewed);
 
     char buf[20];
     snprintf(
         buf,
         sizeof(buf),
         "%04d-%02d-%02d %02d:%02d",
-        year,
-        month,
-        day,
-        hour,
-        minute);
+        viewed.tm_year + 1900,
+        viewed.tm_mon + 1,
+        viewed.tm_mday,
+        viewed.tm_hour,
+        viewed.tm_min);
 
     return String(buf);
 }
 
-String formatEntryLabel(const NoteEntry &entry, int index)
+bool parseNoteStamp(
+    const String &stamp,
+    String &dayKey,
+    String &monthKey)
 {
-    char prefix[4];
-    snprintf(prefix, sizeof(prefix), "%02d", index + 1);
+    if (stamp.length() < 7)
+        return false;
 
-    return String(prefix) + " " + entry.text;
+    monthKey = stamp.substring(0, 7);
+    if (stamp.length() >= 10)
+        dayKey = stamp.substring(0, 10);
+    else
+        dayKey = stamp;
+
+    return monthKey.length() == 7 && dayKey.length() >= 7;
+}
+
+bool noteMatchesView(const NoteEntry &entry)
+{
+    String dayKey;
+    String monthKey;
+    if (!parseNoteStamp(entry.stamp, dayKey, monthKey))
+        return false;
+
+    if (notesViewMode == NotesViewMode::Month)
+        return monthKey == currentMonth;
+
+    return dayKey == currentDay;
+}
+
+String formatEntryLabel(const NoteEntry &entry)
+{
+    if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
+        return entry.stamp.substring(5, 10) + " " + entry.text;
+
+    return entry.text;
+}
+
+void rebuildVisibleNoteIndices()
+{
+    visibleNoteIndices.clear();
+
+    for (int i = 0; i < (int)noteEntries.size(); i++)
+    {
+        if (noteMatchesView(noteEntries[i]))
+            visibleNoteIndices.push_back(i);
+    }
+}
+
+int visibleNoteCount()
+{
+    return (int)visibleNoteIndices.size();
+}
+
+int noteEntryIndexFromVisible(int visibleIndex)
+{
+    if (visibleIndex < 0 || visibleIndex >= visibleNoteCount())
+        return -1;
+
+    return visibleNoteIndices[visibleIndex];
+}
+
+void resetNotesCursor()
+{
+    notesSelected = 0;
+    notesScrollTop = 0;
+    notesMarqueeStartMs = millis();
+}
+
+void redrawQuickNoteEditor()
+{
+    if (!noteEditorVisible || notesMode)
+        return;
+
+    drawNotesEditor();
+}
+
+void shiftQuickNoteDate(int delta)
+{
+    notesDayOffset += delta;
+    redrawQuickNoteEditor();
+}
+
+void selectTopNote()
+{
+    if (visibleNoteCount() == 0)
+        return;
+
+    notesSelected = 0;
+    notesScrollTop = 0;
+    notesMarqueeStartMs = millis();
+    drawNotesList();
+}
+
+void selectBottomNote()
+{
+    int count = visibleNoteCount();
+    if (count == 0)
+        return;
+
+    notesSelected = count - 1;
+    if (notesSelected >= LIST_VISIBLE_ITEM)
+        notesScrollTop = notesSelected - LIST_VISIBLE_ITEM + 1;
+    else
+        notesScrollTop = 0;
+    notesMarqueeStartMs = millis();
+    drawNotesList();
+}
+
+void setNotesViewMode(NotesViewMode mode)
+{
+    notesViewMode = mode;
+    if (mode == NotesViewMode::Day)
+        notesDayOffset = 0;
+    else
+        notesMonthOffset = 0;
+
+    resetNotesCursor();
+    loadNote();
+    drawNotes();
+}
+
+void shiftNotesView(int delta)
+{
+    if (notesViewMode == NotesViewMode::Day)
+        notesDayOffset += delta;
+    else
+        notesMonthOffset += delta;
+
+    resetNotesCursor();
+    loadNote();
+    drawNotes();
+}
+
+void jumpToToday()
+{
+    notesViewMode = NotesViewMode::Day;
+    notesDayOffset = 0;
+    notesMonthOffset = 0;
+    resetNotesCursor();
+    loadNote();
+    drawNotes();
 }
 
 void clampNotesSelection()
 {
-    if (noteEntries.empty())
+    rebuildVisibleNoteIndices();
+
+    if (visibleNoteIndices.empty())
     {
         notesSelected = 0;
         notesScrollTop = 0;
         return;
     }
 
-    notesSelected = max(0, min(notesSelected, (int)noteEntries.size() - 1));
+    notesSelected = max(0, min(notesSelected, visibleNoteCount() - 1));
     if (notesSelected < notesScrollTop)
         notesScrollTop = notesSelected;
-    if (notesSelected >= notesScrollTop + VISIBLE_TRACKS)
-        notesScrollTop = notesSelected - VISIBLE_TRACKS + 1;
+    if (notesSelected >= notesScrollTop + LIST_VISIBLE_ITEM)
+        notesScrollTop = notesSelected - LIST_VISIBLE_ITEM + 1;
     notesScrollTop = max(0, notesScrollTop);
 }
 
@@ -202,7 +338,7 @@ void loadNote()
 {
     noteEntries.clear();
 
-    currentMonth = getMonthString();
+    updateViewedDateCache();
     notePath = "/Notes/" + currentMonth + ".txt";
 
     Serial.print("Notes: ");
@@ -223,17 +359,28 @@ void loadNote()
         if (line.length() == 0)
             continue;
 
-        int sep = line.indexOf('|');
         NoteEntry entry;
-        if (sep >= 0)
+        int firstSep = line.indexOf('|');
+        int secondSep = firstSep >= 0 ? line.indexOf('|', firstSep + 1) : -1;
+
+        if (firstSep >= 0 && secondSep >= 0)
         {
-            entry.stamp = line.substring(0, sep);
-            entry.text = line.substring(sep + 1);
+            entry.stamp = line.substring(0, firstSep);
+            String status = line.substring(firstSep + 1, secondSep);
+            entry.done = status.indexOf('x') >= 0 || status.indexOf('X') >= 0;
+            entry.text = line.substring(secondSep + 1);
+        }
+        else if (firstSep >= 0)
+        {
+            entry.stamp = line.substring(0, firstSep);
+            entry.done = false;
+            entry.text = line.substring(firstSep + 1);
         }
         else
         {
             // Backward-compatible import for older daily/plain note files.
             entry.stamp = getEntryStamp();
+            entry.done = false;
             entry.text = line;
         }
 
@@ -252,6 +399,7 @@ void loadNote()
 void saveNote()
 {
     SD.mkdir("/Notes");
+    SD.remove(notePath.c_str());
 
     File f = SD.open(notePath, FILE_WRITE);
     if (!f)
@@ -261,38 +409,49 @@ void saveNote()
     }
 
     for (const NoteEntry &entry : noteEntries)
-        f.printf("%s|%s\n", entry.stamp.c_str(), entry.text.c_str());
+        f.printf("%s|%c|%s\n", entry.stamp.c_str(), entry.done ? 'x' : '-', entry.text.c_str());
 
     f.close();
 }
 
 void removeSelectedNote()
 {
-    if (noteEntries.empty())
+    if (visibleNoteCount() == 0)
         return;
 
-    noteEntries.erase(noteEntries.begin() + notesSelected);
+    int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0)
+        return;
+
+    noteEntries.erase(noteEntries.begin() + noteIndex);
     clampNotesSelection();
+    saveNote();
+    drawNotes();
+}
+
+void toggleSelectedNoteDone()
+{
+    int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0)
+        return;
+
+    noteEntries[noteIndex].done = !noteEntries[noteIndex].done;
     saveNote();
     drawNotes();
 }
 
 void changeNotesMonth(int delta)
 {
-    notesMonthOffset += delta;
-    notesSelected = 0;
-    notesScrollTop = 0;
-    notesMarqueeStartMs = millis();
-    loadNote();
-    drawNotes();
+    shiftNotesView(delta);
 }
 
 void beginNoteEditor(int editIndex)
 {
     noteEditIndex = editIndex;
     noteEditText = "";
-    if (editIndex >= 0 && editIndex < (int)noteEntries.size())
-        noteEditText = noteEntries[editIndex].text;
+    int noteIndex = noteEntryIndexFromVisible(editIndex);
+    if (noteIndex >= 0 && noteIndex < (int)noteEntries.size())
+        noteEditText = noteEntries[noteIndex].text;
 
     noteEditorVisible = true;
     drawNotesEditor();
@@ -303,12 +462,18 @@ void saveNoteEditor()
     noteEditText.trim();
     if (noteEditText.length() > 0)
     {
-        if (noteEditIndex >= 0 && noteEditIndex < (int)noteEntries.size())
-            noteEntries[noteEditIndex].text = noteEditText;
+        int noteIndex = noteEntryIndexFromVisible(noteEditIndex);
+        if (noteIndex >= 0 && noteIndex < (int)noteEntries.size())
+            noteEntries[noteIndex].text = noteEditText;
         else
-            noteEntries.push_back({getEntryStamp(), noteEditText});
+        {
+            NoteEntry entry;
+            entry.stamp = getEntryStamp();
+            entry.done = false;
+            entry.text = noteEditText;
+            noteEntries.push_back(entry);
+        }
 
-        notesSelected = max(0, (int)noteEntries.size() - 1);
         clampNotesSelection();
         saveNote();
     }
@@ -357,23 +522,27 @@ ListModel buildNotesListModel()
     model.scrollTop = notesScrollTop;
     model.marqueeStartMs = notesMarqueeStartMs;
 
-    if (noteEntries.empty())
+    if (visibleNoteCount() == 0)
     {
         ListItemModel item;
-        item.label = "No notes this month";
-        item.value = "A";
+        item.label = notesViewMode == NotesViewMode::Day
+                         ? "No notes this day"
+                         : "No notes this month";
+        item.value = notesViewMode == NotesViewMode::Day ? "D" : "M";
         item.type = ListItemType::Property;
         item.isSelected = true;
         model.items.push_back(item);
     }
     else
     {
-        for (int i = 0; i < (int)noteEntries.size(); i++)
+        for (int i = 0; i < visibleNoteCount(); i++)
         {
+            int noteIndex = visibleNoteIndices[i];
             ListItemModel item;
-            item.label = formatEntryLabel(noteEntries[i], i);
+            item.label = formatEntryLabel(noteEntries[noteIndex]);
             item.type = ListItemType::Normal;
             item.isSelected = i == notesSelected;
+            item.isDimmed = noteEntries[noteIndex].done;
             model.items.push_back(item);
         }
     }
@@ -411,8 +580,10 @@ void redrawNotesSelection(
 void drawNotesFooter()
 {
     FooterModel model;
-    model.left = "[A]Add [R]Rm [Ent]Ed";
-    model.center = "";
+    model.left = "[A]Add [R]Rm [X]Done";
+    model.center = notesViewMode == NotesViewMode::Day
+                       ? "[D]Day [M]Mon"
+                       : "[D]Day [M]Mon";
     model.battery = footerBatteryText();
     drawFooter(model);
 }
@@ -431,14 +602,15 @@ void notesBegin()
 void notesOpen()
 {
     notesBegin();
+    notesViewMode = NotesViewMode::Day;
+    notesDayOffset = 0;
     notesMonthOffset = 0;
     loadNote();
 
     notesMode = true;
     noteEditorVisible = false;
-    notesSelected = 0;
-    notesScrollTop = 0;
-    notesMarqueeStartMs = millis();
+    resetNotesCursor();
+    clampNotesSelection();
 
     Serial.println("Notes: OPEN");
     drawNotes();
@@ -447,13 +619,14 @@ void notesOpen()
 void notesQuickOpen()
 {
     notesBegin();
+    notesViewMode = NotesViewMode::Day;
+    notesDayOffset = 0;
     notesMonthOffset = 0;
     loadNote();
 
     notesMode = false;
-    notesSelected = 0;
-    notesScrollTop = 0;
-    notesMarqueeStartMs = millis();
+    resetNotesCursor();
+    clampNotesSelection();
 
     Serial.println("Notes: QUICK");
     beginNoteEditor(-1);
@@ -490,7 +663,7 @@ void drawNotesEditor()
     model.value = editorDisplayText();
     model.confirmText = notesMode
                             ? "[Esc]Close   [Ent]Save"
-                            : "[Ctrl+N]Notes   [Ent]Save";
+                            : "[Ctrl+[ / Ctrl+]] Date   [Ent]Save";
     model.tallInput = true;
     drawOverlay(model);
 }
@@ -500,6 +673,11 @@ bool notesInputActive()
     return notesMode || noteEditorVisible;
 }
 
+bool notesEditorVisible()
+{
+    return noteEditorVisible;
+}
+
 void handleNotesInput(Keyboard_Class::KeysState &ks)
 {
     if (!notesInputActive())
@@ -507,6 +685,24 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
 
     if (noteEditorVisible)
     {
+        if (!notesMode && ks.ctrl)
+        {
+            for (auto c : ks.word)
+            {
+                if (c == '[')
+                {
+                    shiftQuickNoteDate(-1);
+                    return;
+                }
+
+                if (c == ']')
+                {
+                    shiftQuickNoteDate(1);
+                    return;
+                }
+            }
+        }
+
         if (keyboardBackPressed(ks))
         {
             cancelNoteEditor();
@@ -553,7 +749,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         return;
     }
 
-    if (ks.enter && !noteEntries.empty())
+    if (ks.enter && visibleNoteCount() > 0)
     {
         beginNoteEditor(notesSelected);
         return;
@@ -578,15 +774,43 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             beginNoteEditor(-1);
             return;
 
+        case 'd':
+        case 'D':
+            setNotesViewMode(NotesViewMode::Day);
+            return;
+
+        case 'm':
+        case 'M':
+            setNotesViewMode(NotesViewMode::Month);
+            return;
+
+        case 't':
+        case 'T':
+            jumpToToday();
+            return;
+
+        case 'u':
+        case 'U':
+            selectTopNote();
+            return;
+
+        case 'b':
+        case 'B':
+            selectBottomNote();
+            return;
+
         case 'r':
         case 'R':
-        case 'x':
-        case 'X':
             removeSelectedNote();
             return;
 
+        case 'x':
+        case 'X':
+            toggleSelectedNoteDone();
+            return;
+
         case ';':
-            if (!noteEntries.empty())
+            if (visibleNoteCount() > 0)
             {
                 int oldSelected =
                     notesSelected;
@@ -594,8 +818,8 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
                     notesScrollTop;
 
                 notesSelected =
-                    (notesSelected - 1 + (int)noteEntries.size()) %
-                    (int)noteEntries.size();
+                    (notesSelected - 1 + visibleNoteCount()) %
+                    visibleNoteCount();
                 notesMarqueeStartMs = millis();
                 redrawNotesSelection(
                     oldSelected,
@@ -604,7 +828,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             return;
 
         case '.':
-            if (!noteEntries.empty())
+            if (visibleNoteCount() > 0)
             {
                 int oldSelected =
                     notesSelected;
@@ -613,7 +837,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
 
                 notesSelected =
                     (notesSelected + 1) %
-                    (int)noteEntries.size();
+                    visibleNoteCount();
                 notesMarqueeStartMs = millis();
                 redrawNotesSelection(
                     oldSelected,
@@ -622,11 +846,11 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             return;
 
         case ',':
-            changeNotesMonth(-1);
+            shiftNotesView(-1);
             return;
 
         case '/':
-            changeNotesMonth(1);
+            shiftNotesView(1);
             return;
         }
     }
@@ -648,13 +872,13 @@ void notesLoop()
         strcpy(lastClock, clockBuf);
 
         if (notesMode)
-            drawNotesHeader();
+            drawHeaderClock(String(clockBuf));
     }
 
     if (!notesMode ||
         noteEditorVisible ||
         helpVisible ||
-        noteEntries.empty())
+        visibleNoteCount() == 0)
         return;
 
     if (millis() - lastMarqueeDrawMs < 80)

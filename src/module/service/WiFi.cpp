@@ -277,7 +277,7 @@ void drawWifiMenu()
 void drawWifiPassOverlay(bool inputOnly)
 {
     OverlayModel model;
-    model.type = OverlayType::WifiPassword;
+    model.type = OverlayType::PasswordInput;
     model.title = "WIFI PASSWORD";
     model.prompt = "Net: " + inputSaved;
     model.value = String(inputBuf);
@@ -384,8 +384,8 @@ WifiInputResult handleWifiInput(Keyboard_Class::KeysState &ks)
                 int oldScroll = wifiNetScroll;
 
                 wifiNetSel = (wifiNetSel + 1) % wifiNetCount;
-                if (wifiNetSel >= wifiNetScroll + VISIBLE_TRACKS)
-                    wifiNetScroll = wifiNetSel - VISIBLE_TRACKS + 1;
+                if (wifiNetSel >= wifiNetScroll + LIST_VISIBLE_ITEM)
+                    wifiNetScroll = wifiNetSel - LIST_VISIBLE_ITEM + 1;
 
                 redrawWifiSelection(oldSel, oldScroll);
             }

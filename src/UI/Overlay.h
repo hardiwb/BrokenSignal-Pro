@@ -11,8 +11,8 @@
 enum class OverlayType
 {
     None,
-    WifiList,
-    WifiPassword,
+    List,
+    PasswordInput,
     TextInput,
     Confirm
 };

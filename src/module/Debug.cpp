@@ -89,8 +89,8 @@ static void clampDebugSelection()
     debugSelected = max(0, min(debugSelected, count - 1));
     if (debugSelected < debugScrollTop)
         debugScrollTop = debugSelected;
-    if (debugSelected >= debugScrollTop + VISIBLE_TRACKS)
-        debugScrollTop = debugSelected - VISIBLE_TRACKS + 1;
+    if (debugSelected >= debugScrollTop + LIST_VISIBLE_ITEM)
+        debugScrollTop = debugSelected - LIST_VISIBLE_ITEM + 1;
     debugScrollTop = max(0, debugScrollTop);
 }
 

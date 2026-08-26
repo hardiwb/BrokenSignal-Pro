@@ -11,4 +11,5 @@ void notesClose();
 void drawNotes();
 void drawNotesEditor();
 bool notesInputActive();
+bool notesEditorVisible();
 void handleNotesInput(Keyboard_Class::KeysState &ks);

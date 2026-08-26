@@ -75,10 +75,15 @@ static const HelpRow RADIO_HELP[] = {
 
 static const HelpRow NOTES_HELP[] = {
     {"[A]", "Add note"},
-    {"[R/X]", "Remove note"},
+    {"[R]", "Remove note"},
+    {"[X]", "Toggle done"},
     {"[Ent]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
-    {"[,/]", "Change month"},
+    {"[,/]", "Prev / next date"},
+    {"[D]", "Day view"},
+    {"[M]", "Month view"},
+    {"[T]", "Today"},
+    {"[U/B]", "Top / bottom"},
     {"[Esc]", "Back to player"},
     {"[N]", "Close notes"},
     {"[H]", "Close help"},
@@ -248,8 +253,8 @@ static void clampHelpSelection()
     helpSelected = max(0, min(helpSelected, count - 1));
     if (helpSelected < helpScrollTop)
         helpScrollTop = helpSelected;
-    if (helpSelected >= helpScrollTop + VISIBLE_TRACKS)
-        helpScrollTop = helpSelected - VISIBLE_TRACKS + 1;
+    if (helpSelected >= helpScrollTop + LIST_VISIBLE_ITEM)
+        helpScrollTop = helpSelected - LIST_VISIBLE_ITEM + 1;
     helpScrollTop = max(0, helpScrollTop);
 }
 

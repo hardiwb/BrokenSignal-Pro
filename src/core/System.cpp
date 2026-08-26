@@ -6,11 +6,24 @@
 #include "UI/Themes.h"
 #include "UI/Toast.h"
 #include "module/Player.h"
+#include "module/Notes.h"
 #include "module/Radio.h"
 #include "../module/service/Clock.h"
 
-void drawAll()
+void drawCurrentScreen()
 {
+    if (notesEditorVisible())
+    {
+        drawNotesEditor();
+        return;
+    }
+
+    if (notesMode)
+    {
+        drawNotes();
+        return;
+    }
+
     if (webRadioMode)
     {
         drawRadioAll();
@@ -21,6 +34,11 @@ void drawAll()
     drawPlayerList();
     pumpAudio();
     drawPlayerStatus();
+}
+
+void drawAll()
+{
+    drawCurrentScreen();
 }
 
 void showHdrMsg(const char *msg)

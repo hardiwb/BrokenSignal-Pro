@@ -5,6 +5,7 @@
 void loadSettings();
 void saveSettings();
 void drawAll();
+void drawCurrentScreen();
 void showHdrMsg(const char *msg);
 void setTheme(uint8_t idx);
 void toggleScreen();

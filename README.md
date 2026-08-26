@@ -20,6 +20,13 @@ BrokenSignal Pro is still evolving, but the main UI has moved to a modular primi
 
 Themes now change color and mood, not layout. Music, Radio, Notes, Settings, Help, Debug, WiFi, and Calculator are being aligned around the same UI primitives.
 
+## Recent Fixes
+
+- Notes now use a compact `Date|State|Text` line format, with `-` for active items and `x` for done items.
+- Notes are filtered by day by default, with `D` for day, `M` for month, `T` for today, and `U` / `B` for top and bottom.
+- Overlay and calculator spacing have been tightened up for clearer alignment on the Cardputer screen.
+- Calculator input now supports backspace cleanup and a centered helper line below the input field.
+
 ## Gallery
 
 <p align="center">
@@ -63,7 +70,7 @@ Themes now change color and mood, not layout. Music, Radio, Notes, Settings, Hel
 - **Music playback**: MP3 and M4A/AAC-LC playback from MicroSD.
 - **Web radio**: Stream MP3/AAC stations over WiFi.
 - **Background audio**: Music or radio can keep playing while opening Settings, Notes, Help, WiFi, Debug, or Calculator.
-- **Notes**: Monthly note storage with quick note overlay for capturing thoughts without closing playback.
+- **Notes**: Monthly note storage with quick note overlay, day/month filtering, and done-state dimming.
 - **Context-aware Help**: `H` opens help for the current mode.
 - **Calculator**: `C` opens a calculator overlay.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
@@ -151,10 +158,15 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | Key | Action |
 | --- | ------ |
 | `A` | Add note |
-| `R` / `X` | Remove note |
+| `R` | Remove note |
+| `X` | Toggle done |
 | `ENTER` | Edit selected note |
 | `;` / `.` | Cursor up / down |
-| `,` / `/` | Change month |
+| `,` / `/` | Previous / next date |
+| `D` | Day view |
+| `M` | Month view |
+| `T` | Today |
+| `U` / `B` | Top / bottom |
 | `Esc` | Back |
 | `N` | Close Notes |
 
@@ -265,8 +277,11 @@ SD/
 Notes are stored per month. Each note line is stored as:
 
 ```text
-YYYY-MM-DD HH:MM|note text
+YYYY-MM-DD|-|note text
+YYYY-MM-DD|x|done note text
 ```
+
+`-` means active, `x` means done.
 
 ## Build
 

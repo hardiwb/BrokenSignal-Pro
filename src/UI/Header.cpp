@@ -257,10 +257,19 @@ void drawHeaderMessage(
 {
     ensureTheme();
 
+    const int textW =
+        M5Cardputer.Display.textWidth(
+            message,
+            &fonts::Font0);
+    const int boxW =
+        max(36, textW + 10);
+    const int boxX =
+        SCREEN_W - boxW - 2;
+
     M5Cardputer.Display.fillRect(
-        HEADER_MESSAGE_X,
+        boxX,
         15,
-        SCREEN_W - HEADER_MESSAGE_X - 2,
+        boxW,
         HEADER_H - 16,
         T->hdrBg);
 

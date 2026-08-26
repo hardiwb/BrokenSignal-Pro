@@ -276,7 +276,7 @@ void loop()
 
   // Battery-safe auto screen off: only when idle, never over an open menu/overlay.
   if (screenOn && autoScreenOffSec > 0 && !settingsMenuVisible && !helpVisible &&
-      !notesInputActive() &&
+      !notesEditorVisible() &&
       !calculatorInputActive() &&
       !debugOverlayVisible &&
       !wifiMenuVisible && !wifiPassOverlayVisible && !addUrlOverlayVisible &&
