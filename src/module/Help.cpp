@@ -79,7 +79,7 @@ static const HelpRow NOTES_HELP[] = {
     {"[X]", "Toggle done"},
     {"[Ent]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
-    {"[,/]", "Prev / next date"},
+    {"[Fn+, / Fn+/]", "Prev / next date"},
     {"[D]", "Day view"},
     {"[M]", "Month view"},
     {"[T]", "Today"},

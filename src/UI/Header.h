@@ -16,7 +16,8 @@ constexpr int HEADER_CURSOR_X = 4;
 constexpr int HEADER_CURSOR_Y = 16;
 constexpr int HEADER_CURSOR_W = 6;
 constexpr int HEADER_CURSOR_H = 10;
-constexpr int HEADER_MESSAGE_X = 100;
+// Keep the transient message on the far right so titles have room to breathe.
+constexpr int HEADER_MESSAGE_X = 180;
 constexpr int HEADER_MESSAGE_Y = 22;
 constexpr int HEADER_CLOCK_CLEAR_X = 198;
 
@@ -34,5 +35,3 @@ void drawHeaderMode(const String &mode);
 void drawHeaderClock(const String &clock);
 void drawHeaderCursor(bool visible);
 void drawHeaderMessage(const String &message);
-void drawHeaderScan(bool visible);
-void showVolumeMessage();

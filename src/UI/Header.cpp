@@ -9,7 +9,6 @@
 
 extern uint8_t themeIdx;
 extern const Theme *T;
-extern uint8_t volume;
 extern String hdrMsg;
 extern unsigned long hdrMsgEnd;
 
@@ -29,6 +28,19 @@ String fitHeaderMode(const String &mode, int maxWidth)
     String fitted = mode;
     while (fitted.length() > 0 &&
            M5Cardputer.Display.textWidth(fitted + ">", &fonts::Font0) > maxWidth)
+        fitted.remove(fitted.length() - 1);
+
+    return fitted + ">";
+}
+
+String fitHeaderTitle(const String &title, int maxWidth)
+{
+    if (M5Cardputer.Display.textWidth(title, &fonts::Font2) <= maxWidth)
+        return title;
+
+    String fitted = title;
+    while (fitted.length() > 0 &&
+           M5Cardputer.Display.textWidth(fitted + ">", &fonts::Font2) > maxWidth)
         fitted.remove(fitted.length() - 1);
 
     return fitted + ">";
@@ -114,89 +126,21 @@ void drawHeaderWifiStatus()
         &fonts::Font0);
 }
 
-unsigned long headerTitleStartMs(
-    const String &title)
-{
-    static String lastTitle = "";
-    static unsigned long startMs = 0;
-
-    if (lastTitle != title)
-    {
-        lastTitle = title;
-        startMs = millis();
-    }
-
-    return startMs;
-}
-
 void drawHeaderTitle(
     const String &title)
 {
     const int titleW =
-        SCREEN_W -
+        HEADER_MESSAGE_X -
         HEADER_TITLE_X -
         4;
-    const int textW =
-        M5Cardputer.Display.textWidth(
-            title,
-            &fonts::Font2);
 
     M5Cardputer.Display.setTextDatum(middle_left);
     M5Cardputer.Display.setTextColor(T->accent1);
-
-    if (textW <= titleW)
-    {
-        M5Cardputer.Display.drawString(
-            title,
-            HEADER_TITLE_X,
-            HEADER_ROW2_Y,
-            &fonts::Font2);
-        return;
-    }
-
-    const unsigned long startMs =
-        headerTitleStartMs(title);
-    const unsigned long pauseMs = 500;
-    const unsigned long pxMs = 35;
-    const int maxOffset =
-        max(0, textW - titleW + 8);
-    const unsigned long moveMs =
-        (unsigned long)maxOffset * pxMs;
-    const unsigned long cycleMs =
-        pauseMs + moveMs + pauseMs;
-    const unsigned long phase =
-        (millis() - startMs) %
-        max(1UL, cycleMs);
-
-    int offset = 0;
-    if (phase < pauseMs)
-    {
-        offset = 0;
-    }
-    else if (phase < pauseMs + moveMs)
-    {
-        offset = min(
-            maxOffset,
-            (int)((phase - pauseMs) / pxMs));
-    }
-    else
-    {
-        offset = maxOffset;
-    }
-
-    M5Cardputer.Display.setClipRect(
-        HEADER_TITLE_X,
-        HEADER_TITLE_Y,
-        titleW,
-        HEADER_TITLE_H);
-
     M5Cardputer.Display.drawString(
-        title,
-        HEADER_TITLE_X - offset,
+        fitHeaderTitle(title, titleW),
+        HEADER_TITLE_X,
         HEADER_ROW2_Y,
         &fonts::Font2);
-
-    M5Cardputer.Display.clearClipRect();
 }
 } // namespace
 
@@ -297,20 +241,11 @@ void drawHeaderMessage(
 {
     ensureTheme();
 
-    const int textW =
-        M5Cardputer.Display.textWidth(
-            message,
-            &fonts::Font0);
-    const int boxW =
-        max(36, textW + 10);
-    const int boxX =
-        SCREEN_W - boxW - 2;
-
     M5Cardputer.Display.fillRect(
-        boxX,
-        15,
-        boxW,
-        HEADER_H - 16,
+        HEADER_MESSAGE_X,
+        HEADER_TITLE_Y,
+        SCREEN_W - HEADER_MESSAGE_X,
+        HEADER_H - HEADER_TITLE_Y,
         T->hdrBg);
 
     if (message.length() == 0)
@@ -319,48 +254,8 @@ void drawHeaderMessage(
     M5Cardputer.Display.setTextDatum(middle_right);
     M5Cardputer.Display.setTextColor(T->accent2);
     M5Cardputer.Display.drawString(
-        message,
+        fitHeaderMode(message, SCREEN_W - HEADER_MESSAGE_X - 4),
         SCREEN_W - 4,
         HEADER_MESSAGE_Y,
         &fonts::Font0);
-}
-
-void drawHeaderScan(bool visible)
-{
-    ensureTheme();
-
-    M5Cardputer.Display.fillRect(
-        SCREEN_W / 2,
-        HEADER_TITLE_Y,
-        SCREEN_W / 2,
-        HEADER_H - HEADER_TITLE_Y,
-        T->hdrBg);
-
-    if (!visible)
-        return;
-
-    M5Cardputer.Display.setTextDatum(middle_right);
-    M5Cardputer.Display.setTextColor(T->accent2);
-    M5Cardputer.Display.drawString(
-        "SCAN...",
-        HEADER_RIGHT_X,
-        HEADER_MESSAGE_Y,
-        &fonts::Font0);
-}
-
-void showVolumeMessage()
-{
-    int volPct = (volume * 100) / 255;
-    char buf[16];
-
-    snprintf(
-        buf,
-        sizeof(buf),
-        "VOL %d%%",
-        volPct);
-
-    hdrMsg = String(buf);
-    hdrMsgEnd = millis() + 1500;
-
-    drawHeaderMessage(hdrMsg);
 }

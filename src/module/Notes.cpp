@@ -242,7 +242,7 @@ void resetNotesCursor()
 
 void redrawQuickNoteEditor()
 {
-    if (!noteEditorVisible || notesMode)
+    if (!noteEditorVisible)
         return;
 
     drawNotesEditor();
@@ -464,7 +464,10 @@ void saveNoteEditor()
     {
         int noteIndex = noteEntryIndexFromVisible(noteEditIndex);
         if (noteIndex >= 0 && noteIndex < (int)noteEntries.size())
+        {
             noteEntries[noteIndex].text = noteEditText;
+            noteEntries[noteIndex].stamp = getEntryStamp();
+        }
         else
         {
             NoteEntry entry;
@@ -661,9 +664,10 @@ void drawNotesEditor()
     model.title = getDisplayDateString();
     model.prompt = "";
     model.value = editorDisplayText();
+    model.helperText = "[Fn+,]Prev [Fn+/]Next";
     model.confirmText = notesMode
-                            ? "[Esc]Close   [Ent]Save"
-                            : "[Ctrl+[ / Ctrl+]] Date   [Ent]Save";
+                            ? "[Esc]Close [Ent]Save"
+                            : "[Esc]Close [Ctrl+N]Open note [Ent]Save";
     model.tallInput = true;
     drawOverlay(model);
 }
@@ -685,17 +689,17 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
 
     if (noteEditorVisible)
     {
-        if (!notesMode && ks.ctrl)
+        if (ks.fn)
         {
             for (auto c : ks.word)
             {
-                if (c == '[')
+                if (c == ',')
                 {
                     shiftQuickNoteDate(-1);
                     return;
                 }
 
-                if (c == ']')
+                if (c == '/')
                 {
                     shiftQuickNoteDate(1);
                     return;
@@ -707,6 +711,19 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         {
             cancelNoteEditor();
             return;
+        }
+
+        if (!notesMode && ks.ctrl)
+        {
+            for (auto c : ks.word)
+            {
+                if (c == 'n' || c == 'N')
+                {
+                    noteEditorVisible = false;
+                    notesOpen();
+                    return;
+                }
+            }
         }
 
         if (!notesMode && ks.opt)

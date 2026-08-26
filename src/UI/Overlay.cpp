@@ -404,15 +404,14 @@ void drawOverlayInput(
 
     if (model.helperText.length() > 0)
     {
-        D.setTextColor(T->textMid);
-        D.setTextDatum(middle_center);
-        D.drawString(
+        drawHotkeyText(
             fitOverlayText(
                 model.helperText,
                 OVERLAY_W - (OVERLAY_PAD * 2)),
             SCREEN_W / 2,
             activeInputY + activeInputH + OVERLAY_HELPER_GAP,
-            &fonts::Font0);
+            middle_center,
+            T->textMid);
     }
 
     drawHotkeyText(

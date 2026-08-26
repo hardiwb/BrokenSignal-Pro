@@ -111,6 +111,13 @@ void showHdrMsg(const char *msg)
         drawPlayerHeader();
 }
 
+void showVolumeMessage()
+{
+    char buf[16];
+    snprintf(buf, sizeof(buf), "VOL %d%%", (volume * 100) / 255);
+    showHdrMsg(buf);
+}
+
 void setTheme(uint8_t idx)
 {
     if (idx >= 5)

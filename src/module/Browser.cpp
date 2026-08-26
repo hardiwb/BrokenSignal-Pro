@@ -293,11 +293,7 @@ void loadFolderIdx(int idx)
     }
     bool needsScan = !allFolders[idx].nameCacheReady || allFolders[idx].trackWindowPage != folderPage;
     if (needsScan)
-    {
-        hdrMsgEnd = 0;
-        hdrMsg = "";
-        drawHeaderScan(true);
-    }
+        drawHeaderMessage("SCAN...");
 
     isScanning = true;
     scanFolderNow(idx);
