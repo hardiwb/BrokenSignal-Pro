@@ -245,7 +245,7 @@ void drawHeaderMessage(
         HEADER_MESSAGE_X,
         HEADER_TITLE_Y,
         SCREEN_W - HEADER_MESSAGE_X,
-        HEADER_H - HEADER_TITLE_Y,
+        HEADER_H - HEADER_TITLE_Y - 1,
         T->hdrBg);
 
     if (message.length() == 0)
