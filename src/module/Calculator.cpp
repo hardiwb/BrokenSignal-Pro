@@ -7,7 +7,6 @@
 #include "core/System.h"
 #include "module/Help.h"
 #include "UI/Overlay.h"
-#include "UI/Themes.h"
 
 namespace
 {
@@ -17,18 +16,6 @@ double calcAccumulator = 0.0;
 char calcOperator = 0;
 bool calcHasAccumulator = false;
 bool calcJustCalculated = false;
-
-constexpr int CALC_MARGIN = 15;
-constexpr int CALC_X = CALC_MARGIN;
-constexpr int CALC_Y = CALC_MARGIN;
-constexpr int CALC_W = SCREEN_W - (CALC_MARGIN * 2);
-constexpr int CALC_PAD = 8;
-constexpr int CALC_BOX_X = CALC_X + CALC_PAD;
-constexpr int CALC_BOX_Y = CALC_Y + 17;
-constexpr int CALC_BOX_W = CALC_W - (CALC_PAD * 2);
-constexpr int CALC_BOX_H = 58;
-constexpr int CALC_TEXT_PAD = 6;
-constexpr int CALC_OPERATOR_GAP = 12;
 
 String formatNumber(double value)
 {
@@ -68,15 +55,17 @@ String operatorLabel()
     return String(calcOperator);
 }
 
-String fitCalcText(String text, int width)
+OverlayModel calculatorOverlayModel()
 {
-    while (text.length() > 0 &&
-           M5Cardputer.Display.textWidth(text, &fonts::Font4) > width)
-    {
-        text = text.substring(1);
-    }
-
-    return text;
+    OverlayModel model;
+    model.type = OverlayType::TwoColumnInput;
+    model.title = "CALCULATOR";
+    model.leftValue = operatorLabel();
+    model.value = calcDisplay;
+    model.helperText = "[A]Add [S]Sub [X]Mul [D]Div";
+    model.confirmText = "[Esc]Clear/Close   [Ent]Calc";
+    model.inputFont = OverlayFontSize::Large;
+    return model;
 }
 
 void resetCalculator()
@@ -91,54 +80,7 @@ void resetCalculator()
 
 void drawCalculatorDisplay()
 {
-    auto &D = M5Cardputer.Display;
-
-    D.fillRect(
-        CALC_BOX_X + 1,
-        CALC_BOX_Y + 1,
-        CALC_BOX_W - 2,
-        CALC_BOX_H - 2,
-        T->bg);
-
-    D.setClipRect(
-        CALC_BOX_X + 4,
-        CALC_BOX_Y + 1,
-        CALC_BOX_W - 8,
-        CALC_BOX_H - 2);
-
-    String op =
-        operatorLabel();
-    const int opWidth =
-        op.length() > 0
-            ? D.textWidth(op, &fonts::Font4)
-            : 0;
-    const int displayWidth =
-        CALC_BOX_W -
-        (CALC_TEXT_PAD * 2) -
-        (op.length() > 0
-             ? opWidth + CALC_OPERATOR_GAP
-             : 0);
-
-    if (op.length() > 0)
-    {
-        D.setTextDatum(middle_left);
-        D.setTextColor(T->accent1, T->bg);
-        D.drawString(
-            op,
-            CALC_BOX_X + CALC_TEXT_PAD,
-            CALC_BOX_Y + (CALC_BOX_H / 2),
-            &fonts::Font4);
-    }
-
-    D.setTextDatum(middle_right);
-    D.setTextColor(T->textBright, T->bg);
-    D.drawString(
-        fitCalcText(calcDisplay, displayWidth),
-        CALC_BOX_X + CALC_BOX_W - CALC_TEXT_PAD,
-        CALC_BOX_Y + (CALC_BOX_H / 2),
-        &fonts::Font4);
-
-    D.clearClipRect();
+    drawOverlayTwoColumnInputValue(calculatorOverlayModel());
 }
 
 void deleteCalcInput()
@@ -277,41 +219,7 @@ bool calculatorInputActive()
 
 void drawCalculator()
 {
-    drawOverlayFrame("CALCULATOR");
-
-    auto &D = M5Cardputer.Display;
-
-    D.fillRect(
-        CALC_BOX_X,
-        CALC_BOX_Y,
-        CALC_BOX_W,
-        CALC_BOX_H,
-        T->bg);
-
-    D.drawRect(
-        CALC_BOX_X,
-        CALC_BOX_Y,
-        CALC_BOX_W,
-        CALC_BOX_H,
-        T->accent2);
-
-    drawCalculatorDisplay();
-
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->textMid);
-    D.drawString(
-        "[A]Add [S]Sub [X]Mul [D]Div",
-        SCREEN_W / 2,
-        CALC_BOX_Y + CALC_BOX_H + 11,
-        &fonts::Font0);
-
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->textDim);
-    D.drawString(
-        "[Esc]Clear/Close   [Ent]Calc",
-        SCREEN_W / 2,
-        SCREEN_H - 21,
-        &fonts::Font0);
+    drawOverlay(calculatorOverlayModel());
 }
 
 void handleCalculatorInput(Keyboard_Class::KeysState &ks)
@@ -383,10 +291,6 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
             closeCalculator();
             return;
 
-        case 'h':
-        case 'H':
-            toggleHelp();
-            return;
         }
     }
 }

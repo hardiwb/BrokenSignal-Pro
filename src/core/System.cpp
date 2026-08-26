@@ -8,10 +8,32 @@
 #include "module/Player.h"
 #include "module/Notes.h"
 #include "module/Radio.h"
+#include "module/Settings.h"
+#include "module/Help.h"
+#include "module/Debug.h"
+#include "module/service/WiFi.h"
 #include "../module/service/Clock.h"
 
 void drawCurrentScreen()
 {
+    if (helpVisible)
+    {
+        drawHelp();
+        return;
+    }
+
+    if (settingsMenuVisible)
+    {
+        drawSettingsMenu();
+        return;
+    }
+
+    if (debugOverlayVisible)
+    {
+        drawDebug();
+        return;
+    }
+
     if (notesEditorVisible())
     {
         drawNotesEditor();
@@ -21,6 +43,12 @@ void drawCurrentScreen()
     if (notesMode)
     {
         drawNotes();
+        return;
+    }
+
+    if (wifiMenuVisible)
+    {
+        drawWifiMenu();
         return;
     }
 

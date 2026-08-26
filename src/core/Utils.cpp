@@ -5,7 +5,7 @@ String folderName(const String &p, int maxCh)
     int sl = p.lastIndexOf('/');
     String n = (sl >= 0) ? p.substring(sl + 1) : p;
     n.replace('_', ' ');
-    if ((int)n.length() > maxCh)
+    if (maxCh > 0 && (int)n.length() > maxCh)
         n = n.substring(0, maxCh - 1) + ">";
     return n;
 }
@@ -18,7 +18,7 @@ String shortName(const String &p, int maxCh)
     if (dot > 0)
         n = n.substring(0, dot);
     n.replace('_', ' ');
-    if ((int)n.length() > maxCh)
+    if (maxCh > 0 && (int)n.length() > maxCh)
         n = n.substring(0, maxCh - 1) + ">";
     return n;
 }

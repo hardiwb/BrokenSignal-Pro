@@ -417,24 +417,16 @@ void drawAddNameOverlay(bool inputOnly)
 
 void drawRemoveConfirm()
 {
-    auto &D = M5Cardputer.Display;
-    drawOverlayFrame("REMOVE STATION?");
-
-    String name = (radioCount > 0 && radioSelected < radioCount)
-                      ? radioList[radioSelected].name
-                      : "?";
-    if ((int)name.length() > 28)
-        name = name.substring(0, 27) + ">";
-
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->textBright);
-    D.drawString(name, SCREEN_W / 2, 55, &fonts::Font0);
-    D.setTextColor(T->textDim);
-    D.drawString("This will be deleted.", SCREEN_W / 2, 75, &fonts::Font0);
-    D.setTextColor(T->accent1);
-    D.drawString("[Ent]Remove", SCREEN_W / 2, 100, &fonts::Font0);
-    D.setTextColor(T->textMid);
-    D.drawString("[Esc/Del]Cancel", SCREEN_W / 2, 114, &fonts::Font0);
+    OverlayModel model;
+    model.type = OverlayType::Message;
+    model.title = "REMOVE STATION?";
+    model.items.push_back(
+        (radioCount > 0 && radioSelected < radioCount)
+            ? radioList[radioSelected].name
+            : "?");
+    model.items.push_back("This will be deleted.");
+    model.confirmText = "[Ent]Remove  [Esc/Del]Cancel";
+    drawOverlay(model);
 }
 
 //==================================================

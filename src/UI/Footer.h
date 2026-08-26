@@ -17,7 +17,7 @@ constexpr int FOOTER_CENTER_W = 78;
 constexpr int FOOTER_BATTERY_X = 190;
 constexpr int FOOTER_BATTERY_W = 50;
 
-constexpr int FOOTER_BAR_H = 6;
+constexpr int FOOTER_BAR_H = 8;
 constexpr int FOOTER_BAR_Y = FOOTER_Y + (FOOTER_H - FOOTER_BAR_H) / 2;
 constexpr int FOOTER_PROGRESS_X = FOOTER_CENTER_X;
 constexpr int FOOTER_PROGRESS_W = FOOTER_CENTER_W;

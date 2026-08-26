@@ -1,5 +1,6 @@
 #include "List.h"
 #include "Themes.h"
+#include "Cells.h"
 #include <M5Cardputer.h>
 #include "../core/Config.h"
 
@@ -321,9 +322,7 @@ void drawNormalItem(
             ? 42
             : 0;
     const int NAME_W =
-        SCREEN_W -
-        LIST_SCROLLBAR_W -
-        3 -
+        LIST_RIGHT_CONTENT_X -
         NAME_X -
         DURATION_W;
 
@@ -378,9 +377,7 @@ void drawNormalItem(
 
         M5Cardputer.Display.drawString(
             duration,
-            SCREEN_W -
-                LIST_SCROLLBAR_W -
-                3,
+            LIST_RIGHT_CONTENT_X,
             midY,
             &fonts::Font0);
 
@@ -399,13 +396,11 @@ void drawNormalItem(
                 ? T->accent1
                 : T->selRow;
 
-        M5Cardputer.Display.fillRect(
-            SCREEN_W -
-                LIST_SCROLLBAR_W -
-                8,
-            y + 3,
-            5,
-            LIST_ITEM_H - 6,
+        drawRightHalfBlock(
+            LIST_BLINKER_X,
+            midY,
+            LIST_BLINKER_W,
+            LIST_ITEM_H - 4,
             cursorColor);
     }
 }
@@ -480,13 +475,18 @@ void drawFolderItem(
         item.label,
         LIST_FOLDER_NAME_X,
         midY,
-        SCREEN_W -
-            LIST_SCROLLBAR_W -
-            3 -
-            LIST_FOLDER_NAME_X,
+        LIST_RIGHT_CONTENT_X - LIST_FOLDER_NAME_X,
         folderColor,
         selected,
         marqueeStartMs);
+
+    if (selected)
+        drawRightHalfBlock(
+            LIST_BLINKER_X,
+            midY,
+            LIST_BLINKER_W,
+            LIST_ITEM_H - 4,
+            cursorVisible ? T->accent1 : T->selRow);
 }
 
 
@@ -560,9 +560,7 @@ void drawPropertyItem(
     const int LABEL_X = LIST_CONTENT_X;
     const int VALUE_W = 76;
     const int LABEL_W =
-        SCREEN_W -
-        LIST_SCROLLBAR_W -
-        3 -
+        LIST_RIGHT_CONTENT_X -
         LABEL_X -
         VALUE_W;
 
@@ -605,15 +603,21 @@ void drawPropertyItem(
 
         M5Cardputer.Display.drawString(
             value,
-            SCREEN_W -
-                LIST_SCROLLBAR_W -
-                3,
+            LIST_RIGHT_CONTENT_X,
             midY,
             &fonts::Font0);
 
         M5Cardputer.Display.setTextDatum(
             middle_left);
     }
+
+    if (selected)
+        drawRightHalfBlock(
+            LIST_BLINKER_X,
+            midY,
+            LIST_BLINKER_W,
+            LIST_ITEM_H - 4,
+            cursorVisible ? T->accent1 : T->selRow);
 }
 
 

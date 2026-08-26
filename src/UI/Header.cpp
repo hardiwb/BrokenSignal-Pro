@@ -1,6 +1,9 @@
 #include "Header.h"
 
+#include <WiFi.h>
+
 #include "Themes.h"
+#include "Cells.h"
 #include "../core/State.h"
 #include "../module/service/Clock.h"
 
@@ -12,10 +15,39 @@ extern unsigned long hdrMsgEnd;
 
 namespace
 {
-constexpr const char *HEADER_BRAND = "BRKN_SIGNAL //";
+constexpr const char *HEADER_BRAND = "BRKN_SIGNAL//";
+constexpr int HEADER_MODE_GAP = 3;
 constexpr int HEADER_TITLE_X = HEADER_CURSOR_X + HEADER_CURSOR_W + 5;
 constexpr int HEADER_TITLE_Y = 15;
 constexpr int HEADER_TITLE_H = HEADER_H - HEADER_TITLE_Y - 1;
+
+String fitHeaderMode(const String &mode, int maxWidth)
+{
+    if (M5Cardputer.Display.textWidth(mode, &fonts::Font0) <= maxWidth)
+        return mode;
+
+    String fitted = mode;
+    while (fitted.length() > 0 &&
+           M5Cardputer.Display.textWidth(fitted + ">", &fonts::Font0) > maxWidth)
+        fitted.remove(fitted.length() - 1);
+
+    return fitted + ">";
+}
+
+void drawModeText(const String &mode)
+{
+    const int modeX = HEADER_BRAND_X +
+        M5Cardputer.Display.textWidth(HEADER_BRAND, &fonts::Font0) + HEADER_MODE_GAP;
+    const int modeW = max(0, HEADER_WIFI_X - modeX - 3);
+
+    M5Cardputer.Display.setTextDatum(middle_left);
+    M5Cardputer.Display.setTextColor(T->accent1);
+    M5Cardputer.Display.drawString(
+        fitHeaderMode(mode, modeW),
+        modeX,
+        HEADER_ROW1_Y,
+        &fonts::Font0);
+}
 
 void ensureTheme()
 {
@@ -54,19 +86,28 @@ void drawHeaderWifiStatus()
         13,
         T->hdrBg);
 
-    if (!wifiConnected)
+    if (WiFi.getMode() == WIFI_OFF)
         return;
 
-    String ssid = wifiSSID;
-    if (ssid.length() == 0)
-        ssid = "NET";
-    if ((int)ssid.length() > 5)
-        ssid = ssid.substring(0, 5);
+    String wifi = wifiSSID;
+    if (wifiConnected)
+    {
+        if (wifi.length() == 0)
+            wifi = "NET";
+    }
+    else if (wifi.length() == 0)
+    {
+        wifi = "WIFI";
+    }
+
+    if ((int)wifi.length() > 7)
+        wifi = wifi.substring(0, 7);
 
     M5Cardputer.Display.setTextDatum(middle_left);
-    M5Cardputer.Display.setTextColor(T->textMid);
+    M5Cardputer.Display.setTextColor(
+        wifiConnected ? T->textMid : T->textDim);
     M5Cardputer.Display.drawString(
-        ssid,
+        wifi,
         HEADER_WIFI_X,
         HEADER_ROW1_Y,
         &fonts::Font0);
@@ -178,12 +219,7 @@ void drawHeader(
         HEADER_ROW1_Y,
         &fonts::Font0);
 
-    M5Cardputer.Display.setTextColor(T->accent1);
-    M5Cardputer.Display.drawString(
-        model.mode,
-        HEADER_MODE_X,
-        HEADER_ROW1_Y,
-        &fonts::Font0);
+    drawModeText(model.mode);
 
     drawHeaderWifiStatus();
     drawHeaderClock(headerClockText());
@@ -199,20 +235,16 @@ void drawHeaderMode(
 {
     ensureTheme();
 
+    const int modeX = HEADER_BRAND_X +
+        M5Cardputer.Display.textWidth(HEADER_BRAND, &fonts::Font0) + HEADER_MODE_GAP;
     M5Cardputer.Display.fillRect(
-        HEADER_MODE_X - 2,
+        modeX - 1,
         1,
-        HEADER_WIFI_X - HEADER_MODE_X - 2,
+        HEADER_WIFI_X - modeX - 2,
         13,
         T->hdrBg);
 
-    M5Cardputer.Display.setTextDatum(middle_left);
-    M5Cardputer.Display.setTextColor(T->accent1);
-    M5Cardputer.Display.drawString(
-        mode,
-        HEADER_MODE_X,
-        HEADER_ROW1_Y,
-        &fonts::Font0);
+    drawModeText(mode);
 }
 
 void drawHeaderClock(
@@ -249,7 +281,14 @@ void drawHeaderCursor(
         HEADER_CURSOR_Y,
         HEADER_CURSOR_W,
         HEADER_CURSOR_H,
-        visible ? T->accent1 : T->hdrBg);
+        T->hdrBg);
+    if (visible)
+        drawLeftHalfBlock(
+            HEADER_CURSOR_X,
+            HEADER_CURSOR_Y + HEADER_CURSOR_H / 2,
+            HEADER_CURSOR_W,
+            HEADER_CURSOR_H,
+            T->accent1);
 }
 
 void drawHeaderMessage(

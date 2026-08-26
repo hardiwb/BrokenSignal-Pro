@@ -7,3 +7,4 @@ void enterSettingsMenu();
 void exitSettingsMenu();
 void drawSettingsMenu();
 void handleSettingsInput(Keyboard_Class::KeysState &ks);
+bool settingsInputOverlayActive();

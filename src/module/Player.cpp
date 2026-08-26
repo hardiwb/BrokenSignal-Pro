@@ -199,25 +199,19 @@ unsigned long estimateDuration(int idx)
 
 void drawPlayerHeader()
 {
-    if (T == nullptr)
-    {
-        T = THEMES[0];
-        themeIdx = 0;
-    }
-
     String name;
     if (currentTrack >= 0 && currentTrack < (int)items.size())
-        name = shortName(items[currentTrack].path, 18);
+        name = shortName(items[currentTrack].path);
     else if (viewFolder == "**RECENT**")
         name = "RECENT";
     else if (viewFolder != "/Music")
-        name = folderName(viewFolder, 24);
+        name = folderName(viewFolder);
     else
         name = "---";
 
     String mode;
     if (!isPlaying && !isPaused && currentFolderIdx != 0)
-        mode = isRecentView ? "RECENT" : folderName(viewFolder, 10);
+        mode = isRecentView ? "RECENT" : folderName(viewFolder);
     else
         mode = isPlaying ? "PLAYING" : (isPaused ? "PAUSED" : "STOPPED");
 
@@ -280,12 +274,8 @@ void drawPlayerList()
 {
     if (items.empty())
     {
-        M5Cardputer.Display.fillRect(
-            0,
-            LIST_Y,
-            SCREEN_W,
-            LIST_HEIGHT,
-            T->bg);
+        ListModel model;
+        drawList(model);
         return;
     }
 

@@ -1,6 +1,7 @@
 #include "Overlay.h"
 #include <M5Cardputer.h>
 #include "Themes.h"
+#include "Cells.h"
 #include "../core/State.h"
 #include "../core/Config.h"
 
@@ -25,6 +26,10 @@ static constexpr int OVERLAY_INPUT_Y_COMPACT = OVERLAY_Y + 17;
 static constexpr int OVERLAY_INPUT_W = OVERLAY_W - (OVERLAY_PAD * 2);
 static constexpr int OVERLAY_INPUT_H = 24;
 static constexpr int OVERLAY_INPUT_TALL_H = 36;
+static constexpr int OVERLAY_TWO_COL_Y = OVERLAY_Y + 17;
+static constexpr int OVERLAY_TWO_COL_H = 56;
+static constexpr int OVERLAY_TWO_COL_PAD = 6;
+static constexpr int OVERLAY_TWO_COL_GAP = 10;
 
 static int activeInputY = OVERLAY_INPUT_Y_WITH_PROMPT;
 static int activeInputH = OVERLAY_INPUT_H;
@@ -78,6 +83,14 @@ void drawOverlay(const OverlayModel &model)
     {
     case OverlayType::List:
         drawOverlayList(model);
+        break;
+
+    case OverlayType::Message:
+        drawOverlayMessage(model);
+        break;
+
+    case OverlayType::TwoColumnInput:
+        drawOverlayTwoColumnInput(model);
         break;
 
     case OverlayType::PasswordInput:
@@ -187,6 +200,150 @@ void drawOverlayList(
     }
 }
 
+void drawOverlayMessage(
+    const OverlayModel &model)
+{
+    drawOverlayFrame(model.title);
+
+    auto &D = M5Cardputer.Display;
+    D.setTextDatum(middle_center);
+
+    for (int i = 0; i < (int)model.items.size(); i++)
+        drawOverlayMessageLine(model, i);
+
+    if (model.confirmText.length() > 0)
+    {
+        D.setTextColor(T->textDim);
+        D.drawString(
+            fitOverlayText(model.confirmText, OVERLAY_LIST_W),
+            SCREEN_W / 2,
+            OVERLAY_FOOTER_Y,
+            &fonts::Font0);
+    }
+}
+
+void drawOverlayMessageLine(
+    const OverlayModel &model,
+    int index)
+{
+    if (index < 0 || index >= (int)model.items.size())
+        return;
+
+    constexpr int lineH = 16;
+    const int lineCount = (int)model.items.size();
+    const int contentTop = OVERLAY_LIST_Y;
+    const int contentBottom = OVERLAY_FOOTER_Y - 10;
+    const int contentH = max(0, contentBottom - contentTop);
+    const int firstY = contentTop +
+        max(0, (contentH - max(0, lineCount - 1) * lineH) / 2);
+    const int y = firstY + index * lineH;
+
+    auto &D = M5Cardputer.Display;
+    D.fillRect(
+        OVERLAY_LIST_X,
+        y - lineH / 2,
+        OVERLAY_LIST_W,
+        lineH,
+        T->hdrBg);
+    D.setTextDatum(middle_center);
+    D.setTextColor(index == 0 ? T->accent1 : T->textMid);
+    D.drawString(
+        fitOverlayText(model.items[index], OVERLAY_LIST_W),
+        SCREEN_W / 2,
+        y,
+        &fonts::Font0);
+}
+
+void drawOverlayTwoColumnInputValue(
+    const OverlayModel &model)
+{
+    auto &D = M5Cardputer.Display;
+    const lgfx::IFont *font = &fonts::Font0;
+    if (model.inputFont == OverlayFontSize::Large)
+        font = &fonts::Font4;
+
+    D.fillRect(
+        OVERLAY_INPUT_X,
+        OVERLAY_TWO_COL_Y + 5,
+        OVERLAY_INPUT_W,
+        OVERLAY_TWO_COL_H - 10,
+        T->bg);
+
+    drawDashedCellLine(
+        OVERLAY_INPUT_X,
+        OVERLAY_TWO_COL_Y,
+        OVERLAY_INPUT_W,
+        T->textDim);
+    drawDashedCellLine(
+        OVERLAY_INPUT_X,
+        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H - 1,
+        OVERLAY_INPUT_W,
+        T->textDim);
+
+    const int innerW = OVERLAY_INPUT_W - (OVERLAY_TWO_COL_PAD * 2);
+    int leftW = model.leftValue.length() > 0
+        ? D.textWidth(model.leftValue, font) + OVERLAY_TWO_COL_GAP
+        : 0;
+    leftW = min(leftW, innerW / 3);
+    const int valueW = max(0, innerW - leftW);
+    const int midY = OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H / 2;
+
+    if (model.leftValue.length() > 0)
+    {
+        D.setTextDatum(middle_left);
+        D.setTextColor(T->accent1, T->bg);
+        D.setClipRect(
+            OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD,
+            OVERLAY_TWO_COL_Y + 5,
+            leftW,
+            OVERLAY_TWO_COL_H - 10);
+        D.drawString(
+            model.leftValue,
+            OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD,
+            midY,
+            font);
+        D.clearClipRect();
+    }
+
+    String fitted = trimTextToWidthFromEnd(model.value, valueW, font);
+    D.setTextDatum(middle_right);
+    D.setTextColor(T->textBright, T->bg);
+    D.setClipRect(
+        OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD + leftW,
+        OVERLAY_TWO_COL_Y + 5,
+        valueW,
+        OVERLAY_TWO_COL_H - 10);
+    D.drawString(
+        fitted,
+        OVERLAY_INPUT_X + OVERLAY_INPUT_W - OVERLAY_TWO_COL_PAD,
+        midY,
+        font);
+    D.clearClipRect();
+}
+
+void drawOverlayTwoColumnInput(
+    const OverlayModel &model)
+{
+    drawOverlayFrame(model.title);
+    drawOverlayTwoColumnInputValue(model);
+
+    auto &D = M5Cardputer.Display;
+    D.setTextDatum(middle_center);
+    D.setTextColor(T->textMid);
+    D.drawString(
+        fitOverlayText(model.helperText, OVERLAY_LIST_W),
+        SCREEN_W / 2,
+        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H + 11,
+        &fonts::Font0);
+
+    D.setTextColor(T->textDim);
+    D.drawString(
+        fitOverlayText(model.confirmText, OVERLAY_LIST_W),
+        SCREEN_W / 2,
+        OVERLAY_FOOTER_Y,
+        &fonts::Font0);
+}
+
 void drawOverlayInput(
     const OverlayModel &model)
 {
@@ -226,12 +383,13 @@ void drawOverlayInput(
         activeInputH,
         T->bg);
 
-    D.drawRect(
+    // Input fields are character rows: dim '-' cells above and below.
+    drawDashedCellLine(OVERLAY_INPUT_X, activeInputY, OVERLAY_INPUT_W, T->textDim);
+    drawDashedCellLine(
         OVERLAY_INPUT_X,
-        activeInputY,
+        activeInputY + activeInputH - 1,
         OVERLAY_INPUT_W,
-        activeInputH,
-        T->accent2);
+        T->textDim);
 
     drawOverlayInputValue(
         model.value,
@@ -271,11 +429,18 @@ void drawOverlayInputValue(
     const int textW = OVERLAY_INPUT_W - 8;
 
     D.fillRect(
-        OVERLAY_INPUT_X + 1,
+        OVERLAY_INPUT_X,
         activeInputY + 1,
-        OVERLAY_INPUT_W - 2,
+        OVERLAY_INPUT_W,
         activeInputH - 2,
         T->bg);
+
+    drawDashedCellLine(OVERLAY_INPUT_X, activeInputY, OVERLAY_INPUT_W, T->textDim);
+    drawDashedCellLine(
+        OVERLAY_INPUT_X,
+        activeInputY + activeInputH - 1,
+        OVERLAY_INPUT_W,
+        T->textDim);
 
     String value = passwordMode ? String("") : rawValue;
     if (passwordMode)
@@ -362,5 +527,5 @@ void drawOverlayCursor(
 
     D.fillRect(x, y, 8, 10, T->bg);
     if (visible)
-        D.fillRect(x, y, 6, 8, T->accent1);
+        drawLeftHalfBlock(x, y + 4, 6, 8, T->accent1);
 }

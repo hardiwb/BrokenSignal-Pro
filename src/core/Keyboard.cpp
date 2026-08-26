@@ -102,14 +102,15 @@ void openNotesAppFromShortcut()
 
 KeyboardInputMode currentKeyboardInputMode()
 {
+    // Calculator is an overlay and always receives input before its host screen.
+    if (calculatorInputActive())
+        return KeyboardInputMode::Calculator;
+
     if (helpVisible)
         return KeyboardInputMode::Help;
 
     if (settingsMenuVisible)
         return KeyboardInputMode::Settings;
-
-    if (calculatorInputActive())
-        return KeyboardInputMode::Calculator;
 
     if (debugOverlayVisible)
         return KeyboardInputMode::Debug;
@@ -126,6 +127,48 @@ KeyboardInputMode currentKeyboardInputMode()
                    : KeyboardInputMode::Radio;
 
     return KeyboardInputMode::Player;
+}
+
+bool calculatorHostAllowsOverlay(KeyboardInputMode mode)
+{
+    switch (mode)
+    {
+    case KeyboardInputMode::Settings:
+        return !settingsInputOverlayActive();
+    case KeyboardInputMode::Notes:
+        return !notesEditorVisible();
+    case KeyboardInputMode::Wifi:
+        return wifiMenuVisible && !wifiPassOverlayVisible;
+    case KeyboardInputMode::RadioOverlay:
+    case KeyboardInputMode::Calculator:
+        return false;
+    case KeyboardInputMode::Debug:
+    case KeyboardInputMode::Help:
+    case KeyboardInputMode::Radio:
+    case KeyboardInputMode::Player:
+        return true;
+    }
+
+    return false;
+}
+
+bool tryOpenCalculatorOverlay(
+    KeyboardInputMode mode,
+    const Keyboard_Class::KeysState &ks)
+{
+    if (!calculatorHostAllowsOverlay(mode))
+        return false;
+
+    for (auto c : ks.word)
+    {
+        if (c == 'c' || c == 'C')
+        {
+            openCalculator();
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
@@ -246,6 +289,11 @@ void keyboardLoop()
     }
 
     if (!notesMode &&
+        !calculatorInputActive() &&
+        !settingsInputOverlayActive() &&
+        !notesEditorVisible() &&
+        !wifiPassOverlayVisible &&
+        !radioOverlayActive() &&
         isCtrlN(ks))
     {
         openNotesAppFromShortcut();
@@ -253,6 +301,9 @@ void keyboardLoop()
     }
 
     KeyboardInputMode mode = currentKeyboardInputMode();
+
+    if (tryOpenCalculatorOverlay(mode, ks))
+        return;
 
     if ((mode == KeyboardInputMode::Player ||
          mode == KeyboardInputMode::Radio) &&

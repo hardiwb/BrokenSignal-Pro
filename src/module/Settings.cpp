@@ -373,6 +373,11 @@ void drawSettingsMenu()
     drawSettingsFooter();
 }
 
+bool settingsInputOverlayActive()
+{
+    return manualClockVisible;
+}
+
 void enterSettingsMenu()
 {
     settingsMenuVisible = true;

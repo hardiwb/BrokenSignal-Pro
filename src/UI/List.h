@@ -64,6 +64,9 @@ constexpr int LIST_INDEX_W = 16;
 constexpr int LIST_CONTENT_X = 34;
 constexpr int LIST_FOLDER_SLASH_X = 34;
 constexpr int LIST_FOLDER_NAME_X = 46;
+constexpr int LIST_BLINKER_X = SCREEN_W - LIST_SCROLLBAR_W - 9;
+constexpr int LIST_BLINKER_W = 6;
+constexpr int LIST_RIGHT_CONTENT_X = LIST_BLINKER_X - 3;
 
 constexpr int LIST_Y = HEADER_H;
 

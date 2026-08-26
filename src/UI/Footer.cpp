@@ -1,6 +1,7 @@
 #include "Footer.h"
 
 #include "Themes.h"
+#include "Cells.h"
 
 extern uint8_t themeIdx;
 extern const Theme *T;
@@ -144,22 +145,22 @@ void drawFooterProgressBar(float progress)
         0.0f,
         1.0f);
 
-    const int segs = max(1, FOOTER_PROGRESS_W / 5);
-    const int litSegs = (int)(segs * progress);
-    const int barW = segs * 5 - 1;
+    constexpr int cellW = 5;
+    constexpr int cellGap = 1;
+    const int segs = max(1, FOOTER_PROGRESS_W / (cellW + cellGap));
+    const int litSegs = (int)(segs * progress + 0.5f);
+    const int barW = segs * (cellW + cellGap) - cellGap;
     const int barX = FOOTER_PROGRESS_X + (FOOTER_PROGRESS_W - barW) / 2;
 
     for (int s = 0; s < segs; s++)
     {
-        const int bx = barX + s * 5;
-        const uint16_t color = (s < litSegs) ? T->accent1 : T->barBg;
-
-        M5Cardputer.Display.fillRect(
+        const int bx = barX + s * (cellW + cellGap);
+        drawFullBlock(
             bx,
-            FOOTER_BAR_Y,
-            4,
+            FOOTER_BAR_Y + FOOTER_BAR_H / 2,
+            cellW,
             FOOTER_BAR_H,
-            color);
+            (s < litSegs) ? T->textMid : T->textDim);
     }
 }
 } // namespace

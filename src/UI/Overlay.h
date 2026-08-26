@@ -12,9 +12,17 @@ enum class OverlayType
 {
     None,
     List,
+    Message,
+    TwoColumnInput,
     PasswordInput,
     TextInput,
     Confirm
+};
+
+enum class OverlayFontSize
+{
+    Small,
+    Large
 };
 
 // ============================================================
@@ -27,6 +35,7 @@ struct OverlayModel
 
     String title;
     String value;
+    String leftValue;
 
     std::vector<String> items;
 
@@ -38,6 +47,7 @@ struct OverlayModel
 
     bool passwordMode = false;
     bool tallInput = false;
+    OverlayFontSize inputFont = OverlayFontSize::Small;
 };
 
 // ============================================================
@@ -50,6 +60,19 @@ void drawOverlayFrame(
     const String &title);
 
 void drawOverlayList(
+    const OverlayModel &model);
+
+void drawOverlayMessage(
+    const OverlayModel &model);
+
+void drawOverlayMessageLine(
+    const OverlayModel &model,
+    int index);
+
+void drawOverlayTwoColumnInput(
+    const OverlayModel &model);
+
+void drawOverlayTwoColumnInputValue(
     const OverlayModel &model);
 
 void drawOverlayInput(

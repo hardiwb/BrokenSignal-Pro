@@ -120,26 +120,24 @@ bool connectWifi(const String &ssid, const String &pass)
     if ((int)truncSsid.length() > 26)
         truncSsid = truncSsid.substring(0, 25) + ">";
 
-    auto drawConnBody = [&](uint8_t dotCount)
+    auto drawConnBody = [&](uint8_t dotCount, bool fullDraw)
     {
         char msg[18];
         snprintf(msg, sizeof(msg), "CONNECTING%.*s", dotCount, "...");
 
-        auto &D = M5Cardputer.Display;
-        D.fillRect(24, 46, SCREEN_W - 48, 72, T->hdrBg);
-        D.setTextDatum(middle_center);
-        D.setTextColor(T->accent1);
-        D.drawString(msg, SCREEN_W / 2, 56, &fonts::Font0);
-
-        D.setTextColor(T->textMid);
-        D.drawString(truncSsid, SCREEN_W / 2, 74, &fonts::Font0);
-
-        D.setTextColor(T->textDim);
-        D.drawString("ESC/DEL to cancel", SCREEN_W / 2, 106, &fonts::Font0);
+        OverlayModel model;
+        model.type = OverlayType::Message;
+        model.title = "WIFI CONNECT";
+        model.items.push_back(String(msg));
+        model.items.push_back(truncSsid);
+        model.confirmText = "ESC/DEL to cancel";
+        if (fullDraw)
+            drawOverlay(model);
+        else
+            drawOverlayMessageLine(model, 0);
     };
 
-    drawOverlayFrame("WIFI CONNECT");
-    drawConnBody(0);
+    drawConnBody(0, true);
     WiFi.persistent(false);
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid.c_str(), pass.c_str());
@@ -154,7 +152,7 @@ bool connectWifi(const String &ssid, const String &pass)
         if (millis() - lastAnim >= 500)
         {
             dots = (dots % 3) + 1;
-            drawConnBody(dots);
+            drawConnBody(dots, false);
             lastAnim = millis();
         }
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed())
@@ -182,18 +180,14 @@ bool connectWifi(const String &ssid, const String &pass)
 
     WiFi.disconnect();
     wifiConnected = false;
-    drawOverlayFrame("WIFI CONNECT");
 
-    auto &D = M5Cardputer.Display;
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->accent1);
-    D.drawString("CONNECT FAILED", SCREEN_W / 2, 58, &fonts::Font0);
-
-    D.setTextColor(T->textMid);
-    D.drawString(truncSsid, SCREEN_W / 2, 76, &fonts::Font0);
-
-    D.setTextColor(T->textDim);
-    D.drawString("Returning to WiFi menu", SCREEN_W / 2, 104, &fonts::Font0);
+    OverlayModel failed;
+    failed.type = OverlayType::Message;
+    failed.title = "WIFI CONNECT";
+    failed.items.push_back("CONNECT FAILED");
+    failed.items.push_back(truncSsid);
+    failed.confirmText = "Returning to WiFi menu";
+    drawOverlay(failed);
 
     delay(2000);
     return false;
