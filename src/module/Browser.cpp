@@ -1,6 +1,7 @@
 #include "core/System.h"
 #include "module/Browser.h"
 #include "module/Player.h"
+#include "UI/Header.h"
 #include <algorithm>
 
 
@@ -295,10 +296,7 @@ void loadFolderIdx(int idx)
     {
         hdrMsgEnd = 0;
         hdrMsg = "";
-        M5Cardputer.Display.fillRect(SCREEN_W / 2, 15, SCREEN_W / 2, 14, T->hdrBg);
-        M5Cardputer.Display.setTextDatum(middle_right);
-        M5Cardputer.Display.setTextColor(T->accent2);
-        M5Cardputer.Display.drawString("SCAN...", SCREEN_W - 4, 22, &fonts::Font0);
+        drawHeaderScan(true);
     }
 
     isScanning = true;

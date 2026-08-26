@@ -18,7 +18,7 @@
 
 static bool manualClockVisible = false;
 static String manualClockInput = "";
-static const int SETTINGS_COUNT = 8;
+static const int SETTINGS_COUNT = 10;
 static int settingsScrollTop = 0;
 
 void drawSettingsMenu();
@@ -54,6 +54,8 @@ static const char *settingsLabel(int index)
         "WiFi power save",
         "Brightness",
         "Auto screen off",
+        "Deep sleep",
+        "Playback off",
         "Sync clock",
         "Timezone",
         "Manual clock",
@@ -78,10 +80,20 @@ static String settingsValue(int index)
     case 3:
         return autoScreenOffSec == 0 ? String("OFF") : String(autoScreenOffSec) + "s";
     case 4:
-    case 6:
-    case 7:
-        return "ENTER";
     case 5:
+    {
+        const uint32_t timer = index == 4 ? deepSleepSec : playbackOffSec;
+        if (timer == 0)
+            return "NONE";
+        if (timer < 3600)
+            return String(timer / 60) + "m";
+        return String(timer / 3600) + "h";
+    }
+    case 6:
+    case 8:
+    case 9:
+        return "ENTER";
+    case 7:
         return formatTimezoneValue();
     default:
         return "";
@@ -352,7 +364,35 @@ static void adjustSetting(int sel, int dir)
         idx = (idx + dir + n) % n;
         autoScreenOffSec = opts[idx];
     }
+    else if (sel == 4)
+    {
+        static const uint32_t opts[] = {0, 1800, 3600, 7200, 10800};
+        const int n = sizeof(opts) / sizeof(opts[0]);
+        int idx = 0;
+        for (int i = 0; i < n; i++)
+            if (opts[i] == deepSleepSec)
+            {
+                idx = i;
+                break;
+            }
+        idx = (idx + dir + n) % n;
+        deepSleepSec = opts[idx];
+    }
     else if (sel == 5)
+    {
+        static const uint32_t opts[] = {0, 1800, 3600, 7200, 10800};
+        const int n = sizeof(opts) / sizeof(opts[0]);
+        int idx = 0;
+        for (int i = 0; i < n; i++)
+            if (opts[i] == playbackOffSec)
+            {
+                idx = i;
+                break;
+            }
+        idx = (idx + dir + n) % n;
+        playbackOffSec = opts[idx];
+    }
+    else if (sel == 7)
     {
         setClockTimezoneOffsetHours((int8_t)(getClockTimezoneOffsetHours() + dir));
     }
@@ -471,7 +511,7 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             settingsDirty = true;
             settingsDirtyMs = millis();
         }
-        else if (settingsSel == 4)
+        else if (settingsSel == 6)
         {
             if (!wifiConnected)
             {
@@ -505,12 +545,12 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
                 showHdrMsg("NTP FAIL");
             }
         }
-        else if (settingsSel == 6)
+        else if (settingsSel == 8)
         {
             beginManualClockEdit();
             return;
         }
-        else if (settingsSel == 7)
+        else if (settingsSel == 9)
         {
             settingsMenuVisible = false;
             manualClockVisible = false;

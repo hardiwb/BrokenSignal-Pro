@@ -22,6 +22,8 @@
 
 namespace
 {
+unsigned long playbackSleepStartMs = 0;
+
 bool loadBootThemeFrom(
     const char *path)
 {
@@ -172,6 +174,11 @@ void loop()
 
   keyboardLoop();
 
+  if (!anyPlaying)
+    playbackSleepStartMs = 0;
+  else if (playbackSleepStartMs == 0)
+    playbackSleepStartMs = millis();
+
   if (notesInputActive())
   {
     notesLoop();
@@ -274,16 +281,29 @@ void loop()
     }
   }
 
-  // Battery-safe auto screen off: only when idle, never over an open menu/overlay.
-  if (screenOn && autoScreenOffSec > 0 && !settingsMenuVisible && !helpVisible &&
-      !notesEditorVisible() &&
-      !calculatorInputActive() &&
-      !debugOverlayVisible &&
-      !wifiMenuVisible && !wifiPassOverlayVisible && !addUrlOverlayVisible &&
-      !addNameOverlayVisible && !removeConfirmVisible &&
+  // Battery-safe auto screen off: only based on idle time.
+  if (screenOn && autoScreenOffSec > 0 &&
       millis() - lastActivityMs >= (unsigned long)autoScreenOffSec * 1000UL)
   {
     screenOn = false;
     M5Cardputer.Display.setBrightness(0);
+  }
+
+  if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying &&
+      millis() - lastActivityMs >= (unsigned long)deepSleepSec * 1000UL)
+  {
+    saveSettings();
+    settingsDirty = false;
+    enterDeepSleep();
+  }
+
+  if (playbackOffSec > 0 && anyPlaying && playbackSleepStartMs > 0 &&
+      millis() - playbackSleepStartMs >= (unsigned long)playbackOffSec * 1000UL)
+  {
+    stopAudio();
+    stopRadioStream();
+    saveSettings();
+    settingsDirty = false;
+    enterDeepSleep();
   }
 }

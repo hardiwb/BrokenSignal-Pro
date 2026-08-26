@@ -1,11 +1,13 @@
 #include <SD.h>
 #include <M5Cardputer.h>
+#include <esp_sleep.h>
 #include "core/System.h"
 #include "core/State.h"
 #include "core/Config.h"
 #include "UI/Themes.h"
 #include "UI/Toast.h"
 #include "module/Player.h"
+#include "module/Calculator.h"
 #include "module/Notes.h"
 #include "module/Radio.h"
 #include "module/Settings.h"
@@ -16,6 +18,12 @@
 
 void drawCurrentScreen()
 {
+    if (calculatorVisible)
+    {
+        drawCalculator();
+        return;
+    }
+
     if (helpVisible)
     {
         drawHelp();
@@ -43,6 +51,30 @@ void drawCurrentScreen()
     if (notesMode)
     {
         drawNotes();
+        return;
+    }
+
+    if (wifiPassOverlayVisible)
+    {
+        drawWifiPassOverlay();
+        return;
+    }
+
+    if (addUrlOverlayVisible)
+    {
+        drawAddUrlOverlay();
+        return;
+    }
+
+    if (addNameOverlayVisible)
+    {
+        drawAddNameOverlay();
+        return;
+    }
+
+    if (removeConfirmVisible)
+    {
+        drawRemoveConfirm();
         return;
     }
 
@@ -161,6 +193,12 @@ void loadSettings()
         if (key == "autoscreenoff" && val >= 0 && val <= 600)
             autoScreenOffSec = (uint16_t)val;
 
+        if (key == "deepsleep" && val >= 0 && val <= 10800)
+            deepSleepSec = (uint32_t)val;
+
+        if (key == "playbackoff" && val >= 0 && val <= 10800)
+            playbackOffSec = (uint32_t)val;
+
         if (key == "timezone")
             setClockTimezoneOffsetHours(
                 (int8_t)max(-12, min(14, val))
@@ -183,6 +221,19 @@ void saveSettings()
     f.printf("wifipowersave=%d\n", wifiPowerSave ? 1 : 0);
     f.printf("brightness=%d\n", screenBrightness);
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
+    f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);
+    f.printf("playbackoff=%lu\n", (unsigned long)playbackOffSec);
     f.printf("timezone=%d\n", (int)getClockTimezoneOffsetHours());
     f.close();
+}
+
+void enterDeepSleep()
+{
+    // Cardputer ADV exposes the keyboard controller interrupt on GPIO 11.
+    // A key press pulls it low and wakes the ESP32 from deep sleep.
+    pinMode(11, INPUT_PULLUP);
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_11, 0);
+    M5Cardputer.Display.sleep();
+    WiFi.mode(WIFI_OFF);
+    esp_deep_sleep_start();
 }

@@ -30,8 +30,8 @@ static const Theme T_TERM = {
     rgb(0, 4, 0),       // bg
     rgb(0, 12, 0),      // hdrBg
     rgb(0, 255, 65),    // accent1
-    rgb(255, 145, 0),   // accent2)
-    rgb(0, 255, 190),   // accent3s
+    rgb(255, 145, 0),   // accent2
+    rgb(25, 230, 69),   // accent3
     rgb(190, 255, 200), // textBright
     rgb(0, 195, 55),    // textMide
     rgb(0, 70, 15),     // textDims

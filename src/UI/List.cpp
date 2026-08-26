@@ -1,6 +1,7 @@
 #include "List.h"
 #include "Themes.h"
 #include "Cells.h"
+#include "Hotkeys.h"
 #include <M5Cardputer.h>
 #include "../core/Config.h"
 
@@ -329,10 +330,10 @@ void drawNormalItem(
     uint16_t textColor =
         item.isDimmed
             ? T->textDim
-            : item.isActive
-                ? T->accent1
-                : selected
+            : selected
                     ? T->accent2
+                : item.isActive
+                    ? T->accent1
                     : T->textMid;
 
     M5Cardputer.Display.setTextColor(
@@ -371,9 +372,11 @@ void drawNormalItem(
         M5Cardputer.Display.setTextColor(
             item.isDimmed
                 ? T->textDim
-                : item.isActive
-                    ? T->accent1
-                    : T->textDim);
+                : selected
+                    ? T->accent2
+                    : item.isActive
+                        ? T->accent1
+                        : T->textDim);
 
         M5Cardputer.Display.drawString(
             duration,
@@ -452,8 +455,8 @@ void drawFolderItem(
         item.isDimmed
             ? T->textDim
             : selected
-                ? T->accent1
-                : T->accent2;
+                ? T->accent2
+                : T->accent3;
 
     M5Cardputer.Display.setTextDatum(
         middle_left);
@@ -554,7 +557,7 @@ void drawPropertyItem(
         item.isDimmed
             ? T->textDim
             : selected
-                ? T->accent1
+                ? T->accent2
                 : T->textMid);
 
     const int LABEL_X = LIST_CONTENT_X;
@@ -570,7 +573,7 @@ void drawPropertyItem(
         midY,
         LABEL_W,
         selected
-            ? T->accent1
+            ? T->accent2
             : T->textMid,
         selected,
         marqueeStartMs);
@@ -591,21 +594,33 @@ void drawPropertyItem(
                     ? T->accent2
                     : T->textDim);
 
-        String value =
-            "<" +
-            item.value +
-            ">";
+        if (item.value.indexOf('[') >= 0)
+        {
+            drawHotkeyText(
+                item.value,
+                LIST_RIGHT_CONTENT_X,
+                midY,
+                middle_right,
+                selected ? T->accent2 : T->textDim);
+        }
+        else
+        {
+            String value =
+                "<" +
+                item.value +
+                ">";
 
-        value =
-            fitTextToWidth(
+            value =
+                fitTextToWidth(
+                    value,
+                    VALUE_W - 2);
+
+            M5Cardputer.Display.drawString(
                 value,
-                VALUE_W - 2);
-
-        M5Cardputer.Display.drawString(
-            value,
-            LIST_RIGHT_CONTENT_X,
-            midY,
-            &fonts::Font0);
+                LIST_RIGHT_CONTENT_X,
+                midY,
+                &fonts::Font0);
+        }
 
         M5Cardputer.Display.setTextDatum(
             middle_left);

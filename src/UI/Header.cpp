@@ -100,15 +100,16 @@ void drawHeaderWifiStatus()
         wifi = "WIFI";
     }
 
-    if ((int)wifi.length() > 7)
-        wifi = wifi.substring(0, 7);
+    // Wi-Fi occupies the right header datum, alongside the clock.
+    if ((int)wifi.length() > 4)
+        wifi = wifi.substring(0, 4);
 
-    M5Cardputer.Display.setTextDatum(middle_left);
+    M5Cardputer.Display.setTextDatum(middle_right);
     M5Cardputer.Display.setTextColor(
         wifiConnected ? T->textMid : T->textDim);
     M5Cardputer.Display.drawString(
         wifi,
-        HEADER_WIFI_X,
+        HEADER_CLOCK_CLEAR_X - 6,
         HEADER_ROW1_Y,
         &fonts::Font0);
 }
@@ -320,6 +321,29 @@ void drawHeaderMessage(
     M5Cardputer.Display.drawString(
         message,
         SCREEN_W - 4,
+        HEADER_MESSAGE_Y,
+        &fonts::Font0);
+}
+
+void drawHeaderScan(bool visible)
+{
+    ensureTheme();
+
+    M5Cardputer.Display.fillRect(
+        SCREEN_W / 2,
+        HEADER_TITLE_Y,
+        SCREEN_W / 2,
+        HEADER_H - HEADER_TITLE_Y,
+        T->hdrBg);
+
+    if (!visible)
+        return;
+
+    M5Cardputer.Display.setTextDatum(middle_right);
+    M5Cardputer.Display.setTextColor(T->accent2);
+    M5Cardputer.Display.drawString(
+        "SCAN...",
+        HEADER_RIGHT_X,
         HEADER_MESSAGE_Y,
         &fonts::Font0);
 }

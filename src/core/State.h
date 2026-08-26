@@ -93,6 +93,8 @@ extern uint8_t seekSeconds;       // seek step in seconds (music mode)
 extern bool wifiPowerSave;        // WiFi modem sleep for battery
 extern uint8_t screenBrightness;  // display brightness 0..255
 extern uint16_t autoScreenOffSec; // 0 = off, else idle seconds before screen off
+extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep sleep
+extern uint32_t playbackOffSec;   // 0 = off, else playback seconds before deep sleep
 extern unsigned long lastActivityMs;
 extern bool settingsMenuVisible;
 extern int settingsSel;

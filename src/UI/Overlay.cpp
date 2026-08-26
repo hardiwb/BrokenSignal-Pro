@@ -2,6 +2,7 @@
 #include <M5Cardputer.h>
 #include "Themes.h"
 #include "Cells.h"
+#include "Hotkeys.h"
 #include "../core/State.h"
 #include "../core/Config.h"
 
@@ -12,24 +13,27 @@ static constexpr int OVERLAY_W = SCREEN_W - (OVERLAY_MARGIN * 2);
 static constexpr int OVERLAY_H = SCREEN_H - (OVERLAY_MARGIN * 2);
 static constexpr int OVERLAY_PAD = 8;
 static constexpr int OVERLAY_TITLE_Y = OVERLAY_Y + 10;
-static constexpr int OVERLAY_FOOTER_Y = OVERLAY_Y + OVERLAY_H - 7;
+static constexpr int OVERLAY_FOOTER_Y = OVERLAY_Y + OVERLAY_H - 10;
 static constexpr int OVERLAY_LIST_X = OVERLAY_X + OVERLAY_PAD;
 static constexpr int OVERLAY_LIST_Y = OVERLAY_Y + 30;
 static constexpr int OVERLAY_LIST_W = OVERLAY_W - (OVERLAY_PAD * 2);
-static constexpr int OVERLAY_LIST_ROW_H = 14;
+static constexpr int OVERLAY_TEXT_ROW_H = 14;
 static constexpr int OVERLAY_LIST_ROW_TEXT_X = 4;
 static constexpr int OVERLAY_LIST_ROW_TOP_PAD = 6;
 static constexpr int OVERLAY_LIST_BOTTOM_GAP = 4;
+static constexpr int OVERLAY_HELPER_GAP = 12;
 static constexpr int OVERLAY_INPUT_X = OVERLAY_X + OVERLAY_PAD;
 static constexpr int OVERLAY_INPUT_Y_WITH_PROMPT = OVERLAY_Y + 40;
 static constexpr int OVERLAY_INPUT_Y_COMPACT = OVERLAY_Y + 17;
 static constexpr int OVERLAY_INPUT_W = OVERLAY_W - (OVERLAY_PAD * 2);
-static constexpr int OVERLAY_INPUT_H = 24;
-static constexpr int OVERLAY_INPUT_TALL_H = 36;
+static constexpr int OVERLAY_INPUT_H = 14;
+static constexpr int OVERLAY_INPUT_TALL_H = 22;
 static constexpr int OVERLAY_TWO_COL_Y = OVERLAY_Y + 17;
-static constexpr int OVERLAY_TWO_COL_H = 56;
+static constexpr int OVERLAY_TWO_COL_H = 38;
 static constexpr int OVERLAY_TWO_COL_PAD = 6;
 static constexpr int OVERLAY_TWO_COL_GAP = 10;
+static constexpr int OVERLAY_TWO_COL_CONTENT_PAD = 3;
+static constexpr int OVERLAY_LARGE_FONT_CENTER_OFFSET = 3;
 
 static int activeInputY = OVERLAY_INPUT_Y_WITH_PROMPT;
 static int activeInputH = OVERLAY_INPUT_H;
@@ -182,18 +186,18 @@ void drawOverlayList(
     D.setTextDatum(middle_left);
 
     const int maxRows =
-        (OVERLAY_FOOTER_Y - OVERLAY_LIST_Y - OVERLAY_LIST_BOTTOM_GAP) / OVERLAY_LIST_ROW_H;
+        (OVERLAY_FOOTER_Y - OVERLAY_LIST_Y - OVERLAY_LIST_BOTTOM_GAP) / OVERLAY_TEXT_ROW_H;
 
     for (int i = 0; i < (int)model.items.size() && i < maxRows; i++)
     {
         const bool selected = i == model.selected;
-        const int y = OVERLAY_LIST_Y + i * OVERLAY_LIST_ROW_H;
+        const int y = OVERLAY_LIST_Y + i * OVERLAY_TEXT_ROW_H;
 
         D.fillRect(
             OVERLAY_LIST_X,
             y - OVERLAY_LIST_ROW_TOP_PAD,
             OVERLAY_LIST_W,
-            OVERLAY_LIST_ROW_H,
+            OVERLAY_TEXT_ROW_H,
             selected ? T->accent2 : T->hdrBg);
         D.setTextColor(selected ? T->bg : T->textMid);
         D.drawString(model.items[i], OVERLAY_LIST_X + OVERLAY_LIST_ROW_TEXT_X, y, &fonts::Font0);
@@ -229,7 +233,7 @@ void drawOverlayMessageLine(
     if (index < 0 || index >= (int)model.items.size())
         return;
 
-    constexpr int lineH = 16;
+    constexpr int lineH = OVERLAY_TEXT_ROW_H;
     const int lineCount = (int)model.items.size();
     const int contentTop = OVERLAY_LIST_Y;
     const int contentBottom = OVERLAY_FOOTER_Y - 10;
@@ -264,9 +268,9 @@ void drawOverlayTwoColumnInputValue(
 
     D.fillRect(
         OVERLAY_INPUT_X,
-        OVERLAY_TWO_COL_Y + 5,
+        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_CONTENT_PAD,
         OVERLAY_INPUT_W,
-        OVERLAY_TWO_COL_H - 10,
+        OVERLAY_TWO_COL_H - (OVERLAY_TWO_COL_CONTENT_PAD * 2),
         T->bg);
 
     drawDashedCellLine(
@@ -286,7 +290,11 @@ void drawOverlayTwoColumnInputValue(
         : 0;
     leftW = min(leftW, innerW / 3);
     const int valueW = max(0, innerW - leftW);
-    const int midY = OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H / 2;
+    // Font4's digit ink sits above its metric midpoint, so lower it visually.
+    const int midY = OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H / 2 +
+        (model.inputFont == OverlayFontSize::Large
+            ? OVERLAY_LARGE_FONT_CENTER_OFFSET
+            : 0);
 
     if (model.leftValue.length() > 0)
     {
@@ -294,9 +302,9 @@ void drawOverlayTwoColumnInputValue(
         D.setTextColor(T->accent1, T->bg);
         D.setClipRect(
             OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD,
-            OVERLAY_TWO_COL_Y + 5,
+            OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_CONTENT_PAD,
             leftW,
-            OVERLAY_TWO_COL_H - 10);
+            OVERLAY_TWO_COL_H - (OVERLAY_TWO_COL_CONTENT_PAD * 2));
         D.drawString(
             model.leftValue,
             OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD,
@@ -310,9 +318,9 @@ void drawOverlayTwoColumnInputValue(
     D.setTextColor(T->textBright, T->bg);
     D.setClipRect(
         OVERLAY_INPUT_X + OVERLAY_TWO_COL_PAD + leftW,
-        OVERLAY_TWO_COL_Y + 5,
+        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_CONTENT_PAD,
         valueW,
-        OVERLAY_TWO_COL_H - 10);
+        OVERLAY_TWO_COL_H - (OVERLAY_TWO_COL_CONTENT_PAD * 2));
     D.drawString(
         fitted,
         OVERLAY_INPUT_X + OVERLAY_INPUT_W - OVERLAY_TWO_COL_PAD,
@@ -328,20 +336,19 @@ void drawOverlayTwoColumnInput(
     drawOverlayTwoColumnInputValue(model);
 
     auto &D = M5Cardputer.Display;
-    D.setTextDatum(middle_center);
-    D.setTextColor(T->textMid);
-    D.drawString(
+    drawHotkeyText(
         fitOverlayText(model.helperText, OVERLAY_LIST_W),
         SCREEN_W / 2,
-        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H + 11,
-        &fonts::Font0);
+        OVERLAY_TWO_COL_Y + OVERLAY_TWO_COL_H + OVERLAY_HELPER_GAP,
+        middle_center,
+        T->textMid);
 
-    D.setTextColor(T->textDim);
-    D.drawString(
+    drawHotkeyText(
         fitOverlayText(model.confirmText, OVERLAY_LIST_W),
         SCREEN_W / 2,
         OVERLAY_FOOTER_Y,
-        &fonts::Font0);
+        middle_center,
+        T->textDim);
 }
 
 void drawOverlayInput(
@@ -404,19 +411,18 @@ void drawOverlayInput(
                 model.helperText,
                 OVERLAY_W - (OVERLAY_PAD * 2)),
             SCREEN_W / 2,
-            activeInputY + activeInputH + 16,
+            activeInputY + activeInputH + OVERLAY_HELPER_GAP,
             &fonts::Font0);
     }
 
-    D.setTextColor(T->accent1);
-    D.setTextDatum(middle_center);
-    D.drawString(
+    drawHotkeyText(
         fitOverlayText(
             model.confirmText,
             OVERLAY_W - (OVERLAY_PAD * 2)),
         SCREEN_W / 2,
         OVERLAY_FOOTER_Y,
-        &fonts::Font0);
+        middle_center,
+        T->accent1);
 }
 
 void drawOverlayInputValue(

@@ -34,4 +34,5 @@ void drawHeaderMode(const String &mode);
 void drawHeaderClock(const String &clock);
 void drawHeaderCursor(bool visible);
 void drawHeaderMessage(const String &message);
+void drawHeaderScan(bool visible);
 void showVolumeMessage();

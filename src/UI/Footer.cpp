@@ -2,6 +2,7 @@
 
 #include "Themes.h"
 #include "Cells.h"
+#include "Hotkeys.h"
 
 extern uint8_t themeIdx;
 extern const Theme *T;
@@ -85,13 +86,25 @@ void drawFooterLeftText(const String &text)
         leftW,
         FOOTER_H - 1);
 
-    M5Cardputer.Display.setTextDatum(middle_left);
-    M5Cardputer.Display.setTextColor(T->textMid);
-    M5Cardputer.Display.drawString(
-        text,
-        FOOTER_LEFT_X + FOOTER_TEXT_PAD_X,
-        FOOTER_TEXT_Y,
-        &fonts::Font0);
+    if (text.indexOf('[') >= 0)
+    {
+        drawHotkeyText(
+            text,
+            FOOTER_LEFT_X + FOOTER_TEXT_PAD_X,
+            FOOTER_TEXT_Y,
+            middle_left,
+            T->textMid);
+    }
+    else
+    {
+        M5Cardputer.Display.setTextDatum(middle_left);
+        M5Cardputer.Display.setTextColor(T->textMid);
+        M5Cardputer.Display.drawString(
+            text,
+            FOOTER_LEFT_X + FOOTER_TEXT_PAD_X,
+            FOOTER_TEXT_Y,
+            &fonts::Font0);
+    }
 
     M5Cardputer.Display.clearClipRect();
 }
@@ -107,13 +120,25 @@ void drawFooterCenterText(const String &text)
         text,
         FOOTER_CENTER_W - (FOOTER_TEXT_PAD_X * 2));
 
-    M5Cardputer.Display.setTextDatum(middle_center);
-    M5Cardputer.Display.setTextColor(T->textMid);
-    M5Cardputer.Display.drawString(
-        fitted,
-        FOOTER_CENTER_X + (FOOTER_CENTER_W / 2),
-        FOOTER_TEXT_Y,
-        &fonts::Font0);
+    if (fitted.indexOf('[') >= 0)
+    {
+        drawHotkeyText(
+            fitted,
+            FOOTER_CENTER_X + (FOOTER_CENTER_W / 2),
+            FOOTER_TEXT_Y,
+            middle_center,
+            T->textMid);
+    }
+    else
+    {
+        M5Cardputer.Display.setTextDatum(middle_center);
+        M5Cardputer.Display.setTextColor(T->textMid);
+        M5Cardputer.Display.drawString(
+            fitted,
+            FOOTER_CENTER_X + (FOOTER_CENTER_W / 2),
+            FOOTER_TEXT_Y,
+            &fonts::Font0);
+    }
 }
 
 void drawFooterBatteryText(const String &text)
