@@ -45,6 +45,12 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
 ## Gallery
 
 <p align="center">
+  <img src="./images/BSProApps.jpg" width="360" alt="Applications menu showing Music Player, Web Radio, Notes, and Calculator">
+  <br>
+  <strong>Applications</strong>
+</p>
+
+<p align="center">
   <img src="./images/BSPRoMusic.jpg" width="360" alt="Music player">
   <br>
   <strong>Music Player</strong>
@@ -63,9 +69,15 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
 </p>
 
 <p align="center">
-  <img src="./images/BSProQuickNote.jpg" width="360" alt="Quick note overlay">
+  <img src="./images/BSProContextualMenu.jpg" width="360" alt="Contextual Notes Options menu">
   <br>
-  <strong>Quick Note Overlay</strong>
+  <strong>Contextual Options</strong>
+</p>
+
+<p align="center">
+  <img src="./images/BSProControlPanel.jpg" width="360" alt="System Control Panel">
+  <br>
+  <strong>Control Panel</strong>
 </p>
 
 <p align="center">
@@ -78,6 +90,12 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
   <img src="./images/BSProCalc.jpg" width="360" alt="Calculator overlay">
   <br>
   <strong>Calculator</strong>
+</p>
+
+<p align="center">
+  <img src="./images/BSProCalcHistory.jpg" width="360" alt="Calculator history with right-aligned result and thousands separators">
+  <br>
+  <strong>Calculation History</strong>
 </p>
 
 ## Features
