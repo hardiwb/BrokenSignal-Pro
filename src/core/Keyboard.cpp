@@ -4,16 +4,17 @@
 
 #include "System.h"
 
-#include "../module/Browser.h"
-#include "../module/Calculator.h"
-#include "../module/Debug.h"
-#include "../module/Help.h"
-#include "../module/Player.h"
-#include "../module/Settings.h"
-#include "../module/Applications.h"
-#include "../module/Notes.h"
-#include "../module/Radio.h"
-#include "../module/service/WiFi.h"
+#include "module/programs/Browser.h"
+#include "module/programs/Calculator.h"
+#include "module/shell/Debug.h"
+#include "module/shell/Help.h"
+#include "module/programs/Player.h"
+#include "module/shell/Settings.h"
+#include "module/shell/Applications.h"
+#include "module/shell/Options.h"
+#include "module/programs/Notes.h"
+#include "module/programs/Radio.h"
+#include "module/service/WiFi.h"
 
 bool keyboardBackPressed(Keyboard_Class::KeysState &ks)
 {
@@ -51,6 +52,7 @@ static const uint8_t HID_KEY_N = 0x11;
 
 enum class KeyboardInputMode
 {
+    Options,
     Calculator,
     Applications,
     Settings,
@@ -104,6 +106,9 @@ void openNotesAppFromShortcut()
 
 KeyboardInputMode currentKeyboardInputMode()
 {
+    if (optionsMenuVisible)
+        return KeyboardInputMode::Options;
+
     // Calculator is an overlay and always receives input before its host screen.
     if (calculatorInputActive())
         return KeyboardInputMode::Calculator;
@@ -138,6 +143,8 @@ bool calculatorHostAllowsOverlay(KeyboardInputMode mode)
 {
     switch (mode)
     {
+    case KeyboardInputMode::Options:
+        return false;
     case KeyboardInputMode::Settings:
         return !settingsInputOverlayActive();
     case KeyboardInputMode::Applications:
@@ -180,12 +187,6 @@ bool tryOpenCalculatorOverlay(
 
 bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
 {
-    if (ks.opt)
-    {
-        enterApplicationsMenu();
-        return true;
-    }
-
     for (auto c : ks.word)
     {
         switch (c)
@@ -295,10 +296,12 @@ void keyboardLoop()
         return;
     }
 
-    if (!notesMode &&
+    if (!optionsMenuVisible &&
+        !notesMode &&
         !calculatorInputActive() &&
         !settingsInputOverlayActive() &&
         !notesEditorVisible() &&
+        !notesMoveDateInputActive() &&
         !wifiPassOverlayVisible &&
         !radioOverlayActive() &&
         isFnN(ks))
@@ -309,18 +312,36 @@ void keyboardLoop()
 
     const bool modifierOnly = ks.word.empty();
     const bool modalInputActive =
-        calculatorInputActive() || settingsInputOverlayActive() ||
-        notesEditorVisible() || wifiPassOverlayVisible || radioOverlayActive();
+        optionsMenuVisible || calculatorInputActive() ||
+        settingsInputOverlayActive() ||
+        notesEditorVisible() || notesMoveDateInputActive() ||
+        wifiPassOverlayVisible || radioOverlayActive();
 
-    if (!modalInputActive && modifierOnly && ks.ctrl)
+    if (!settingsMenuVisible && !modalInputActive && modifierOnly && ks.ctrl)
     {
         enterSettingsMenu();
         return;
     }
 
-    if (!modalInputActive && ks.opt)
+    const bool applicationHostActive =
+        !applicationsMenuVisible && !settingsMenuVisible &&
+        !helpVisible && !debugOverlayVisible &&
+        !wifiInputActive() && !notesEditorVisible() &&
+        !notesMoveDateInputActive() &&
+        !radioOverlayActive();
+
+    if (applicationHostActive && modifierOnly && ks.alt)
     {
         enterApplicationsMenu();
+        return;
+    }
+
+    const bool optionsHostActive =
+        !optionsMenuVisible && applicationHostActive;
+
+    if (optionsHostActive && modifierOnly && ks.opt)
+    {
+        enterOptionsMenu();
         return;
     }
 
@@ -336,6 +357,10 @@ void keyboardLoop()
 
     switch (mode)
     {
+    case KeyboardInputMode::Options:
+        handleOptionsInput(ks);
+        return;
+
     case KeyboardInputMode::Calculator:
         handleCalculatorInput(ks);
         return;

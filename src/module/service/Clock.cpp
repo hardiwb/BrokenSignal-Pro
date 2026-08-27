@@ -600,12 +600,18 @@ bool formatClock(char *out, size_t outSize)
     return lastClockValid;
 }
 
-bool setClockFromDisplayDateTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute)
+bool setClockFromDisplayDateTime(
+    uint16_t year,
+    uint8_t month,
+    uint8_t day,
+    uint8_t hour,
+    uint8_t minute,
+    uint8_t second)
 {
     if (!ensureRtcClock())
         return false;
     if (year < 2000 || year > 2099 || month < 1 || month > 12 || day < 1 ||
-        day > daysInMonth(year, month) || hour > 23 || minute > 59)
+        day > daysInMonth(year, month) || hour > 23 || minute > 59 || second > 59)
         return false;
 
     struct tm displayTm{};
@@ -620,7 +626,7 @@ bool setClockFromDisplayDateTime(uint16_t year, uint8_t month, uint8_t day, uint
     displayTm.tm_mday = (int)day;
     displayTm.tm_hour = hour;
     displayTm.tm_min = minute;
-    displayTm.tm_sec = 0;
+    displayTm.tm_sec = second;
 
     time_t displayEpoch = epochFromUtcTm(displayTm);
     if (displayEpoch < 0)

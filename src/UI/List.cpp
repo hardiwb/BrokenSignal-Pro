@@ -549,6 +549,47 @@ void drawPropertyItem(
         midY,
         &fonts::Font0);
 
+    if (item.propertyFirst)
+    {
+        constexpr int PROPERTY_W = 42;
+        String property = "<" + item.value + ">";
+        property = fitTextToWidth(property, PROPERTY_W);
+
+        M5Cardputer.Display.setTextDatum(middle_left);
+        M5Cardputer.Display.setTextColor(
+            item.isDimmed
+                ? T->textDim
+                : selected ? T->accent2 : T->textDim);
+        M5Cardputer.Display.drawString(
+            property,
+            LIST_CONTENT_X,
+            midY,
+            &fonts::Font0);
+
+        const int itemX = LIST_CONTENT_X + PROPERTY_W;
+        const int itemW = LIST_RIGHT_CONTENT_X - itemX;
+        String fittedLabel = fitTextToWidth(item.label, itemW);
+        M5Cardputer.Display.setTextDatum(middle_right);
+        M5Cardputer.Display.setTextColor(
+            item.isDimmed
+                ? T->textDim
+                : selected ? T->accent2 : T->textMid);
+        M5Cardputer.Display.drawString(
+            fittedLabel,
+            LIST_RIGHT_CONTENT_X,
+            midY,
+            &fonts::Font0);
+
+        if (selected)
+            drawRightHalfBlock(
+                LIST_BLINKER_X,
+                midY,
+                LIST_BLINKER_W,
+                LIST_ITEM_H - 4,
+                cursorVisible ? T->accent1 : T->selRow);
+        return;
+    }
+
     // --------------------------------------------------------
     // Property label
     // --------------------------------------------------------

@@ -1,11 +1,11 @@
-#include "module/Applications.h"
+#include "module/shell/Applications.h"
 
 #include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/Calculator.h"
-#include "module/Notes.h"
-#include "module/Radio.h"
+#include "module/programs/Calculator.h"
+#include "module/programs/Notes.h"
+#include "module/programs/Radio.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -14,9 +14,28 @@ bool applicationsMenuVisible = false;
 
 namespace
 {
-static const int APPLICATION_COUNT = 4;
-static const char *APPLICATION_LABELS[APPLICATION_COUNT] = {
-    "Music Player", "Web Radio", "Notes", "Calculator"};
+enum class ApplicationId
+{
+    MusicPlayer,
+    WebRadio,
+    Notes,
+    Calculator
+};
+
+struct ApplicationDescriptor
+{
+    ApplicationId id;
+    const char *displayName;
+    const char *headerTag;
+};
+
+static const ApplicationDescriptor APPLICATIONS[] = {
+    {ApplicationId::MusicPlayer, "Music Player", "MUSIC"},
+    {ApplicationId::WebRadio, "Web Radio", "RADIO"},
+    {ApplicationId::Notes, "Notes", "NOTES"},
+    {ApplicationId::Calculator, "Calculator", "CALCULATOR"}};
+static constexpr int APPLICATION_COUNT =
+    sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]);
 static int applicationSelected = 2;
 
 static ListModel buildApplicationsListModel()
@@ -29,7 +48,7 @@ static ListModel buildApplicationsListModel()
     {
         ListItemModel item;
         item.type = ListItemType::Normal;
-        item.label = APPLICATION_LABELS[i];
+        item.label = APPLICATIONS[i].displayName;
         item.isSelected = i == applicationSelected;
         model.items.push_back(item);
     }
@@ -40,27 +59,27 @@ static void openSelectedApplication()
 {
     applicationsMenuVisible = false;
 
-    switch (applicationSelected)
+    switch (APPLICATIONS[applicationSelected].id)
     {
-    case 0:
+    case ApplicationId::MusicPlayer:
         notesClose();
         if (webRadioMode)
             exitWebRadioMode();
         else
             drawAll();
         break;
-    case 1:
+    case ApplicationId::WebRadio:
         notesClose();
         if (!webRadioMode)
             enterWebRadioMode();
         else
             drawRadioAll();
         break;
-    case 2:
+    case ApplicationId::Notes:
         notesOpen();
         break;
-    case 3:
-        openCalculator();
+    case ApplicationId::Calculator:
+        openCalculatorHistory();
         break;
     }
 }
@@ -69,15 +88,15 @@ static void openSelectedApplication()
 void drawApplicationsMenu()
 {
     HeaderModel header;
-    header.mode = "APPLICATIONS";
-    header.title = "APPLICATIONS";
+    header.appHeaderTag = "APPS";
+    header.appHeaderTitle = "Applications";
     header.cursor = true;
     drawHeader(header);
 
     drawList(buildApplicationsListModel());
 
     FooterModel footer;
-    footer.left = "[Esc]Close [Ent]Open";
+    footer.left = "[Alt]Close [Ok]Open";
     footer.center = "";
     footer.battery = footerBatteryText();
     drawFooter(footer);
@@ -85,6 +104,8 @@ void drawApplicationsMenu()
 
 void enterApplicationsMenu()
 {
+    optionsMenuVisible = false;
+    calculatorVisible = false;
     settingsMenuVisible = false;
     helpVisible = false;
     debugOverlayVisible = false;
@@ -101,7 +122,7 @@ void exitApplicationsMenu()
 
 void handleApplicationsInput(Keyboard_Class::KeysState &ks)
 {
-    if (keyboardBackPressed(ks) || ks.opt)
+    if ((ks.alt && ks.word.empty()) || keyboardBackPressed(ks))
     {
         exitApplicationsMenu();
         return;

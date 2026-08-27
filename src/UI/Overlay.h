@@ -16,6 +16,7 @@ enum class OverlayType
     TwoColumnInput,
     PasswordInput,
     TextInput,
+    TwoFieldInput,
     Confirm
 };
 
@@ -35,18 +36,23 @@ struct OverlayModel
 
     String title;
     String value;
+    String secondValue;
     String leftValue;
 
     std::vector<String> items;
 
     int selected = 0;
+    int activeField = 0;
+    int cursorIndex = 0;
 
     String prompt;
+    String secondPrompt;
     String helperText;
     String confirmText;
 
     bool passwordMode = false;
     bool tallInput = false;
+    bool centerFirstField = false;
     OverlayFontSize inputFont = OverlayFontSize::Small;
 };
 
@@ -81,6 +87,12 @@ void drawOverlayInput(
 void drawOverlayInputValue(
     const String &value,
     bool passwordMode = false);
+
+void drawOverlayTwoFieldInput(
+    const OverlayModel &model);
+
+void drawOverlayTwoFieldInputValues(
+    const OverlayModel &model);
 
 void drawOverlayConfirm(
     const OverlayModel &model);

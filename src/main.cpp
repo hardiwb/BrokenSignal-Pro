@@ -10,15 +10,15 @@
 #include "core/State.h"
 #include "core/Keyboard.h"
 #include "core/System.h"
-#include "module/Player.h"
-#include "module/Browser.h"
-#include "module/Calculator.h"
-#include "module/Debug.h"
-#include "module/Radio.h"
-#include "module/Settings.h"
+#include "module/programs/Player.h"
+#include "module/programs/Browser.h"
+#include "module/programs/Calculator.h"
+#include "module/shell/Debug.h"
+#include "module/programs/Radio.h"
+#include "module/shell/Settings.h"
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
-#include "module/Notes.h"
+#include "module/programs/Notes.h"
 
 namespace
 {
@@ -173,7 +173,8 @@ void loop()
 
   // UI Update
   static unsigned long lastDraw = 0;
-  if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+  if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
+      !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       millis() - lastDraw >= 500)
   {
@@ -211,7 +212,8 @@ void loop()
     }
   }
 
-  if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+  if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
+      !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
       !removeConfirmVisible)
@@ -230,7 +232,8 @@ void loop()
   if (toastActive && millis() > toastEnd)
   {
     dismissToast();
-    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
+    if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
+        !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
@@ -240,8 +243,11 @@ void loop()
   if (hdrMsgEnd > 0 && millis() >= hdrMsgEnd)
   {
     hdrMsgEnd = 0;
-    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
-        !calculatorInputActive())
+    if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
+        !settingsMenuVisible && !notesInputActive() &&
+        !calculatorInputActive() &&
+        !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
+        !removeConfirmVisible)
     {
       if (webRadioMode)
         drawRadioHeader();
@@ -261,8 +267,11 @@ void loop()
   {
     batteryLevel = (int)min((int32_t)99, M5.Power.getBatteryLevel());
     batteryLastMs = millis();
-    if (screenOn && !helpVisible && !settingsMenuVisible && !notesInputActive() &&
-        !calculatorInputActive())
+    if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
+        !settingsMenuVisible && !notesInputActive() &&
+        !calculatorInputActive() &&
+        !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
+        !removeConfirmVisible)
     {
       drawFooterBattery(footerBatteryText());
     }

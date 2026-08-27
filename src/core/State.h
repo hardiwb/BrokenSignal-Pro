@@ -56,6 +56,7 @@ extern int radioSelected;
 extern int radioScrollTop;
 extern int radioPlaying;
 extern bool radioIsPlaying;
+extern bool radioForceAac;
 extern AudioFileSource *httpSrc;
 extern AudioFileSourceBuffer *radioBuf;
 extern AudioGeneratorMP3 *radioMp3;
@@ -95,9 +96,13 @@ extern uint8_t screenBrightness;  // display brightness 0..255
 extern uint16_t autoScreenOffSec; // 0 = off, else idle seconds before screen off
 extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep sleep
 extern uint32_t playbackOffSec;   // 0 = off, else playback seconds before deep sleep
+extern int8_t calculatorDecimalPlaces; // -1 = Auto, otherwise fixed decimal places
+extern uint8_t calculatorRoundingMode; // 0 = Half Up, 1 = Half Even, 2 = Truncate
+extern bool calculatorThousandsSeparator;
 extern unsigned long lastActivityMs;
 extern bool settingsMenuVisible;
 extern bool applicationsMenuVisible;
+extern bool optionsMenuVisible;
 extern int settingsSel;
 extern bool debugOverlayVisible;
 extern bool calculatorVisible;

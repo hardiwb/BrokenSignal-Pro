@@ -6,19 +6,26 @@
 #include "core/Config.h"
 #include "UI/Themes.h"
 #include "UI/Toast.h"
-#include "module/Player.h"
-#include "module/Calculator.h"
-#include "module/Notes.h"
-#include "module/Radio.h"
-#include "module/Settings.h"
-#include "module/Applications.h"
-#include "module/Help.h"
-#include "module/Debug.h"
+#include "module/programs/Player.h"
+#include "module/programs/Calculator.h"
+#include "module/programs/Notes.h"
+#include "module/programs/Radio.h"
+#include "module/shell/Settings.h"
+#include "module/shell/Applications.h"
+#include "module/shell/Options.h"
+#include "module/shell/Help.h"
+#include "module/shell/Debug.h"
 #include "module/service/WiFi.h"
-#include "../module/service/Clock.h"
+#include "module/service/Clock.h"
 
 void drawCurrentScreen()
 {
+    if (optionsMenuVisible)
+    {
+        drawOptionsMenu();
+        return;
+    }
+
     if (calculatorVisible)
     {
         drawCalculator();
@@ -46,6 +53,12 @@ void drawCurrentScreen()
     if (debugOverlayVisible)
     {
         drawDebug();
+        return;
+    }
+
+    if (notesMoveDateInputActive())
+    {
+        drawNotesMoveDateEditor();
         return;
     }
 
@@ -112,6 +125,15 @@ void showHdrMsg(const char *msg)
 {
     hdrMsg = String(msg);
     hdrMsgEnd = millis() + 1000;
+
+    const bool hostScreenVisible =
+        !optionsMenuVisible && !calculatorVisible && !helpVisible &&
+        !applicationsMenuVisible && !settingsMenuVisible &&
+        !debugOverlayVisible && !notesInputActive() &&
+        !wifiInputActive() && !radioOverlayActive();
+    if (!hostScreenVisible)
+        return;
+
     if (webRadioMode)
         drawRadioHeader();
     else
@@ -213,6 +235,16 @@ void loadSettings()
         if (key == "playbackoff" && val >= 0 && val <= 10800)
             playbackOffSec = (uint32_t)val;
 
+        if (key == "calcdecimals" &&
+            (val == -1 || val == 0 || val == 2 || val == 4 || val == 6))
+            calculatorDecimalPlaces = (int8_t)val;
+
+        if (key == "calcrounding" && val >= 0 && val <= 2)
+            calculatorRoundingMode = (uint8_t)val;
+
+        if (key == "calcthousands")
+            calculatorThousandsSeparator = (val != 0);
+
         if (key == "timezone")
             setClockTimezoneOffsetHours(
                 (int8_t)max(-12, min(14, val))
@@ -237,6 +269,9 @@ void saveSettings()
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
     f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);
     f.printf("playbackoff=%lu\n", (unsigned long)playbackOffSec);
+    f.printf("calcdecimals=%d\n", (int)calculatorDecimalPlaces);
+    f.printf("calcrounding=%d\n", calculatorRoundingMode);
+    f.printf("calcthousands=%d\n", calculatorThousandsSeparator ? 1 : 0);
     f.printf("timezone=%d\n", (int)getClockTimezoneOffsetHours());
     f.close();
 }

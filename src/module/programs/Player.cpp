@@ -1,7 +1,7 @@
 #include "core/System.h"
 #include <M5Cardputer.h>
-#include "module/Player.h"
-#include "module/Browser.h"
+#include "module/programs/Player.h"
+#include "module/programs/Browser.h"
 #include "core/Utils.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -216,8 +216,8 @@ void drawPlayerHeader()
         mode = isPlaying ? "PLAYING" : (isPaused ? "PAUSED" : "STOPPED");
 
     HeaderModel model;
-    model.mode = mode;
-    model.title = name;
+    model.appHeaderTag = mode;
+    model.appHeaderTitle = name;
     model.cursor = cursorVisible;
 
     drawHeader(model);
@@ -389,7 +389,7 @@ void cycleRepeat()
     repeatMode = (repeatMode + 1) % 3;
     settingsDirty = true;
     settingsDirtyMs = millis();
-    const char *labels[] = {"REPEAT OFF", "REPEAT ONE", "REPEAT ALL"};
+    const char *labels[] = {"RPT OFF", "RPT ONE", "RPT ALL"};
     showHdrMsg(labels[repeatMode]);
 }
 
@@ -398,7 +398,7 @@ void toggleShuffle()
     shuffleOn = !shuffleOn;
     settingsDirty = true;
     settingsDirtyMs = millis();
-    showHdrMsg(shuffleOn ? "SHUFFLE ON" : "SHUFFLE OFF");
+    showHdrMsg(shuffleOn ? "SHUF ON" : "SHUF OFF");
 }
 
 //==================================================

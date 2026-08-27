@@ -1,10 +1,10 @@
-#include "module/Debug.h"
+#include "module/shell/Debug.h"
 
 #include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/Help.h"
-#include "module/Radio.h"
+#include "module/shell/Help.h"
+#include "module/programs/Radio.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -97,8 +97,8 @@ static void clampDebugSelection()
 static void drawDebugHeader()
 {
     HeaderModel model;
-    model.mode = "DEBUG";
-    model.title = "SYSTEM";
+    model.appHeaderTag = "DEBUG";
+    model.appHeaderTitle = "SYSTEM";
     model.cursor = true;
     drawHeader(model);
 }

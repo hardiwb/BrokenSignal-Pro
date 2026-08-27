@@ -1,4 +1,4 @@
-#include "module/Notes.h"
+#include "module/programs/Notes.h"
 
 #include <SD.h>
 #include <time.h>
@@ -8,7 +8,7 @@
 #include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/Help.h"
+#include "module/shell/Help.h"
 #include "module/service/Clock.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -17,12 +17,14 @@
 #include "UI/Themes.h"
 
 void drawNotes();
-void drawNotesEditor();
+void drawNotesEditor(bool inputOnly);
 
 namespace
 {
 void loadNote();
 void drawNotesList();
+bool parseDateKey(const String &dateKey, struct tm &date);
+String formatDateKey(const struct tm &date);
 
 enum class NotesViewMode
 {
@@ -44,9 +46,17 @@ String currentMonth;
 String currentDay;
 String notePath;
 String noteEditText;
+String noteEditDate;
 
 bool initialized = false;
 bool noteEditorVisible = false;
+bool noteEditorDateInvalid = false;
+int noteEditorField = 0;
+int noteEditTextCursor = 0;
+int noteEditDateCursor = 0;
+bool noteMoveDateVisible = false;
+bool noteMoveDateInvalid = false;
+String noteMoveDateInput;
 int noteEditIndex = -1;
 NotesViewMode notesViewMode = NotesViewMode::Day;
 int notesDayOffset = 0;
@@ -147,9 +157,10 @@ String getDisplayDateString()
         return String(monthNames[viewed.tm_mon]) + " " + String(viewed.tm_year + 1900);
     }
 
-    char buf[32];
-    strftime(buf, sizeof(buf), "%a, %b %d %Y", &viewed);
-    return String(buf);
+    char prefix[24];
+    strftime(prefix, sizeof(prefix), "%A, %b ", &viewed);
+    return String(prefix) + String(viewed.tm_mday) + " " +
+           String(viewed.tm_year + 1900);
 }
 
 String getEntryStamp()
@@ -245,12 +256,20 @@ void redrawQuickNoteEditor()
     if (!noteEditorVisible)
         return;
 
-    drawNotesEditor();
+    drawNotesEditor(true);
 }
 
 void shiftQuickNoteDate(int delta)
 {
-    notesDayOffset += delta;
+    struct tm date{};
+    if (!parseDateKey(noteEditDate, date))
+        return;
+
+    date.tm_mday += delta;
+    mktime(&date);
+    noteEditDate = formatDateKey(date);
+    noteEditDateCursor = min(noteEditDateCursor, (int)noteEditDate.length());
+    noteEditorDateInvalid = false;
     redrawQuickNoteEditor();
 }
 
@@ -280,7 +299,7 @@ void selectBottomNote()
     drawNotesList();
 }
 
-void setNotesViewMode(NotesViewMode mode)
+void setNotesViewMode(NotesViewMode mode, bool redraw = true)
 {
     notesViewMode = mode;
     if (mode == NotesViewMode::Day)
@@ -290,7 +309,8 @@ void setNotesViewMode(NotesViewMode mode)
 
     resetNotesCursor();
     loadNote();
-    drawNotes();
+    if (redraw)
+        drawNotes();
 }
 
 void shiftNotesView(int delta)
@@ -429,6 +449,119 @@ void removeSelectedNote()
     drawNotes();
 }
 
+bool parseDateKey(const String &dateKey, struct tm &date)
+{
+    int year = 0;
+    int month = 0;
+    int day = 0;
+    char trailing = '\0';
+
+    if (dateKey.length() != 10 ||
+        sscanf(dateKey.c_str(), "%d-%d-%d%c", &year, &month, &day, &trailing) != 3 ||
+        year < 2000 || year > 2099 || month < 1 || month > 12 ||
+        day < 1 || day > 31)
+        return false;
+
+    memset(&date, 0, sizeof(date));
+    date.tm_year = year - 1900;
+    date.tm_mon = month - 1;
+    date.tm_mday = day;
+    date.tm_hour = 12;
+    date.tm_isdst = -1;
+
+    if (mktime(&date) == (time_t)-1)
+        return false;
+
+    return date.tm_year == year - 1900 &&
+           date.tm_mon == month - 1 &&
+           date.tm_mday == day;
+}
+
+String formatDateKey(const struct tm &date)
+{
+    char value[11];
+    snprintf(
+        value,
+        sizeof(value),
+        "%04d-%02d-%02d",
+        date.tm_year + 1900,
+        date.tm_mon + 1,
+        date.tm_mday);
+    return String(value);
+}
+
+bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey)
+{
+    String destinationMonth = dateKey.substring(0, 7);
+    if (destinationMonth == currentMonth)
+    {
+        noteEntries.push_back(entry);
+        saveNote();
+        return true;
+    }
+
+    SD.mkdir("/Notes");
+    String destinationPath = "/Notes/" + destinationMonth + ".txt";
+    File destination = SD.open(destinationPath, FILE_APPEND);
+    if (!destination)
+        return false;
+
+    destination.printf(
+        "%s|%c|%s\n",
+        entry.stamp.c_str(),
+        entry.done ? 'x' : '-',
+        entry.text.c_str());
+    destination.close();
+    return true;
+}
+
+bool moveSelectedNoteToDate(const String &dateKey)
+{
+    struct tm targetDate{};
+    if (!parseDateKey(dateKey, targetDate))
+        return false;
+
+    int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0 || noteIndex >= (int)noteEntries.size())
+        return false;
+
+    NoteEntry moved = noteEntries[noteIndex];
+    String timeSuffix = moved.stamp.length() > 10
+                            ? moved.stamp.substring(10)
+                            : getEntryStamp().substring(10);
+    moved.stamp = dateKey + timeSuffix;
+
+    String destinationMonth = dateKey.substring(0, 7);
+    if (destinationMonth == currentMonth)
+    {
+        noteEntries[noteIndex] = moved;
+        saveNote();
+    }
+    else
+    {
+        SD.mkdir("/Notes");
+        String destinationPath = "/Notes/" + destinationMonth + ".txt";
+        File destination = SD.open(destinationPath, FILE_APPEND);
+        if (!destination)
+            return false;
+
+        destination.printf(
+            "%s|%c|%s\n",
+            moved.stamp.c_str(),
+            moved.done ? 'x' : '-',
+            moved.text.c_str());
+        destination.close();
+
+        noteEntries.erase(noteEntries.begin() + noteIndex);
+        saveNote();
+    }
+
+    loadNote();
+    clampNotesSelection();
+    drawNotes();
+    return true;
+}
+
 void toggleSelectedNoteDone()
 {
     int noteIndex = noteEntryIndexFromVisible(notesSelected);
@@ -449,10 +582,19 @@ void beginNoteEditor(int editIndex)
 {
     noteEditIndex = editIndex;
     noteEditText = "";
+    noteEditDate = viewedDateKey();
     int noteIndex = noteEntryIndexFromVisible(editIndex);
     if (noteIndex >= 0 && noteIndex < (int)noteEntries.size())
+    {
         noteEditText = noteEntries[noteIndex].text;
+        String monthKey;
+        parseNoteStamp(noteEntries[noteIndex].stamp, noteEditDate, monthKey);
+    }
 
+    noteEditorField = 0;
+    noteEditTextCursor = noteEditText.length();
+    noteEditDateCursor = noteEditDate.length();
+    noteEditorDateInvalid = false;
     noteEditorVisible = true;
     drawNotesEditor();
 }
@@ -460,28 +602,47 @@ void beginNoteEditor(int editIndex)
 void saveNoteEditor()
 {
     noteEditText.trim();
+    struct tm parsedDate{};
+    if (!parseDateKey(noteEditDate, parsedDate))
+    {
+        noteEditorDateInvalid = true;
+        noteEditorField = 1;
+        noteEditDateCursor = noteEditDate.length();
+        drawNotesEditor();
+        return;
+    }
+
+    bool saved = true;
     if (noteEditText.length() > 0)
     {
         int noteIndex = noteEntryIndexFromVisible(noteEditIndex);
         if (noteIndex >= 0 && noteIndex < (int)noteEntries.size())
         {
             noteEntries[noteIndex].text = noteEditText;
-            noteEntries[noteIndex].stamp = getEntryStamp();
+            noteEditorVisible = false;
+            saved = moveSelectedNoteToDate(noteEditDate);
         }
         else
         {
             NoteEntry entry;
-            entry.stamp = getEntryStamp();
+            entry.stamp = noteEditDate + getEntryStamp().substring(10);
             entry.done = false;
             entry.text = noteEditText;
-            noteEntries.push_back(entry);
+            saved = appendEntryToMonth(entry, noteEditDate);
+            if (saved)
+                loadNote();
         }
+    }
 
-        clampNotesSelection();
-        saveNote();
+    if (!saved)
+    {
+        noteEditorVisible = true;
+        drawNotesEditor();
+        return;
     }
 
     noteEditorVisible = false;
+    noteEditorDateInvalid = false;
     noteEditIndex = -1;
 
     if (notesMode)
@@ -493,6 +654,7 @@ void saveNoteEditor()
 void cancelNoteEditor()
 {
     noteEditorVisible = false;
+    noteEditorDateInvalid = false;
     noteEditIndex = -1;
 
     if (notesMode)
@@ -512,8 +674,8 @@ String editorDisplayText()
 void drawNotesHeader()
 {
     HeaderModel model;
-    model.mode = "NOTES";
-    model.title = getDisplayDateString();
+    model.appHeaderTag = "NOTES";
+    model.appHeaderTitle = getDisplayDateString();
     model.cursor = true;
     drawHeader(model);
 }
@@ -583,14 +745,24 @@ void redrawNotesSelection(
 void drawNotesFooter()
 {
     FooterModel model;
-    model.left = "[A]Add [R]Rm [X]Done";
-    model.center = notesViewMode == NotesViewMode::Day
-                       ? "[D]Day [M]Mon"
-                       : "[D]Day [M]Mon";
+    model.left = "[A]Ad [X]Done";
+    model.center = "[Ok]Edit";
     model.battery = footerBatteryText();
     drawFooter(model);
 }
 } // namespace
+
+String notesFilterLabel()
+{
+    return notesViewMode == NotesViewMode::Day ? "Day" : "Month";
+}
+
+void notesAdjustFilter(int direction)
+{
+    const int current = notesViewMode == NotesViewMode::Day ? 0 : 1;
+    const int next = (current + direction + 2) % 2;
+    setNotesViewMode(next == 0 ? NotesViewMode::Day : NotesViewMode::Month, false);
+}
 
 void notesBegin()
 {
@@ -612,6 +784,7 @@ void notesOpen()
 
     notesMode = true;
     noteEditorVisible = false;
+    noteMoveDateVisible = false;
     resetNotesCursor();
     clampNotesSelection();
 
@@ -635,10 +808,17 @@ void notesQuickOpen()
     beginNoteEditor(-1);
 }
 
+void notesNew()
+{
+    notesBegin();
+    beginNoteEditor(-1);
+}
+
 void notesClose()
 {
     notesMode = false;
     noteEditorVisible = false;
+    noteMoveDateVisible = false;
     noteEditIndex = -1;
 
     Serial.println("Notes: CLOSE");
@@ -657,24 +837,41 @@ void drawNotes()
     drawNotesFooter();
 }
 
-void drawNotesEditor()
+void drawNotesEditor(bool inputOnly)
+{
+    OverlayModel model;
+    model.type = OverlayType::TwoFieldInput;
+    model.title = noteEditorDateInvalid
+                      ? "Invalid Date"
+                      : noteEditIndex >= 0 ? "Edit Entry" : "New Entry";
+    model.value = noteEditText;
+    model.secondValue = noteEditDate;
+    model.activeField = noteEditorField;
+    model.cursorIndex = noteEditorField == 0
+                            ? noteEditTextCursor
+                            : noteEditDateCursor;
+    model.helperText = "Fn Up/Down +/- date";
+    model.confirmText = "[Esc]Close [Tab]Field [Ok]Save";
+    if (inputOnly)
+        drawOverlayTwoFieldInputValues(model);
+    else
+        drawOverlay(model);
+}
+
+void drawNotesMoveDateEditor()
 {
     OverlayModel model;
     model.type = OverlayType::TextInput;
-    model.title = getDisplayDateString();
-    model.prompt = "";
-    model.value = editorDisplayText();
-    model.helperText = "[Fn+,]Prev [Fn+/]Next";
-    model.confirmText = notesMode
-                            ? "[Esc]Close [Ent]Save"
-                            : "[Esc]Close [Fn+N]Open note [Ent]Save";
-    model.tallInput = true;
+    model.title = noteMoveDateInvalid ? "Invalid Date" : "Move to Date";
+    model.prompt = "YYYY-MM-DD";
+    model.value = noteMoveDateInput;
+    model.confirmText = "[Esc]Close   [Ok]Save";
     drawOverlay(model);
 }
 
 bool notesInputActive()
 {
-    return notesMode || noteEditorVisible;
+    return notesMode || noteEditorVisible || noteMoveDateVisible;
 }
 
 bool notesEditorVisible()
@@ -682,10 +879,126 @@ bool notesEditorVisible()
     return noteEditorVisible;
 }
 
+bool notesMoveDateInputActive()
+{
+    return noteMoveDateVisible;
+}
+
+bool notesHasSelection()
+{
+    return noteEntryIndexFromVisible(notesSelected) >= 0;
+}
+
+void notesMoveSelectedToTomorrow()
+{
+    int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0 || noteIndex >= (int)noteEntries.size())
+    {
+        drawNotes();
+        return;
+    }
+
+    String dayKey;
+    String monthKey;
+    struct tm date{};
+    if (!parseNoteStamp(noteEntries[noteIndex].stamp, dayKey, monthKey) ||
+        !parseDateKey(dayKey, date))
+    {
+        drawNotes();
+        return;
+    }
+
+    date.tm_mday += 1;
+    mktime(&date);
+    moveSelectedNoteToDate(formatDateKey(date));
+}
+
+void notesPromptMoveSelectedToDate()
+{
+    int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0 || noteIndex >= (int)noteEntries.size())
+    {
+        drawNotes();
+        return;
+    }
+
+    String monthKey;
+    parseNoteStamp(noteEntries[noteIndex].stamp, noteMoveDateInput, monthKey);
+    noteMoveDateInvalid = false;
+    noteMoveDateVisible = true;
+    drawNotesMoveDateEditor();
+}
+
+void notesEditSelected()
+{
+    if (notesHasSelection())
+        beginNoteEditor(notesSelected);
+    else
+        drawNotes();
+}
+
+void notesDeleteSelected()
+{
+    removeSelectedNote();
+}
+
 void handleNotesInput(Keyboard_Class::KeysState &ks)
 {
     if (!notesInputActive())
         return;
+
+    if (noteMoveDateVisible)
+    {
+        if (keyboardBackPressed(ks))
+        {
+            noteMoveDateVisible = false;
+            noteMoveDateInvalid = false;
+            drawNotes();
+            return;
+        }
+
+        if (ks.enter)
+        {
+            if (moveSelectedNoteToDate(noteMoveDateInput))
+            {
+                noteMoveDateVisible = false;
+                noteMoveDateInvalid = false;
+            }
+            else
+            {
+                noteMoveDateInvalid = true;
+                drawNotesMoveDateEditor();
+            }
+            return;
+        }
+
+        if (ks.del)
+        {
+            if (noteMoveDateInput.length() > 0)
+                noteMoveDateInput.remove(noteMoveDateInput.length() - 1);
+            noteMoveDateInvalid = false;
+            drawOverlayInputValue(noteMoveDateInput);
+            return;
+        }
+
+        bool changed = false;
+        for (auto c : ks.word)
+        {
+            if (((c >= '0' && c <= '9') || c == '-') &&
+                noteMoveDateInput.length() < 10)
+            {
+                noteMoveDateInput += c;
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            noteMoveDateInvalid = false;
+            drawOverlayInputValue(noteMoveDateInput);
+        }
+        return;
+    }
 
     if (noteEditorVisible)
     {
@@ -693,18 +1006,45 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         {
             for (auto c : ks.word)
             {
-                if (c == ',')
+                if (c == ';')
                 {
                     shiftQuickNoteDate(-1);
                     return;
                 }
 
-                if (c == '/')
+                if (c == '.')
                 {
                     shiftQuickNoteDate(1);
                     return;
                 }
+
+                if (c == ',')
+                {
+                    if (noteEditorField == 0)
+                        noteEditTextCursor = max(0, noteEditTextCursor - 1);
+                    else
+                        noteEditDateCursor = max(0, noteEditDateCursor - 1);
+                    drawNotesEditor(true);
+                    return;
+                }
+
+                if (c == '/')
+                {
+                    if (noteEditorField == 0)
+                        noteEditTextCursor = min((int)noteEditText.length(), noteEditTextCursor + 1);
+                    else
+                        noteEditDateCursor = min((int)noteEditDate.length(), noteEditDateCursor + 1);
+                    drawNotesEditor(true);
+                    return;
+                }
             }
+        }
+
+        if (ks.tab)
+        {
+            noteEditorField = (noteEditorField + 1) % 2;
+            drawNotesEditor(true);
+            return;
         }
 
         if (keyboardBackPressed(ks))
@@ -726,13 +1066,6 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             }
         }
 
-        if (!notesMode && ks.opt)
-        {
-            noteEditorVisible = false;
-            notesOpen();
-            return;
-        }
-
         if (ks.enter)
         {
             saveNoteEditor();
@@ -741,20 +1074,39 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
 
         if (ks.del)
         {
-            if (noteEditText.length() > 0)
+            String *value = noteEditorField == 0 ? &noteEditText : &noteEditDate;
+            int *cursor = noteEditorField == 0 ? &noteEditTextCursor : &noteEditDateCursor;
+            if (*cursor > 0 && value->length() > 0)
             {
-                noteEditText.remove(noteEditText.length() - 1);
-                drawOverlayInputValue(editorDisplayText());
+                value->remove(*cursor - 1, 1);
+                *cursor -= 1;
+                noteEditorDateInvalid = false;
+                drawNotesEditor(true);
             }
             return;
         }
 
         for (auto c : ks.word)
         {
-            if (keyboardTextInputChar(ks, c) && noteEditText.length() < RADIO_INPUT_MAX)
+            if (!keyboardTextInputChar(ks, c))
+                continue;
+
+            if (noteEditorField == 0 && noteEditText.length() < RADIO_INPUT_MAX)
             {
-                noteEditText += c;
-                drawOverlayInputValue(editorDisplayText());
+                noteEditText = noteEditText.substring(0, noteEditTextCursor) +
+                               String(c) + noteEditText.substring(noteEditTextCursor);
+                noteEditTextCursor += 1;
+                drawNotesEditor(true);
+            }
+            else if (noteEditorField == 1 &&
+                     ((c >= '0' && c <= '9') || c == '-') &&
+                     noteEditDate.length() < 10)
+            {
+                noteEditDate = noteEditDate.substring(0, noteEditDateCursor) +
+                               String(c) + noteEditDate.substring(noteEditDateCursor);
+                noteEditDateCursor += 1;
+                noteEditorDateInvalid = false;
+                drawNotesEditor(true);
             }
         }
         return;
@@ -789,16 +1141,6 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         case 'a':
         case 'A':
             beginNoteEditor(-1);
-            return;
-
-        case 'd':
-        case 'D':
-            setNotesViewMode(NotesViewMode::Day);
-            return;
-
-        case 'm':
-        case 'M':
-            setNotesViewMode(NotesViewMode::Month);
             return;
 
         case 't':
@@ -881,6 +1223,14 @@ void notesLoop()
     if (!notesInputActive())
         return;
 
+    const bool notesScreenVisible =
+        notesMode && !noteEditorVisible && !noteMoveDateVisible &&
+        !optionsMenuVisible && !applicationsMenuVisible &&
+        !settingsMenuVisible && !helpVisible &&
+        !debugOverlayVisible && !calculatorVisible;
+    if (!notesScreenVisible)
+        return;
+
     char clockBuf[6];
     formatClock(clockBuf, sizeof(clockBuf));
 
@@ -892,10 +1242,7 @@ void notesLoop()
             drawHeaderClock(String(clockBuf));
     }
 
-    if (!notesMode ||
-        noteEditorVisible ||
-        helpVisible ||
-        visibleNoteCount() == 0)
+    if (visibleNoteCount() == 0)
         return;
 
     if (millis() - lastMarqueeDrawMs < 80)

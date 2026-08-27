@@ -32,6 +32,7 @@ struct ListItemModel
     bool isSelected = false;
     bool isActive = false;
     bool isDimmed = false;
+    bool propertyFirst = false;
 
     // Optional duration for music/radio items
     unsigned long durationMs = 0;

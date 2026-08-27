@@ -2,8 +2,8 @@
 #include "core/AudioFileSourceHTTPSStream.h"
 #include "core/Keyboard.h"
 #include "core/Utils.h"
-#include "module/Browser.h"
-#include "module/Radio.h"
+#include "module/programs/Browser.h"
+#include "module/programs/Radio.h"
 #include "module/service/WiFi.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -11,13 +11,17 @@
 #include "UI/Overlay.h"
 #include "UI/Themes.h"
 
-extern bool radioForceAac;
-
 #if DEBUG_SERIAL
 #define RDBG(...) Serial.printf(__VA_ARGS__)
 #else
 #define RDBG(...) ((void)0)
 #endif
+
+static String radioEditUrl;
+static String radioEditName;
+static int radioEditField = 0;
+static int radioEditUrlCursor = 0;
+static int radioEditNameCursor = 0;
 
 //==================================================
 // RADIO LOGIC HELPERS
@@ -309,14 +313,10 @@ void pumpRadioAudio()
 
     if (!gen->isRunning())
     {
-        int oldPlaying = radioPlaying;
         stopRadioStream();
         showHdrMsg("STREAM LOST");
         RDBG("[RADIO] STREAM LOST (gen stopped)\n");
-        if (oldPlaying >= 0)
-            drawRadioRow(oldPlaying);
-        drawRadioHeader();
-        drawRadioStatus();
+        drawAll();
         return;
     }
     for (int i = 0; i < 4; i++)
@@ -337,8 +337,8 @@ void drawRadioHeader()
         stationLine = radioList[radioPlaying].name;
 
     HeaderModel model;
-    model.mode = "RADIO";
-    model.title = stationLine;
+    model.appHeaderTag = "RADIO";
+    model.appHeaderTitle = stationLine;
     model.cursor = radioIsPlaying && cursorVisible;
 
     drawHeader(model);
@@ -388,31 +388,27 @@ void drawRadioAll()
 void drawAddUrlOverlay(bool inputOnly)
 {
     OverlayModel model;
-    model.type = OverlayType::TextInput;
-    model.title = "ADD RADIO STATION";
-    model.prompt = "Enter stream URL";
-    model.value = String(inputBuf);
-    model.confirmText = "[Ent]Next   [Del]Back   [Esc]Cancel";
-
+    model.type = OverlayType::TwoFieldInput;
+    model.title = "Enter stream URL";
+    model.value = radioEditUrl;
+    model.secondValue = radioEditName;
+    model.activeField = radioEditField;
+    model.cursorIndex = radioEditField == 0
+                            ? radioEditUrlCursor
+                            : radioEditNameCursor;
+    model.prompt = "https://stream.com";
+    model.secondPrompt = "Station Name";
+    model.helperText = "[Tab]Switch [Fn L/R]Cursor";
+    model.confirmText = "[Esc]Cancel [Ok]Save";
     if (inputOnly)
-        drawOverlayInputValue(model.value);
+        drawOverlayTwoFieldInputValues(model);
     else
         drawOverlay(model);
 }
 
 void drawAddNameOverlay(bool inputOnly)
 {
-    OverlayModel model;
-    model.type = OverlayType::TextInput;
-    model.title = "STATION NAME";
-    model.prompt = "Name or ENTER to accept";
-    model.value = String(inputBuf);
-    model.confirmText = "[Ent]Add   [Del]Back   [Esc]Cancel";
-
-    if (inputOnly)
-        drawOverlayInputValue(model.value);
-    else
-        drawOverlay(model);
+    drawAddUrlOverlay(inputOnly);
 }
 
 void drawRemoveConfirm()
@@ -425,7 +421,7 @@ void drawRemoveConfirm()
             ? radioList[radioSelected].name
             : "?");
     model.items.push_back("This will be deleted.");
-    model.confirmText = "[Ent]Remove  [Esc/Del]Cancel";
+    model.confirmText = "[Ok]Remove   [Esc]Cancel";
     drawOverlay(model);
 }
 
@@ -435,19 +431,14 @@ void drawRemoveConfirm()
 
 void showAddUrlOverlay()
 {
-    inputBuf[0] = '\0';
-    inputLen = 0;
+    radioEditUrl = "";
+    radioEditName = "";
+    radioEditField = 0;
+    radioEditUrlCursor = 0;
+    radioEditNameCursor = 0;
     addUrlOverlayVisible = true;
+    addNameOverlayVisible = false;
     drawAddUrlOverlay();
-}
-
-void showAddNameOverlay(const String &defaultName)
-{
-    strncpy(inputBuf, defaultName.c_str(), RADIO_INPUT_MAX);
-    inputBuf[RADIO_INPUT_MAX] = '\0';
-    inputLen = strlen(inputBuf);
-    addNameOverlayVisible = true;
-    drawAddNameOverlay();
 }
 
 void showRemoveConfirm()
@@ -492,41 +483,79 @@ void handleRadioOverlayInput(Keyboard_Class::KeysState &ks)
             return;
         }
 
-        for (auto c : ks.word)
+        if (ks.tab)
         {
-            if (keyboardTextInputChar(ks, c) && inputLen < RADIO_INPUT_MAX)
-            {
-                inputBuf[inputLen++] = c;
-                inputBuf[inputLen] = '\0';
-                drawAddUrlOverlay(true);
-            }
+            radioEditField = 1 - radioEditField;
+            drawAddUrlOverlay(true);
+            return;
         }
+
+        if (ks.fn)
+        {
+            for (auto c : ks.word)
+            {
+                if (c == ',')
+                {
+                    int &cursor = radioEditField == 0
+                                      ? radioEditUrlCursor
+                                      : radioEditNameCursor;
+                    cursor = max(0, cursor - 1);
+                    drawAddUrlOverlay(true);
+                    return;
+                }
+                if (c == '/')
+                {
+                    String &value = radioEditField == 0
+                                        ? radioEditUrl
+                                        : radioEditName;
+                    int &cursor = radioEditField == 0
+                                      ? radioEditUrlCursor
+                                      : radioEditNameCursor;
+                    cursor = min((int)value.length(), cursor + 1);
+                    drawAddUrlOverlay(true);
+                    return;
+                }
+            }
+            return;
+        }
+
+        String &activeValue = radioEditField == 0
+                                  ? radioEditUrl
+                                  : radioEditName;
+        int &activeCursor = radioEditField == 0
+                                ? radioEditUrlCursor
+                                : radioEditNameCursor;
 
         if (ks.del)
         {
-            if (inputLen > 0)
+            if (activeCursor > 0)
             {
-                inputBuf[--inputLen] = '\0';
+                activeValue.remove(activeCursor - 1, 1);
+                activeCursor--;
                 drawAddUrlOverlay(true);
             }
-            else
+            return;
+        }
+
+        if (ks.enter)
+        {
+            radioEditUrl.trim();
+            radioEditName.trim();
+            if (radioEditUrl.length() == 0)
+                return;
+
+            if (radioCount < RADIO_MAX)
             {
-                addUrlOverlayVisible = false;
-                drawRadioAll();
+                radioList[radioCount].url = radioEditUrl;
+                radioList[radioCount].name = radioEditName.length() > 0
+                                                 ? radioEditName
+                                                 : generateRadioName(radioEditUrl, radioCount + 1);
+                radioCount++;
+                saveRadioList();
+                radioSelected = radioCount - 1;
+                radioScrollTop = max(0, radioSelected - LIST_VISIBLE_ITEM + 1);
             }
-        }
-        if (ks.enter && inputLen > 0)
-        {
-            inputSaved = String(inputBuf);
             addUrlOverlayVisible = false;
-            String defName = generateRadioName(inputSaved, radioCount + 1);
-            showAddNameOverlay(defName);
-        }
-    }
-    else if (addNameOverlayVisible)
-    {
-        if (keyboardBackPressed(ks))
-        {
             addNameOverlayVisible = false;
             drawRadioAll();
             return;
@@ -534,32 +563,15 @@ void handleRadioOverlayInput(Keyboard_Class::KeysState &ks)
 
         for (auto c : ks.word)
         {
-            if (keyboardTextInputChar(ks, c) && inputLen < 31)
+            const int maxLength = radioEditField == 0 ? RADIO_INPUT_MAX : 31;
+            if (keyboardTextInputChar(ks, c) && (int)activeValue.length() < maxLength)
             {
-                inputBuf[inputLen++] = c;
-                inputBuf[inputLen] = '\0';
-                drawAddNameOverlay(true);
+                activeValue = activeValue.substring(0, activeCursor) +
+                              String(c) +
+                              activeValue.substring(activeCursor);
+                activeCursor++;
+                drawAddUrlOverlay(true);
             }
-        }
-
-        if (ks.del && inputLen > 0)
-        {
-            inputBuf[--inputLen] = '\0';
-            drawAddNameOverlay(true);
-        }
-        if (ks.enter)
-        {
-            if (radioCount < RADIO_MAX)
-            {
-                radioList[radioCount].url = inputSaved;
-                radioList[radioCount].name = (inputLen > 0) ? String(inputBuf) : ("Radio " + String(radioCount + 1));
-                radioCount++;
-                saveRadioList();
-                radioSelected = radioCount - 1;
-                radioScrollTop = max(0, radioSelected - LIST_VISIBLE_ITEM + 1);
-            }
-            addNameOverlayVisible = false;
-            drawRadioAll();
         }
     }
     else if (removeConfirmVisible)
@@ -580,12 +592,18 @@ void handleRadioOverlayInput(Keyboard_Class::KeysState &ks)
             removeConfirmVisible = false;
             drawRadioAll();
         }
-        if (keyboardBackPressed(ks) || ks.del)
+        if (keyboardBackPressed(ks))
         {
             removeConfirmVisible = false;
             drawRadioAll();
         }
     }
+}
+
+void toggleRadioForceAac()
+{
+    radioForceAac = !radioForceAac;
+    showHdrMsg(radioForceAac ? "FORCE AAC" : "AAC OFF");
 }
 
 //==================================================
@@ -718,13 +736,7 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
 
         case 'i':
         case 'I':
-            radioForceAac = !radioForceAac;
-
-            showHdrMsg(
-                radioForceAac
-                    ? "FORCE AAC"
-                    : "AAC OFF");
-
+            toggleRadioForceAac();
             drawRadioStatus();
 
             return;

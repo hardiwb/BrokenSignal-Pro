@@ -23,15 +23,16 @@ constexpr int HEADER_CLOCK_CLEAR_X = 198;
 
 struct HeaderModel
 {
-    String mode;
-    String title;
+    String appHeaderTag;
+    String appHeaderTitle;
 
     bool cursor = false;
+    bool appHeaderTitleRightAligned = false;
 };
 
 void drawHeader(const HeaderModel &model);
 
-void drawHeaderMode(const String &mode);
+void drawHeaderMode(const String &appHeaderTag);
 void drawHeaderClock(const String &clock);
 void drawHeaderCursor(bool visible);
 void drawHeaderMessage(const String &message);

@@ -5,7 +5,7 @@
 
 #include "core/Config.h"
 #include "core/Keyboard.h"
-#include "module/Help.h"
+#include "module/shell/Help.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -130,7 +130,7 @@ bool connectWifi(const String &ssid, const String &pass)
         model.title = "WIFI CONNECT";
         model.items.push_back(String(msg));
         model.items.push_back(truncSsid);
-        model.confirmText = "ESC/DEL to cancel";
+        model.confirmText = "ESC to cancel";
         if (fullDraw)
             drawOverlay(model);
         else
@@ -158,7 +158,7 @@ bool connectWifi(const String &ssid, const String &pass)
         if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed())
         {
             Keyboard_Class::KeysState ks = M5Cardputer.Keyboard.keysState();
-            if (keyboardBackPressed(ks) || ks.del)
+            if (keyboardBackPressed(ks))
             {
                 WiFi.disconnect();
                 return false;
@@ -206,8 +206,8 @@ void applyWifiPowerSave()
 void drawWifiHeader()
 {
     HeaderModel model;
-    model.mode = "WIFI";
-    model.title = wifiStatusText();
+    model.appHeaderTag = "WIFI";
+    model.appHeaderTitle = wifiStatusText();
     model.cursor = cursorVisible;
 
     drawHeader(model);
@@ -275,7 +275,7 @@ void drawWifiPassOverlay(bool inputOnly)
     model.title = "WIFI PASSWORD";
     model.prompt = "Net: " + inputSaved;
     model.value = String(inputBuf);
-    model.confirmText = "[Ent]Connect   [Del]Back   [Esc]Cancel";
+    model.confirmText = "[Ok]Connect   [Del]Back   [Esc]Cancel";
     model.passwordMode = true;
 
     if (inputOnly)
@@ -289,8 +289,8 @@ void drawWifiPassOverlay(bool inputOnly)
 void showWifiMenu()
 {
     HeaderModel header;
-    header.mode = "WIFI";
-    header.title = "SCANNING";
+    header.appHeaderTag = "WIFI";
+    header.appHeaderTitle = "SCANNING";
     header.cursor = true;
     drawHeader(header);
 

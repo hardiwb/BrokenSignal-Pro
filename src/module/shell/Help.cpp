@@ -1,13 +1,13 @@
-#include "module/Help.h"
+#include "module/shell/Help.h"
 
 #include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/Calculator.h"
-#include "module/Debug.h"
-#include "module/Notes.h"
-#include "module/Radio.h"
-#include "module/Settings.h"
+#include "module/programs/Calculator.h"
+#include "module/shell/Debug.h"
+#include "module/programs/Notes.h"
+#include "module/programs/Radio.h"
+#include "module/shell/Settings.h"
 #include "module/service/WiFi.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -37,7 +37,7 @@ static int helpScrollTop = 0;
 static HelpContext helpContext = HelpContext::Music;
 
 static const HelpRow MUSIC_HELP[] = {
-    {"[Ent]", "Open / play"},
+    {"[Ok]", "Open / play"},
     {"[Del]", "Parent folder"},
     {"[Space]", "Pause / resume"},
     {"[;/.]", "Cursor up / down"},
@@ -45,8 +45,9 @@ static const HelpRow MUSIC_HELP[] = {
     {"[+/-]", "Volume"},
     {"[W]", "Switch to radio"},
     {"[N]", "Quick note"},
-    {"[Alt]", "Applications"},
-    {"[Ctrl]", "Control Panel"},
+    {"[Opt]", "Toggle Options"},
+    {"[Alt]", "Toggle Applications"},
+    {"[Ctrl]", "Toggle Control Panel"},
     {"[C]", "Calculator"},
     {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
@@ -55,7 +56,7 @@ static const HelpRow MUSIC_HELP[] = {
 };
 
 static const HelpRow RADIO_HELP[] = {
-    {"[Ent/Spc]", "Play / stop stream"},
+    {"[Ok/Spc]", "Play / stop stream"},
     {"[;/.]", "Cursor up / down"},
     {"[A]", "Add station"},
     {"[X]", "Remove station"},
@@ -64,8 +65,9 @@ static const HelpRow RADIO_HELP[] = {
     {"[+/-]", "Volume"},
     {"[W/Esc]", "Back to music"},
     {"[N]", "Quick note"},
-    {"[Alt]", "Applications"},
-    {"[Ctrl]", "Control Panel"},
+    {"[Opt]", "Toggle Options"},
+    {"[Alt]", "Toggle Applications"},
+    {"[Ctrl]", "Toggle Control Panel"},
     {"[C]", "Calculator"},
     {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
@@ -74,16 +76,16 @@ static const HelpRow RADIO_HELP[] = {
 };
 
 static const HelpRow NOTES_HELP[] = {
-    {"[Alt]", "Applications"},
-    {"[Ctrl]", "Control Panel"},
+    {"[Opt]", "Toggle Options"},
+    {"[Alt]", "Toggle Applications"},
+    {"[Ctrl]", "Toggle Control Panel"},
     {"[A]", "Add note"},
     {"[R]", "Remove note"},
     {"[X]", "Toggle done"},
-    {"[Ent]", "Edit note"},
+    {"[Ok]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
-    {"[Fn+, / Fn+/]", "Prev / next date"},
-    {"[D]", "Day view"},
-    {"[M]", "Month view"},
+    {"[Tab]", "Switch editor field"},
+    {"[Fn arrows]", "Cursor / editor date"},
     {"[T]", "Today"},
     {"[U/B]", "Top / bottom"},
     {"[Esc]", "Back to player"},
@@ -92,7 +94,7 @@ static const HelpRow NOTES_HELP[] = {
 };
 
 static const HelpRow WIFI_HELP[] = {
-    {"[Ent]", "Connect"},
+    {"[Ok]", "Connect"},
     {"[R]", "Refresh scan"},
     {"[;/.]", "Cursor up / down"},
     {"[Esc]", "Back"},
@@ -103,7 +105,8 @@ static const HelpRow WIFI_HELP[] = {
 static const HelpRow SETTINGS_HELP[] = {
     {"[;/.]", "Cursor up / down"},
     {"[+/-]", "Change value"},
-    {"[Ent]", "Open / apply"},
+    {"[Ok]", "Open / apply"},
+    {"[Ctrl]", "Close Control Panel"},
     {"[Esc]", "Close Control Panel"},
     {"[H]", "Close help"},
 };
@@ -116,16 +119,18 @@ static const HelpRow DEBUG_HELP[] = {
 };
 
 static const HelpRow CALC_HELP[] = {
+    {"[Opt]", "Toggle Options"},
     {"[0-9/.]", "Enter number"},
     {"[A/+]", "Add"},
     {"[S/-]", "Subtract"},
+    {"[M]", "Add multiply row"},
     {"[X/*]", "Multiply"},
     {"[D//]", "Divide"},
-    {"[Ent]", "Calculate"},
+    {"[Ok]", "Calculate"},
+    {"[H]", "Toggle history"},
     {"[Del]", "Backspace"},
     {"[Esc]", "Clear / close"},
     {"[C]", "Close calculator"},
-    {"[H]", "Close help"},
 };
 
 static HelpContext resolveHelpContext()
@@ -262,8 +267,8 @@ static void clampHelpSelection()
 static void drawHelpHeader()
 {
     HeaderModel model;
-    model.mode = "HELP";
-    model.title = helpContextTitle();
+    model.appHeaderTag = "HELP";
+    model.appHeaderTitle = helpContextTitle();
     model.cursor = true;
     drawHeader(model);
 }

@@ -1,6 +1,6 @@
 #include "core/System.h"
-#include "module/Browser.h"
-#include "module/Player.h"
+#include "module/programs/Browser.h"
+#include "module/programs/Player.h"
 #include "UI/Header.h"
 #include <algorithm>
 

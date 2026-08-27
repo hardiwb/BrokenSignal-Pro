@@ -102,6 +102,10 @@ void drawOverlay(const OverlayModel &model)
         drawOverlayInput(model);
         break;
 
+    case OverlayType::TwoFieldInput:
+        drawOverlayTwoFieldInput(model);
+        break;
+
     case OverlayType::Confirm:
         drawOverlayConfirm(model);
         break;
@@ -422,6 +426,101 @@ void drawOverlayInput(
         OVERLAY_FOOTER_Y,
         middle_center,
         T->accent1);
+}
+
+void drawOverlayTwoFieldInput(
+    const OverlayModel &model)
+{
+    drawOverlayFrame(model.title);
+
+    drawOverlayTwoFieldInputValues(model);
+
+    auto &D = M5Cardputer.Display;
+    constexpr int fieldW = OVERLAY_W - (OVERLAY_PAD * 2);
+
+    drawHotkeyText(
+        fitOverlayText(model.helperText, fieldW),
+        SCREEN_W / 2,
+        OVERLAY_Y + 77,
+        middle_center,
+        T->textMid);
+
+    drawHotkeyText(
+        fitOverlayText(model.confirmText, fieldW),
+        SCREEN_W / 2,
+        OVERLAY_FOOTER_Y,
+        middle_center,
+        T->accent1);
+}
+
+void drawOverlayTwoFieldInputValues(
+    const OverlayModel &model)
+{
+
+    auto &D = M5Cardputer.Display;
+    constexpr int fieldX = OVERLAY_X + OVERLAY_PAD;
+    constexpr int fieldW = OVERLAY_W - (OVERLAY_PAD * 2);
+    constexpr int contentTop = OVERLAY_Y + 21;
+    constexpr int contentBottom = OVERLAY_Y + 46;
+    constexpr int dateBottom = OVERLAY_Y + 64;
+
+    D.fillRect(
+        fieldX,
+        contentTop,
+        fieldW,
+        dateBottom - contentTop + 1,
+        T->hdrBg);
+
+    drawDashedCellLine(fieldX, contentTop, fieldW, T->textDim);
+    drawDashedCellLine(fieldX, contentBottom, fieldW, T->textDim);
+    drawDashedCellLine(fieldX, dateBottom, fieldW, T->textDim);
+
+    String content = model.value;
+    String date = model.secondValue;
+    const bool contentEmpty = content.length() == 0;
+    const bool dateEmpty = date.length() == 0;
+    String *activeValue = model.activeField == 0 ? &content : &date;
+    int cursor = constrain(model.cursorIndex, 0, (int)activeValue->length());
+    *activeValue = activeValue->substring(0, cursor) + "|" + activeValue->substring(cursor);
+
+    if (contentEmpty && model.activeField != 0)
+        content = model.prompt;
+    if (dateEmpty && model.activeField != 1)
+        date = model.secondPrompt;
+
+    int visibleCursor = model.activeField == 0 ? cursor : -1;
+    while (D.textWidth(content, &fonts::Font0) > fieldW - 8 && content.length() > 1)
+    {
+        if (visibleCursor > (int)content.length() / 2)
+        {
+            content.remove(0, 1);
+            visibleCursor -= 1;
+        }
+        else
+        {
+            content.remove(content.length() - 1);
+        }
+    }
+
+    D.setTextDatum(model.centerFirstField ? middle_center : middle_left);
+    D.setTextColor(model.activeField == 0 ? T->accent1 : T->textMid);
+    D.setClipRect(fieldX + 4, contentTop + 1, fieldW - 8, contentBottom - contentTop - 1);
+    D.drawString(
+        content,
+        model.centerFirstField ? SCREEN_W / 2 : fieldX + 4,
+        (contentTop + contentBottom) / 2,
+        &fonts::Font0);
+    D.clearClipRect();
+
+    D.setTextDatum(middle_center);
+    D.setTextColor(model.activeField == 1 ? T->accent1 : T->textMid);
+    D.setClipRect(fieldX + 4, contentBottom + 1, fieldW - 8, dateBottom - contentBottom - 1);
+    D.drawString(
+        fitOverlayText(date, fieldW - 8),
+        SCREEN_W / 2,
+        (contentBottom + dateBottom) / 2,
+        &fonts::Font0);
+    D.clearClipRect();
 }
 
 void drawOverlayInputValue(

@@ -26,7 +26,10 @@ void drawRadioStatus();
 void drawAddUrlOverlay(bool inputOnly = false);
 void drawAddNameOverlay(bool inputOnly = false);
 void drawRemoveConfirm();
+void showAddUrlOverlay();
+void showRemoveConfirm();
 bool radioOverlayActive();
+void toggleRadioForceAac();
 
 // ============================================================
 // RADIO MODE / INPUT

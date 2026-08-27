@@ -2,6 +2,12 @@
 
 An audio player, web radio, quick notes, and utility shell for the **Cardputer ADV**.
 
+**Pro stands for Productivity**: fast access to music, radio, notes,
+calculations, and everyday utilities from one keyboard-driven interface.
+
+**Current development version:** `v1.2.0-dev`  
+**Latest tagged release:** `v1.1.0`
+
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
 
 <p align="center">
@@ -10,7 +16,8 @@ BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt
 
 ## Current Status
 
-BrokenSignal Pro is still evolving, but the main UI has moved to a modular primitive architecture:
+BrokenSignal Pro is preparing for the `v1.2.0` release. The main UI uses a
+modular primitive architecture:
 
 - `Header`
 - `List`
@@ -18,14 +25,22 @@ BrokenSignal Pro is still evolving, but the main UI has moved to a modular primi
 - `Overlay`
 - `Toast`
 
-Themes now change color and mood, not layout. Music, Radio, Notes, Settings, Help, Debug, WiFi, and Calculator are being aligned around the same UI primitives.
+Themes change color and mood, not layout. Music Player, Web Radio, Notes,
+Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
 
-## Recent Fixes
+## v1.2.0 Development Changes
 
-- Notes now use a compact `Date|State|Text` line format, with `-` for active items and `x` for done items.
-- Notes are filtered by day by default, with `D` for day, `M` for month, `T` for today, and `U` / `B` for top and bottom.
-- Overlay and calculator spacing have been tightened up for clearer alignment on the Cardputer screen.
-- Calculator input now supports backspace cleanup and a centered helper line below the input field.
+- Added the Applications shell with Music Player, Web Radio, Notes, and Calculator.
+- Added contextual Options for Music, Radio, Notes, and Calculator.
+- Standardized modifier routing: `Alt` toggles Applications, `Opt` toggles
+  Options, and `Ctrl` toggles Control Panel.
+- Expanded Calculator with full-screen history, operator-row editing, decimal
+  precision, rounding modes, and optional thousands separators.
+- Expanded Notes with Day/Month filtering in Options, date-aware editors, and
+  contextual note actions.
+- Added granular redraw for two-field overlays and guarded covered screens from
+  background refresh.
+- Reorganized source modules into `programs`, `shell`, and `service` folders.
 
 ## Gallery
 
@@ -71,8 +86,10 @@ Themes now change color and mood, not layout. Music, Radio, Notes, Settings, Hel
 - **Web radio**: Stream MP3/AAC stations over WiFi.
 - **Background audio**: Music or radio can keep playing while opening Settings, Notes, Help, WiFi, Debug, or Calculator.
 - **Notes**: Monthly note storage with quick note overlay, day/month filtering, and done-state dimming.
-- **Context-aware Help**: `H` opens help for the current mode.
-- **Calculator**: `C` opens a calculator overlay.
+- **Applications**: `Alt` opens a full application list for switching between Music Player, Web Radio, Notes, and Calculator.
+- **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
+- **Context-aware Help**: `H` opens help in application screens; Calculator reserves `H` for history.
+- **Calculator**: `C` opens the calculator overlay; `H` toggles its full-screen calculation history.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
 - **Granular redraw**: Header, list rows, footer slots, progress bar, and overlay input can update independently.
@@ -96,7 +113,7 @@ The default layout is Glitch Terminal:
 
 ```text
 +------------------------------------------+
-| Header: app mode, title, WiFi, clock     |
+| Header: app tag, title, WiFi, clock      |
 +------------------------------------------+
 | List: selected row, values, scrollbar    |
 +------------------------------------------+
@@ -112,15 +129,25 @@ Left slot / navigation hints        Battery
 
 Music can replace the footer center area with a segmented progress bar.
 
+Application-facing code is organized by responsibility:
+
+```text
+src/module/
+|-- programs/   Music, Radio, Notes, and Calculator
+|-- shell/      Applications, Options, Control Panel, Help, and Debug
+`-- service/    Clock and WiFi
+```
+
 ## Controls
 
 ### Global
 
 | Key | Action |
 | --- | ------ |
-| `H` | Context help |
-| `Alt` | Applications |
-| `Ctrl` | Control Panel |
+| `H` | Context help; Calculator uses it for history |
+| `Opt` | Toggle contextual Options |
+| `Alt` | Toggle Applications |
+| `Ctrl` | Toggle Control Panel |
 | `C` | Calculator |
 | `N` | Quick note |
 | `Fn+N` | Notes app |
@@ -136,7 +163,7 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | Key | Action |
 | --- | ------ |
 | `;` / `.` | Cursor up / down |
-| `ENTER` | Open folder / play selected track |
+| `Ok` | Open folder / play selected track |
 | `SPACE` | Pause / resume |
 | `DEL` | Parent folder |
 | `,` / `/` | Seek back / forward |
@@ -147,7 +174,7 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | Key | Action |
 | --- | ------ |
 | `;` / `.` | Cursor up / down |
-| `ENTER` / `SPACE` | Play / stop stream |
+| `Ok` / `SPACE` | Play / stop stream |
 | `A` | Add station |
 | `X` | Remove station |
 | `R` | Reconnect |
@@ -161,17 +188,19 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | `A` | Add note |
 | `R` | Remove note |
 | `X` | Toggle done |
-| `ENTER` | Edit selected note |
+| `Ok` | Edit selected note |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
-| `D` | Day view |
-| `M` | Month view |
+| `Opt` then `+` / `-` | Change Day/Month filter |
 | `T` | Today |
 | `U` / `B` | Top / bottom |
 | `Esc` | Back |
 | `N` | Close Notes |
 
 Notes use monthly files under `/Notes/`.
+
+In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
+changes the date, while `Fn+Left/Right` moves the active field cursor.
 
 ### WiFi
 
@@ -181,7 +210,7 @@ WiFi is available from Settings.
 | --- | ------ |
 | `R` | Refresh scan |
 | `;` / `.` | Cursor up / down |
-| `ENTER` | Connect |
+| `Ok` | Connect |
 | `Esc` / `DEL` | Back / cancel |
 
 ### Control Panel
@@ -190,20 +219,23 @@ WiFi is available from Settings.
 | --- | ------ |
 | `;` / `.` | Select setting |
 | `+` / `-` | Change value |
-| `ENTER` | Apply / open selected setting |
-| `Opt` / `Esc` / `DEL` | Close and save |
+| `Ok` | Apply / open selected setting |
+| `Ctrl` / `Esc` | Close and save |
 
 Settings include:
 
 | Option | Notes |
 | ------ | ----- |
-| Seek step | Music seek interval |
-| WiFi power save | Toggle WiFi modem sleep |
 | Brightness | Display brightness |
-| Auto screen off | Idle screen timeout |
-| Sync clock | NTP sync when WiFi is available |
-| Timezone | UTC offset |
-| Manual clock | Text input date/time |
+| Volume | System playback volume |
+| Screen off timer | Idle screen timeout |
+| Deep Sleep timer | Idle deep-sleep timeout |
+| Playback timer | Stop playback after a selected interval |
+| Theme | Active color theme |
+| Time Zone | UTC offset |
+| Sync Clock | NTP sync when WiFi is available |
+| Manual Clock | Time and date editor |
+| WiFi power save | Toggle WiFi modem sleep |
 | WiFi menu | Opens WiFi service menu |
 
 ### Calculator
@@ -215,10 +247,17 @@ Settings include:
 | `S` / `-` | Subtract |
 | `X` / `*` | Multiply |
 | `D` / `/` | Divide |
-| `ENTER` | Calculate |
+| `Ok` | Calculate |
 | `DEL` | Backspace |
 | `Esc` | Clear / close |
+| `H` | Toggle calculation history |
+| `Opt` | Toggle Calculator Options |
 | `C` | Close |
+
+Calculator history uses `A`, `S`, `M`, and `D` to append addition,
+subtraction, multiplication, and division rows. `I` inserts a row above the
+current selection. Calculator Options control decimal places, rounding mode,
+and thousands separators.
 
 ## Themes
 

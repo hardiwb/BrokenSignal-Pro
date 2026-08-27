@@ -46,8 +46,24 @@ String fitHeaderTitle(const String &title, int maxWidth)
     return fitted + ">";
 }
 
+String fitHeaderTitleFromEnd(const String &title, int maxWidth)
+{
+    if (M5Cardputer.Display.textWidth(title, &fonts::Font2) <= maxWidth)
+        return title;
+
+    String fitted = title;
+    while (fitted.length() > 0 &&
+           M5Cardputer.Display.textWidth("<" + fitted, &fonts::Font2) > maxWidth)
+        fitted.remove(0, 1);
+
+    return "<" + fitted;
+}
+
 void drawModeText(const String &mode)
 {
+    String normalizedMode = mode;
+    normalizedMode.toUpperCase();
+
     const int modeX = HEADER_BRAND_X +
         M5Cardputer.Display.textWidth(HEADER_BRAND, &fonts::Font0) + HEADER_MODE_GAP;
     const int modeW = max(0, HEADER_WIFI_X - modeX - 3);
@@ -55,7 +71,7 @@ void drawModeText(const String &mode)
     M5Cardputer.Display.setTextDatum(middle_left);
     M5Cardputer.Display.setTextColor(T->accent1);
     M5Cardputer.Display.drawString(
-        fitHeaderMode(mode, modeW),
+        fitHeaderMode(normalizedMode, modeW),
         modeX,
         HEADER_ROW1_Y,
         &fonts::Font0);
@@ -127,18 +143,22 @@ void drawHeaderWifiStatus()
 }
 
 void drawHeaderTitle(
-    const String &title)
+    const String &title,
+    bool rightAligned)
 {
-    const int titleW =
-        HEADER_MESSAGE_X -
-        HEADER_TITLE_X -
-        4;
+    const int titleRight = rightAligned
+                               ? SCREEN_W - 4
+                               : HEADER_MESSAGE_X - 4;
+    const int titleW = titleRight - HEADER_TITLE_X;
 
-    M5Cardputer.Display.setTextDatum(middle_left);
+    M5Cardputer.Display.setTextDatum(
+        rightAligned ? middle_right : middle_left);
     M5Cardputer.Display.setTextColor(T->accent1);
     M5Cardputer.Display.drawString(
-        fitHeaderTitle(title, titleW),
-        HEADER_TITLE_X,
+        rightAligned
+            ? fitHeaderTitleFromEnd(title, titleW)
+            : fitHeaderTitle(title, titleW),
+        rightAligned ? titleRight : HEADER_TITLE_X,
         HEADER_ROW2_Y,
         &fonts::Font2);
 }
@@ -164,19 +184,21 @@ void drawHeader(
         HEADER_ROW1_Y,
         &fonts::Font0);
 
-    drawModeText(model.mode);
+    drawModeText(model.appHeaderTag);
 
     drawHeaderWifiStatus();
     drawHeaderClock(headerClockText());
 
-    drawHeaderTitle(model.title);
+    drawHeaderTitle(
+        model.appHeaderTitle,
+        model.appHeaderTitleRightAligned);
 
     drawHeaderCursor(model.cursor);
     drawBottomSeparator();
 }
 
 void drawHeaderMode(
-    const String &mode)
+    const String &appHeaderTag)
 {
     ensureTheme();
 
@@ -189,7 +211,7 @@ void drawHeaderMode(
         13,
         T->hdrBg);
 
-    drawModeText(mode);
+    drawModeText(appHeaderTag);
 }
 
 void drawHeaderClock(
