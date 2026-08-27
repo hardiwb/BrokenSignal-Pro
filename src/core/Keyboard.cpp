@@ -10,6 +10,7 @@
 #include "../module/Help.h"
 #include "../module/Player.h"
 #include "../module/Settings.h"
+#include "../module/Applications.h"
 #include "../module/Notes.h"
 #include "../module/Radio.h"
 #include "../module/service/WiFi.h"
@@ -51,6 +52,7 @@ static const uint8_t HID_KEY_N = 0x11;
 enum class KeyboardInputMode
 {
     Calculator,
+    Applications,
     Settings,
     Debug,
     Help,
@@ -61,10 +63,10 @@ enum class KeyboardInputMode
     Player
 };
 
-bool isCtrlN(
+bool isFnN(
     Keyboard_Class::KeysState &ks)
 {
-    if (!ks.ctrl)
+    if (!ks.fn)
         return false;
 
     for (auto c : ks.word)
@@ -109,6 +111,9 @@ KeyboardInputMode currentKeyboardInputMode()
     if (helpVisible)
         return KeyboardInputMode::Help;
 
+    if (applicationsMenuVisible)
+        return KeyboardInputMode::Applications;
+
     if (settingsMenuVisible)
         return KeyboardInputMode::Settings;
 
@@ -135,6 +140,8 @@ bool calculatorHostAllowsOverlay(KeyboardInputMode mode)
     {
     case KeyboardInputMode::Settings:
         return !settingsInputOverlayActive();
+    case KeyboardInputMode::Applications:
+        return false;
     case KeyboardInputMode::Notes:
         return !notesEditorVisible();
     case KeyboardInputMode::Wifi:
@@ -175,7 +182,7 @@ bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
 {
     if (ks.opt)
     {
-        enterSettingsMenu();
+        enterApplicationsMenu();
         return true;
     }
 
@@ -294,9 +301,26 @@ void keyboardLoop()
         !notesEditorVisible() &&
         !wifiPassOverlayVisible &&
         !radioOverlayActive() &&
-        isCtrlN(ks))
+        isFnN(ks))
     {
         openNotesAppFromShortcut();
+        return;
+    }
+
+    const bool modifierOnly = ks.word.empty();
+    const bool modalInputActive =
+        calculatorInputActive() || settingsInputOverlayActive() ||
+        notesEditorVisible() || wifiPassOverlayVisible || radioOverlayActive();
+
+    if (!modalInputActive && modifierOnly && ks.ctrl)
+    {
+        enterSettingsMenu();
+        return;
+    }
+
+    if (!modalInputActive && ks.opt)
+    {
+        enterApplicationsMenu();
         return;
     }
 
@@ -314,6 +338,10 @@ void keyboardLoop()
     {
     case KeyboardInputMode::Calculator:
         handleCalculatorInput(ks);
+        return;
+
+    case KeyboardInputMode::Applications:
+        handleApplicationsInput(ks);
         return;
 
     case KeyboardInputMode::Settings:

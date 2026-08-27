@@ -131,31 +131,18 @@ void setup()
 
   lastActivityMs = millis();
 
-  if (allFolders.empty())
-  {
-    Serial.println("!! /Music NOT FOUND !!");
-    while (true)
-      delay(1000);
-  }
-
   Serial.println("[13] Load folder");
-  loadFolderIdx(0);
+  if (!allFolders.empty())
+    loadFolderIdx(0);
 
   int totalTracks =
-      allFolders[0].tracks.size() +
-      allFolders[0].subFolderIds.size();
+      allFolders.empty() ? 0 :
+      allFolders[0].tracks.size() + allFolders[0].subFolderIds.size();
 
   Serial.printf("Tracks: %d\n", totalTracks);
 
-  if (totalTracks == 0)
-  {
-    Serial.println("!! NO TRACKS !!");
-    while (true)
-      delay(1000);
-  }
-
   Serial.println("[14] Draw UI");
-  drawAll();
+  notesOpen();
 
   Serial.println("=== SETUP DONE ===");
 }

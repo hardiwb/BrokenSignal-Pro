@@ -18,7 +18,7 @@
 
 static bool manualClockVisible = false;
 static String manualClockInput = "";
-static const int SETTINGS_COUNT = 10;
+static const int SETTINGS_COUNT = 11;
 static int settingsScrollTop = 0;
 
 void drawSettingsMenu();
@@ -59,7 +59,8 @@ static const char *settingsLabel(int index)
         "Sync clock",
         "Timezone",
         "Manual clock",
-        "WiFi menu"};
+        "WiFi menu",
+        "Theme"};
 
     if (index < 0 || index >= SETTINGS_COUNT)
         return "";
@@ -95,6 +96,8 @@ static String settingsValue(int index)
         return "ENTER";
     case 7:
         return formatTimezoneValue();
+    case 10:
+        return T->name;
     default:
         return "";
     }
@@ -134,8 +137,8 @@ static ListModel buildSettingsListModel()
 static void drawSettingsHeader()
 {
     HeaderModel model;
-    model.mode = "SETTINGS";
-    model.title = "SYSTEM";
+    model.mode = "SYSTEM";
+    model.title = "CONTROL PANEL";
     model.cursor = true;
     drawHeader(model);
 }
@@ -396,6 +399,11 @@ static void adjustSetting(int sel, int dir)
     {
         setClockTimezoneOffsetHours((int8_t)(getClockTimezoneOffsetHours() + dir));
     }
+    else if (sel == 10)
+    {
+        themeIdx = (themeIdx + dir + 5) % 5;
+        T = THEMES[themeIdx];
+    }
     settingsDirty = true;
     settingsDirtyMs = millis();
 }
@@ -420,6 +428,9 @@ bool settingsInputOverlayActive()
 
 void enterSettingsMenu()
 {
+    applicationsMenuVisible = false;
+    helpVisible = false;
+    debugOverlayVisible = false;
     settingsMenuVisible = true;
     settingsSel = 0;
     settingsScrollTop = 0;
@@ -493,12 +504,18 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
         case '+':
         case '=':
             adjustSetting(settingsSel, +1);
-            drawSettingsRow(settingsSel);
+            if (settingsSel == 10)
+                drawSettingsMenu();
+            else
+                drawSettingsRow(settingsSel);
             return;
 
         case '-':
             adjustSetting(settingsSel, -1);
-            drawSettingsRow(settingsSel);
+            if (settingsSel == 10)
+                drawSettingsMenu();
+            else
+                drawSettingsRow(settingsSel);
             return;
         }
     }

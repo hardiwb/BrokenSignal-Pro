@@ -97,6 +97,7 @@ extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep slee
 extern uint32_t playbackOffSec;   // 0 = off, else playback seconds before deep sleep
 extern unsigned long lastActivityMs;
 extern bool settingsMenuVisible;
+extern bool applicationsMenuVisible;
 extern int settingsSel;
 extern bool debugOverlayVisible;
 extern bool calculatorVisible;

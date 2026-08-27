@@ -11,6 +11,7 @@
 #include "module/Notes.h"
 #include "module/Radio.h"
 #include "module/Settings.h"
+#include "module/Applications.h"
 #include "module/Help.h"
 #include "module/Debug.h"
 #include "module/service/WiFi.h"
@@ -27,6 +28,12 @@ void drawCurrentScreen()
     if (helpVisible)
     {
         drawHelp();
+        return;
+    }
+
+    if (applicationsMenuVisible)
+    {
+        drawApplicationsMenu();
         return;
     }
 

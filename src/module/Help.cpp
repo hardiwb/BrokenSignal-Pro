@@ -45,9 +45,9 @@ static const HelpRow MUSIC_HELP[] = {
     {"[+/-]", "Volume"},
     {"[W]", "Switch to radio"},
     {"[N]", "Quick note"},
-    {"[Ctrl+N]", "Notes app"},
+    {"[Alt]", "Applications"},
+    {"[Ctrl]", "Control Panel"},
     {"[C]", "Calculator"},
-    {"[Opt]", "Settings"},
     {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
     {"[1-5]", "Theme"},
@@ -64,9 +64,9 @@ static const HelpRow RADIO_HELP[] = {
     {"[+/-]", "Volume"},
     {"[W/Esc]", "Back to music"},
     {"[N]", "Quick note"},
-    {"[Ctrl+N]", "Notes app"},
+    {"[Alt]", "Applications"},
+    {"[Ctrl]", "Control Panel"},
     {"[C]", "Calculator"},
-    {"[Opt]", "Settings"},
     {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
     {"[1-5]", "Theme"},
@@ -74,6 +74,8 @@ static const HelpRow RADIO_HELP[] = {
 };
 
 static const HelpRow NOTES_HELP[] = {
+    {"[Alt]", "Applications"},
+    {"[Ctrl]", "Control Panel"},
     {"[A]", "Add note"},
     {"[R]", "Remove note"},
     {"[X]", "Toggle done"},
@@ -102,8 +104,7 @@ static const HelpRow SETTINGS_HELP[] = {
     {"[;/.]", "Cursor up / down"},
     {"[+/-]", "Change value"},
     {"[Ent]", "Open / apply"},
-    {"[Opt]", "Close settings"},
-    {"[Esc]", "Close settings"},
+    {"[Esc]", "Close Control Panel"},
     {"[H]", "Close help"},
 };
 
@@ -200,7 +201,7 @@ static const char *helpContextTitle()
     case HelpContext::Wifi:
         return "WIFI KEYS";
     case HelpContext::Settings:
-        return "SETTINGS KEYS";
+        return "CONTROL PANEL KEYS";
     case HelpContext::Debug:
         return "DEBUG KEYS";
     case HelpContext::Calculator:

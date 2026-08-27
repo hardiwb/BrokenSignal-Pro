@@ -119,10 +119,11 @@ Music can replace the footer center area with a segmented progress bar.
 | Key | Action |
 | --- | ------ |
 | `H` | Context help |
-| `Opt` | Settings |
+| `Alt` | Applications |
+| `Ctrl` | Control Panel |
 | `C` | Calculator |
 | `N` | Quick note |
-| `Ctrl+N` | Notes app |
+| `Fn+N` | Notes app |
 | `D` | Debug |
 | `O` | Screen on / off |
 | `1` to `5` | Switch theme |
@@ -183,7 +184,7 @@ WiFi is available from Settings.
 | `ENTER` | Connect |
 | `Esc` / `DEL` | Back / cancel |
 
-### Settings
+### Control Panel
 
 | Key | Action |
 | --- | ------ |

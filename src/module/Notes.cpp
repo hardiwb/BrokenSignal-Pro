@@ -667,7 +667,7 @@ void drawNotesEditor()
     model.helperText = "[Fn+,]Prev [Fn+/]Next";
     model.confirmText = notesMode
                             ? "[Esc]Close [Ent]Save"
-                            : "[Esc]Close [Ctrl+N]Open note [Ent]Save";
+                            : "[Esc]Close [Fn+N]Open note [Ent]Save";
     model.tallInput = true;
     drawOverlay(model);
 }
@@ -713,7 +713,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             return;
         }
 
-        if (!notesMode && ks.ctrl)
+        if (!notesMode && ks.fn)
         {
             for (auto c : ks.word)
             {
