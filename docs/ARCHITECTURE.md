@@ -121,6 +121,10 @@ Host/quick-popup surfaces check global quick access
   C -> quick calculator
   N -> quick note
         |
+Host surfaces check hardware-safe global keys
+  [ -> brightness down, ] -> brightness up
+  -/+ -> volume only where the host app does not own math/text symbols
+        |
 Collision-safe host utility hotkeys may run
   H -> context help, O -> screen
         |
@@ -135,6 +139,7 @@ Input ownership rules:
 | Shell navigation (`Alt`, `Opt`, `Ctrl`) | `Keyboard.cpp`, using `SurfaceManager` state. |
 | Back/Esc close behavior | `SurfaceManager.cpp`. |
 | Global quick access (`C`, `N`) | App descriptors through `AppRuntime.cpp`, only on host-like surfaces. |
+| Hardware hotkeys (`[`, `]`, safe `-`, `+`) | `Keyboard.cpp` calls shared system adjustment helpers. |
 | Global utility keys (`H`, `O`) | `Keyboard.cpp`, only where they do not collide with app-local keys. |
 | App-specific keys | The app's own input module. |
 | Modal editor keys | The modal owner, routed by active surface. |

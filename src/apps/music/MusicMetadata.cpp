@@ -8,7 +8,7 @@ const HelpEntry MUSIC_HELP_ENTRIES[] = {
     {"[Space]", "Pause / resume"},
     {"[;/.]", "Cursor up / down"},
     {"[,/]", "Seek back / forward"},
-    {"[+/-]", "Volume"},
+    {"[-/+]", "Volume"},
     {"[W]", "Switch to radio"},
     {"[N]", "Quick note"},
     {"[Esc]", "Applications"},

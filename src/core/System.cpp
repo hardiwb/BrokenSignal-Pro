@@ -132,6 +132,48 @@ void showVolumeMessage()
     showHdrMsg(buf);
 }
 
+void adjustSystemVolume(int direction)
+{
+    volume = (uint8_t)constrain((int)volume + direction * 10, 0, 255);
+    M5Cardputer.Speaker.setVolume(volume);
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "VOL %d%%", (volume * 100) / 255);
+    showToast(buf, 800);
+}
+
+void adjustSystemBrightness(int direction)
+{
+    static const uint8_t options[] = {16, 64, 128, 200, 255};
+    constexpr int count = sizeof(options) / sizeof(options[0]);
+
+    int index = 0;
+    int bestDistance = abs((int)screenBrightness - (int)options[0]);
+    for (int i = 1; i < count; ++i)
+    {
+        const int distance = abs((int)screenBrightness - (int)options[i]);
+        if (distance < bestDistance)
+        {
+            index = i;
+            bestDistance = distance;
+        }
+    }
+
+    index = (index + direction + count) % count;
+    screenBrightness = options[index];
+    if (screenOn)
+        M5Cardputer.Display.setBrightness(screenBrightness);
+
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+
+    char buf[16];
+    snprintf(buf, sizeof(buf), "BRI %d%%", (screenBrightness * 100) / 255);
+    showToast(buf, 800);
+}
+
 void setTheme(uint8_t idx)
 {
     if (idx >= 5)

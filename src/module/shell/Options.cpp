@@ -97,7 +97,7 @@ void drawOptionsMenu()
     footer.left = "[Opt]Close";
     if (optionsApp().optionsShowRunHint)
         footer.left += " [Ok]Run";
-    footer.center = "[+/-]Change";
+    footer.center = "[,/]Change";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }
@@ -153,14 +153,14 @@ void handleOptionsInput(Keyboard_Class::KeysState &ks)
             return;
         }
 
-        if (c == '+' || c == '=')
+        if (c == '/')
         {
             if (selectedOptionSupportsAdjustment())
                 activateSelectedOption(+1);
             return;
         }
 
-        if (c == '-')
+        if (c == ',')
         {
             if (selectedOptionSupportsAdjustment())
                 activateSelectedOption(-1);

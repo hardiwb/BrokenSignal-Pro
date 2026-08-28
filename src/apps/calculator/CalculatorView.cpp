@@ -97,7 +97,7 @@ void drawCalculationHistory()
 
     FooterModel footer;
     footer.left = "[F]Calc [H]Help";
-    footer.center = "[Ok]Edit";
+    footer.center = "[,/]Op [Ok]Edit";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }

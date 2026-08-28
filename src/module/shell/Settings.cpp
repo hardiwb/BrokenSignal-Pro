@@ -209,7 +209,7 @@ static void drawSettingsFooter()
 {
     FooterModel model;
     model.left = "[;/.]Sel [Ctrl]Close";
-    model.center = "[+/-]Change";
+    model.center = "[,/]Change";
     model.battery = footerBatteryText();
     drawFooter(model);
 }
@@ -597,8 +597,7 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             return;
         }
 
-        case '+':
-        case '=':
+        case '/':
             if (settingSupportsAdjustment(settingsSel))
             {
                 adjustSetting(settingsSel, +1);
@@ -609,7 +608,7 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             }
             return;
 
-        case '-':
+        case ',':
             if (settingSupportsAdjustment(settingsSel))
             {
                 adjustSetting(settingsSel, -1);

@@ -88,12 +88,12 @@ void handleCalculationHistoryInput(Keyboard_Class::KeysState &ks)
             drawCalculationHistory();
             return;
         }
-        if (c == '+' || c == '=')
+        if (c == '/')
         {
             changeSelectedHistoryOperator(+1);
             return;
         }
-        if (c == '-')
+        if (c == ',')
         {
             changeSelectedHistoryOperator(-1);
             return;

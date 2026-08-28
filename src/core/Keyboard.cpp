@@ -64,6 +64,19 @@ bool foregroundAllowsGlobalUtilityHotkeys()
            foregroundApp == HostApp::Radio;
 }
 
+bool foregroundAllowsGlobalVolumeHotkeys()
+{
+    // Calculator owns arithmetic symbols. Notes list can safely use playback
+    // volume, while editors remain protected by OverlayModal routing.
+    return foregroundApp == HostApp::Notes;
+}
+
+bool globalHardwareHotkeysAllowed(const ActiveSurface &surface)
+{
+    return surface.kind == SurfaceKind::HostApp ||
+           surface.kind == SurfaceKind::QuickPopup;
+}
+
 bool handleGlobalQuickAccessHotkey(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
@@ -72,6 +85,47 @@ bool handleGlobalQuickAccessHotkey(
         return false;
 
     return appRuntimeHandleQuickAccess(ks);
+}
+
+bool handleGlobalHardwareHotkey(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!globalHardwareHotkeysAllowed(surface))
+        return false;
+
+    for (auto c : ks.word)
+    {
+        switch (c)
+        {
+        case '[':
+            adjustSystemBrightness(-1);
+            return true;
+
+        case ']':
+            adjustSystemBrightness(+1);
+            return true;
+
+        case '-':
+            if (foregroundAllowsGlobalVolumeHotkeys())
+            {
+                adjustSystemVolume(-1);
+                return true;
+            }
+            break;
+
+        case '+':
+        case '=':
+            if (foregroundAllowsGlobalVolumeHotkeys())
+            {
+                adjustSystemVolume(+1);
+                return true;
+            }
+            break;
+        }
+    }
+
+    return false;
 }
 
 bool handleGlobalUtilityHotkey(
@@ -287,6 +341,9 @@ void handleHostSurfaceInput(Keyboard_Class::KeysState &ks)
     const ActiveSurface surface = resolveActiveSurface();
 
     if (handleGlobalQuickAccessHotkey(surface, ks))
+        return;
+
+    if (handleGlobalHardwareHotkey(surface, ks))
         return;
 
     if (handleGlobalUtilityHotkey(surface, ks))

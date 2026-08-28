@@ -150,6 +150,12 @@ handles shell navigation, host-safe global hotkeys, and finally app-local input.
 | `C` | Global quick Calculator launch where supported. |
 | `N` | Global quick Note launch where supported. |
 | `H`, `O` | Global utility keys only on host screens where they do not collide. |
+| `[`, `]` | Global brightness down/up on host screens. |
+| `,`, `/` | Left/right adjustment for list-style property rows. |
+
+`-` and `+` are reserved for playback volume only on foreground host
+screens that do not give those keys a stronger local meaning. Full-screen Notes
+can use them for volume; Calculator keeps them for arithmetic.
 
 `Alt`, `Opt`, and `Ctrl` work from host apps and shell menus, so users can move
 between Applications, Options, and Control Panel without closing the current menu
@@ -219,7 +225,7 @@ contains:
 | `label` | Left-side row text. |
 | `value` | Current value; empty for an action row. |
 | `enabled` | Disabled rows are dimmed and cannot activate. |
-| `adjustable` | Allows `+` and `-` to call the action. |
+| `adjustable` | Allows `,` and `/` to call the action as left/right changes. |
 | `closeOnActivate` | Closes Options before opening another surface. |
 | `activate` | Receives `+1` or `-1`. |
 

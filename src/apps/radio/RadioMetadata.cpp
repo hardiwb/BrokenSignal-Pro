@@ -10,7 +10,7 @@ const HelpEntry RADIO_HELP_ENTRIES[] = {
     {"[X]", "Remove station"},
     {"[R]", "Reconnect"},
     {"[I]", "Force AAC"},
-    {"[+/-]", "Volume"},
+    {"[-/+]", "Volume"},
     {"[W]", "Back to music"},
     {"[Esc]", "Applications"},
     {"[N]", "Quick note"},

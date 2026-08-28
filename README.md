@@ -218,12 +218,17 @@ without editing core, shell, keyboard, or existing app sources.
 | `C` | Calculator |
 | `N` | Quick note |
 | `O` | Screen on / off |
+| `[` / `]` | Brightness down / up |
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
 If a foreground app reserves the same letter, the app-specific meaning wins.
 
-Music and Radio own playback volume locally with `+` / `-`. Volume changes are
-shown as a transient header message, for example `VOL 50%`.
+List-style property rows use `,` / `/` as left / right adjustment keys. This
+keeps `-` and `+` available for playback volume muscle memory in host
+apps where those keys do not have a stronger local meaning.
+
+Music, Radio, and full-screen Notes support playback volume with `-` / `+`.
+Volume changes are shown as transient feedback, for example `VOL 50%`.
 
 `Alt`, `Opt`, and `Ctrl` can switch directly between Applications, Options, and
 Control Panel. Modal editors and confirmations keep input until closed.
@@ -237,7 +242,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `SPACE` | Pause / resume |
 | `DEL` | Parent folder |
 | `,` / `/` | Seek back / forward |
-| `+` / `-` | Volume up / down |
+| `-` / `+` | Volume down / up |
 | `R` | Cycle repeat mode |
 | `S` | Toggle shuffle |
 | `W` | Switch to Radio |
@@ -252,7 +257,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `X` | Remove station |
 | `R` | Reconnect |
 | `I` | Force AAC |
-| `+` / `-` | Volume up / down |
+| `-` / `+` | Volume down / up |
 | `W` | Back to Music |
 
 ### Notes
@@ -265,7 +270,8 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `Ok` | Edit selected note |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
-| `Opt` then `+` / `-` | Change Day/Month filter |
+| `-` / `+` | Volume down / up |
+| `Opt` then `,` / `/` | Change Day/Month filter |
 | `T` | Today |
 | `U` / `B` | Top / bottom |
 | `Esc` | Back |
@@ -291,7 +297,7 @@ WiFi is available from Settings.
 | Key | Action |
 | --- | ------ |
 | `;` / `.` | Select setting |
-| `+` / `-` | Change value |
+| `,` / `/` | Change value |
 | `Ok` | Apply / open selected setting |
 | `Ctrl` / `Esc` | Close and save |
 
@@ -327,12 +333,14 @@ Settings include:
 | `F` | Open full-screen calculation history |
 | `H` | Toggle Calculator Help |
 | `Opt` | Toggle Calculator Options |
+| `[` / `]` | Brightness down / up |
 | `C` | Close |
 
 Calculator history uses `A`, `S`, `M`, and `D` to append addition,
-subtraction, multiplication, and division rows. `I` inserts a row above the
-current selection. Calculator Options control decimal places, rounding mode,
-and thousands separators.
+subtraction, multiplication, and division rows. `,` / `/` changes the selected
+history row operator, and `I` inserts a row above the current selection.
+Calculator Options control decimal places, rounding mode, and thousands
+separators.
 
 ## Themes
 

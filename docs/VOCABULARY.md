@@ -43,6 +43,8 @@ or another architecture term and the boundary is not obvious.
 | Shell navigation | Modifier-only shortcuts for moving between shell menus: `Alt`, `Opt`, and `Ctrl`. | `src/core/Keyboard.cpp` | App-specific hotkeys |
 | App-specific hotkey | A key that only means something inside one host app. | `<App>Input.cpp` or app input callback | Quick access launcher |
 | Global utility hotkey | A firmware-level action allowed only on host-like surfaces where it does not collide with app-local keys, such as Help or screen toggle. | `src/core/Keyboard.cpp` | Text/editor input |
+| Hardware hotkey | A firmware-level adjustment for device state, such as brightness or safe playback volume. | `src/core/Keyboard.cpp`, `src/core/System.cpp` | App-local text or arithmetic input |
+| Property adjustment | Left/right changes on a selected list property row. Uses `,` and `/`. | `Options.cpp`, `Settings.cpp`, app list views | Volume keys |
 | Back/Esc | The close/back action. It closes the topmost surface before app input sees it. | `SurfaceManager.cpp`, `Keyboard.cpp` | App-local delete |
 
 ## App File Terms
