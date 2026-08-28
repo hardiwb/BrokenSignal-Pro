@@ -1,18 +1,13 @@
 #include "apps/calculator/Calculator.h"
+#include "apps/calculator/CalculatorInternal.h"
 
 #include <cstdlib>
 #include <cmath>
 
-#include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/shell/Help.h"
-#include "UI/Footer.h"
-#include "UI/Header.h"
-#include "UI/List.h"
-#include "UI/Overlay.h"
 
-namespace
+namespace CalculatorInternal
 {
 String calcInput = "";
 String calcDisplay = "0";
@@ -28,12 +23,7 @@ int calcHistorySelected = 0;
 int calcHistoryScrollTop = 0;
 int calcHistoryEditIndex = -1;
 bool calcHistoryEditIsNew = false;
-
-struct CalculationStep
-{
-    char op;
-    double value;
-};
+bool calcHistoryEditIsInitial = false;
 
 std::vector<CalculationStep> calcHistory;
 
@@ -139,31 +129,6 @@ double inputValue()
     return atof(calcInput.c_str());
 }
 
-String operatorLabel()
-{
-    if (calcOperator == 0)
-        return "";
-
-    return String(calcOperator);
-}
-
-OverlayModel calculatorOverlayModel()
-{
-    OverlayModel model;
-    model.type = OverlayType::TwoColumnInput;
-    model.title = calcEditingHistory ? "Edit Calculation" : "CALCULATOR";
-    model.leftValue = operatorLabel();
-    model.value = formatNumberForDisplay(calcDisplay);
-    model.helperText = "[A]Add [S]Sub [X]Mul [D]Div";
-    model.confirmText = calcEditingHistory
-                            ? "[Esc]Cancel [Ok]Save"
-                            : calculatorOverlayMode
-                                  ? "[Esc]Close [F]Full [Ok]="
-                                  : "[Esc]Apps [F]Full [H]Help [Ok]=";
-    model.inputFont = OverlayFontSize::Large;
-    return model;
-}
-
 void resetCalculator()
 {
     calcInput = "";
@@ -180,6 +145,7 @@ void resetCalculator()
     calcHistoryScrollTop = 0;
     calcHistoryEditIndex = -1;
     calcHistoryEditIsNew = false;
+    calcHistoryEditIsInitial = false;
     calcHistory.clear();
 }
 
@@ -206,20 +172,40 @@ bool applyCalculationStep(double &result, char op, double rhs)
     }
 }
 
+int historyDisplayCount();
+int historyStepIndexFromDisplay(int displayIndex);
+int historyDisplayIndexFromStepIndex(int stepIndex);
+
 void ensureHistorySelectionVisible()
 {
-    if (calcHistory.empty())
+    const int displayCount = (calcHasInitialValue ? 1 : 0) + (int)calcHistory.size();
+    if (displayCount == 0)
     {
         calcHistorySelected = 0;
         calcHistoryScrollTop = 0;
         return;
     }
 
-    calcHistorySelected = constrain(calcHistorySelected, 0, (int)calcHistory.size() - 1);
+    calcHistorySelected = constrain(calcHistorySelected, 0, displayCount - 1);
     if (calcHistorySelected < calcHistoryScrollTop)
         calcHistoryScrollTop = calcHistorySelected;
     if (calcHistorySelected >= calcHistoryScrollTop + LIST_VISIBLE_ITEM)
         calcHistoryScrollTop = calcHistorySelected - LIST_VISIBLE_ITEM + 1;
+}
+
+int historyDisplayCount()
+{
+    return (calcHasInitialValue ? 1 : 0) + (int)calcHistory.size();
+}
+
+int historyStepIndexFromDisplay(int displayIndex)
+{
+    return calcHasInitialValue ? displayIndex - 1 : displayIndex;
+}
+
+int historyDisplayIndexFromStepIndex(int stepIndex)
+{
+    return calcHasInitialValue ? stepIndex + 1 : stepIndex;
 }
 
 void recalculateHistory()
@@ -259,11 +245,6 @@ void appendHistoryStep(char op, double value)
         calcHistory.erase(calcHistory.begin());
     }
     calcHistory.push_back({op, value});
-}
-
-void drawCalculatorDisplay()
-{
-    drawOverlayTwoColumnInputValue(calculatorOverlayModel());
 }
 
 void deleteCalcInput()
@@ -353,6 +334,13 @@ void appendCalcChar(char c)
         }
     }
 
+    if (c >= '0' && c <= '9' &&
+        calcInput == "0" &&
+        calcInput.indexOf('.') < 0)
+    {
+        calcInput = "";
+    }
+
     if (c == '.' &&
         calcInput.indexOf('.') >= 0)
         return;
@@ -371,63 +359,37 @@ void appendCalcChar(char c)
     drawCalculatorDisplay();
 }
 
-ListModel calculationHistoryListModel()
+void beginHistoryEdit(bool isNew)
 {
-    ListModel model;
-    model.selected = calcHistorySelected;
-    model.scrollTop = calcHistoryScrollTop;
-
-    if (calcHistory.empty())
-    {
-        ListItemModel empty;
-        empty.label = "No calculations yet";
-        empty.isSelected = true;
-        empty.isDimmed = true;
-        model.items.push_back(empty);
-        return model;
-    }
-
-    for (int i = 0; i < (int)calcHistory.size(); ++i)
-    {
-        ListItemModel item;
-        item.type = ListItemType::Property;
-        item.label = formatNumberForDisplay(
-            formatNumber(calcHistory[i].value));
-        item.value = String(calcHistory[i].op);
-        item.propertyFirst = true;
-        item.isSelected = i == calcHistorySelected;
-        model.items.push_back(item);
-    }
-    return model;
-}
-
-void drawCalculationHistory()
-{
-    HeaderModel header;
-    header.appHeaderTag = "CALCULATOR";
-    header.appHeaderTitle = formatNumberForDisplay(calcDisplay);
-    header.cursor = true;
-    header.appHeaderTitleRightAligned = true;
-    drawHeader(header);
-
-    drawList(calculationHistoryListModel());
-
-    FooterModel footer;
-    footer.left = "[F]Calc [H]Help";
-    footer.center = "[Ok]Edit";
-    footer.battery = footerBatteryText();
-    drawFooter(footer);
-}
-
-void beginHistoryEdit(bool isNew = false)
-{
-    if (calcHistory.empty())
+    if (historyDisplayCount() == 0)
         return;
 
-    calcHistoryEditIndex = calcHistorySelected;
     calcHistoryEditIsNew = isNew;
+    calcHistoryEditIsInitial = calcHasInitialValue && calcHistorySelected == 0;
     calcEditingHistory = true;
     calculatorHistoryVisible = false;
+    if (calcHistoryEditIsInitial)
+    {
+        calcHistoryEditIndex = -1;
+        calcInput = formatNumber(calcInitialValue);
+        calcDisplay = calcInput;
+        calcOperator = 0;
+        calcJustCalculated = false;
+        drawOverlay(calculatorOverlayModel());
+        return;
+    }
+
+    calcHistoryEditIndex = historyStepIndexFromDisplay(calcHistorySelected);
+    if (calcHistoryEditIndex < 0 || calcHistoryEditIndex >= (int)calcHistory.size())
+    {
+        calcEditingHistory = false;
+        calcHistoryEditIndex = -1;
+        calcHistoryEditIsNew = false;
+        calcHistoryEditIsInitial = false;
+        calculatorHistoryVisible = true;
+        return;
+    }
+
     calcInput = formatNumber(calcHistory[calcHistoryEditIndex].value);
     calcDisplay = calcInput;
     calcOperator = calcHistory[calcHistoryEditIndex].op;
@@ -446,7 +408,7 @@ void insertHistoryStep(int index, char op)
 
     index = constrain(index, 0, (int)calcHistory.size());
     calcHistory.insert(calcHistory.begin() + index, {op, 0.0});
-    calcHistorySelected = index;
+    calcHistorySelected = historyDisplayIndexFromStepIndex(index);
     ensureHistorySelectionVisible();
     recalculateHistory();
     beginHistoryEdit(true);
@@ -454,16 +416,18 @@ void insertHistoryStep(int index, char op)
 
 void cancelHistoryEdit()
 {
-    if (calcHistoryEditIsNew && calcHistoryEditIndex >= 0 &&
+    if (calcHistoryEditIsNew && !calcHistoryEditIsInitial &&
+        calcHistoryEditIndex >= 0 &&
         calcHistoryEditIndex < (int)calcHistory.size())
     {
         calcHistory.erase(calcHistory.begin() + calcHistoryEditIndex);
-        calcHistorySelected = min(calcHistorySelected, max(0, (int)calcHistory.size() - 1));
+        calcHistorySelected = min(calcHistorySelected, max(0, historyDisplayCount() - 1));
         ensureHistorySelectionVisible();
     }
     calcEditingHistory = false;
     calcHistoryEditIndex = -1;
     calcHistoryEditIsNew = false;
+    calcHistoryEditIsInitial = false;
     calculatorHistoryVisible = true;
     recalculateHistory();
     drawCalculationHistory();
@@ -471,7 +435,12 @@ void cancelHistoryEdit()
 
 void saveHistoryEdit()
 {
-    if (calcHistoryEditIndex >= 0 &&
+    if (calcHistoryEditIsInitial)
+    {
+        if (calcInput.length() > 0 && calcInput != "-")
+            calcInitialValue = inputValue();
+    }
+    else if (calcHistoryEditIndex >= 0 &&
         calcHistoryEditIndex < (int)calcHistory.size() &&
         calcInput.length() > 0 && calcInput != "-")
     {
@@ -479,17 +448,27 @@ void saveHistoryEdit()
         calcHistory[calcHistoryEditIndex].op = calcOperator;
     }
     calcHistoryEditIsNew = false;
+    calcHistoryEditIsInitial = false;
     cancelHistoryEdit();
 }
 
 void removeSelectedHistoryStep()
 {
-    if (calcHistory.empty())
+    if (historyDisplayCount() == 0)
         return;
 
-    calcHistory.erase(calcHistory.begin() + calcHistorySelected);
-    if (calcHistorySelected >= (int)calcHistory.size())
-        calcHistorySelected = max(0, (int)calcHistory.size() - 1);
+    if (calcHasInitialValue && calcHistorySelected == 0)
+    {
+        calcInitialValue = 0.0;
+    }
+    else
+    {
+        const int stepIndex = historyStepIndexFromDisplay(calcHistorySelected);
+        if (stepIndex >= 0 && stepIndex < (int)calcHistory.size())
+            calcHistory.erase(calcHistory.begin() + stepIndex);
+    }
+
+    calcHistorySelected = min(calcHistorySelected, max(0, historyDisplayCount() - 1));
     ensureHistorySelectionVisible();
     recalculateHistory();
     drawCalculationHistory();
@@ -497,115 +476,31 @@ void removeSelectedHistoryStep()
 
 void changeSelectedHistoryOperator(int direction)
 {
-    if (calcHistory.empty())
+    if (historyDisplayCount() == 0)
+        return;
+
+    const int stepIndex = historyStepIndexFromDisplay(calcHistorySelected);
+    if (stepIndex < 0 || stepIndex >= (int)calcHistory.size())
         return;
 
     static const char operators[] = {'+', '-', '/', 'x'};
     int index = 0;
     for (int i = 0; i < 4; ++i)
     {
-        if (operators[i] == calcHistory[calcHistorySelected].op)
+        if (operators[i] == calcHistory[stepIndex].op)
         {
             index = i;
             break;
         }
     }
-    calcHistory[calcHistorySelected].op = operators[(index + direction + 4) % 4];
+    calcHistory[stepIndex].op = operators[(index + direction + 4) % 4];
     recalculateHistory();
     drawCalculationHistory();
 }
 
-void handleCalculationHistoryInput(Keyboard_Class::KeysState &ks)
-{
-    if (keyboardBackPressed(ks))
-    {
-        closeCalculator();
-        return;
-    }
+} // namespace CalculatorInternal
 
-    if (ks.enter)
-    {
-        beginHistoryEdit();
-        return;
-    }
-
-    if (ks.del)
-    {
-        removeSelectedHistoryStep();
-        return;
-    }
-
-    for (auto c : ks.word)
-    {
-        if (c == 'f' || c == 'F')
-        {
-            calculatorHistoryVisible = false;
-            drawOverlay(calculatorOverlayModel());
-            return;
-        }
-
-        if (c == 'h' || c == 'H')
-        {
-            toggleHelp();
-            return;
-        }
-
-        if (c == 'a' || c == 'A')
-        {
-            insertHistoryStep(calcHistory.size(), '+');
-            return;
-        }
-        if (c == 's' || c == 'S')
-        {
-            insertHistoryStep(calcHistory.size(), '-');
-            return;
-        }
-        if (c == 'm' || c == 'M')
-        {
-            insertHistoryStep(calcHistory.size(), 'x');
-            return;
-        }
-        if (c == 'd' || c == 'D')
-        {
-            insertHistoryStep(calcHistory.size(), '/');
-            return;
-        }
-        if (c == 'i' || c == 'I')
-        {
-            const char op = calcHistory.empty()
-                                ? '+'
-                                : calcHistory[calcHistorySelected].op;
-            insertHistoryStep(calcHistory.empty() ? 0 : calcHistorySelected, op);
-            return;
-        }
-        if (c == ';' && !calcHistory.empty())
-        {
-            calcHistorySelected =
-                (calcHistorySelected - 1 + calcHistory.size()) % calcHistory.size();
-            ensureHistorySelectionVisible();
-            drawCalculationHistory();
-            return;
-        }
-        if (c == '.' && !calcHistory.empty())
-        {
-            calcHistorySelected = (calcHistorySelected + 1) % calcHistory.size();
-            ensureHistorySelectionVisible();
-            drawCalculationHistory();
-            return;
-        }
-        if (c == '+' || c == '=')
-        {
-            changeSelectedHistoryOperator(+1);
-            return;
-        }
-        if (c == '-')
-        {
-            changeSelectedHistoryOperator(-1);
-            return;
-        }
-    }
-}
-} // namespace
+using namespace CalculatorInternal;
 
 void openCalculator()
 {
@@ -674,165 +569,4 @@ void refreshCalculatorFormatting()
         calcDisplay = formatNumber(calcAccumulator);
     else
         calcDisplay = "0";
-}
-
-void drawCalculator()
-{
-    if (calculatorHistoryVisible)
-        drawCalculationHistory();
-    else
-        drawOverlay(calculatorOverlayModel());
-}
-
-void handleCalculatorInput(Keyboard_Class::KeysState &ks)
-{
-    if (!calculatorVisible)
-        return;
-
-    if (calculatorHistoryVisible)
-    {
-        handleCalculationHistoryInput(ks);
-        return;
-    }
-
-    if (calcEditingHistory)
-    {
-        if (keyboardBackPressed(ks))
-        {
-            cancelHistoryEdit();
-            return;
-        }
-        if (ks.enter)
-        {
-            saveHistoryEdit();
-            return;
-        }
-
-        if (ks.del)
-        {
-            if (calcInput.length() > 0)
-            {
-                calcInput.remove(calcInput.length() - 1);
-                calcDisplay = calcInput.length() > 0 ? calcInput : "0";
-                drawCalculatorDisplay();
-            }
-            return;
-        }
-
-        for (auto c : ks.word)
-        {
-            if ((c >= '0' && c <= '9') || c == '.')
-            {
-                appendCalcChar(c);
-                return;
-            }
-
-            char op = 0;
-            if (c == 'a' || c == 'A' || c == '+' || c == '=')
-                op = '+';
-            else if (c == 's' || c == 'S' || c == '-')
-                op = '-';
-            else if (c == 'x' || c == 'X' || c == '*')
-                op = 'x';
-            else if (c == 'd' || c == 'D' || c == '/')
-                op = '/';
-
-            if (op != 0 && calcHistoryEditIndex >= 0 &&
-                calcHistoryEditIndex < (int)calcHistory.size())
-            {
-                calcOperator = op;
-                drawCalculatorDisplay();
-                return;
-            }
-        }
-        return;
-    }
-
-    if (keyboardBackPressed(ks))
-    {
-        deleteCalcInput();
-        return;
-    }
-
-    if (ks.enter)
-    {
-        calculateResult();
-        return;
-    }
-
-    if (ks.del)
-    {
-        deleteCalcInput();
-        return;
-    }
-
-    for (auto c : ks.word)
-    {
-        if (c == 'f' || c == 'F')
-        {
-            if (calculatorOverlayMode)
-            {
-                calculatorOverlayMode = false;
-                notesMode = false;
-                rememberLastOpenedApp(HostApp::Calculator);
-            }
-            calculatorHistoryVisible = true;
-            ensureHistorySelectionVisible();
-            drawCalculationHistory();
-            return;
-        }
-
-        if (c == 'h' || c == 'H')
-        {
-            if (!calculatorOverlayMode)
-                toggleHelp();
-            return;
-        }
-
-        if (c >= '0' && c <= '9')
-        {
-            appendCalcChar(c);
-            return;
-        }
-
-        if (c == '.')
-        {
-            appendCalcChar(c);
-            return;
-        }
-
-        switch (c)
-        {
-        case 'a':
-        case 'A':
-        case '+':
-        case '=':
-            setOperator('+');
-            return;
-
-        case 's':
-        case 'S':
-        case '-':
-            setOperator('-');
-            return;
-
-        case 'x':
-        case 'X':
-        case '*':
-            setOperator('x');
-            return;
-
-        case 'd':
-        case 'D':
-        case '/':
-            setOperator('/');
-            return;
-
-        case 'c':
-        case 'C':
-            closeCalculator();
-            return;
-
-        }
-    }
 }

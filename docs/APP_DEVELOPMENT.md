@@ -1,8 +1,12 @@
 # BrokenSignal Pro App Development
 
 This guide describes the host-app API used by Music, Radio, Notes, and
-Calculator. A host app owns the full content area and is listed in Applications.
+Calculator. BrokenSignal Pro is organized as an embedded shell runtime: a host
+app owns the full content area and shell surfaces sit above it.
+
 Menus, dialogs, Help, Debug, toasts, and quick tools are surfaces, not host apps.
+See `docs/ARCHITECTURE.md` for the full layer map and input-routing model. See
+`docs/VOCABULARY.md` for the project dictionary.
 
 Start from the files in `docs/app-template/`. They use the same callback shapes
 as production apps but are not compiled because their names end in `.example`.
@@ -54,23 +58,48 @@ Recommended layout for an app named Example:
 src/apps/example/
 |-- app.json
 |-- Example.h
-|-- Example.cpp
-|-- ExampleMetadata.h
-`-- ExampleMetadata.cpp
-```
-
-As the app grows, split `Example.cpp` without changing the descriptor API:
-
-```text
-src/apps/example/
-|-- app.json
-|-- Example.h
-|-- ExampleLogic.cpp
+|-- ExampleApp.cpp
+|-- ExampleApp.h
+|-- ExampleModel.cpp
 |-- ExampleInput.cpp
 |-- ExampleView.cpp
 |-- ExampleMetadata.h
 `-- ExampleMetadata.cpp
 ```
+
+Small apps may combine model, input, and view into one implementation file, but
+larger apps should use the same names consistently:
+
+```text
+src/apps/example/
+|-- app.json
+|-- Example.h            Public app API used by core, shell, or other apps.
+|-- ExampleApp.cpp       Thin AppDescriptor adapter: open/draw/input/tick.
+|-- ExampleApp.h
+|-- ExampleInternal.h    Private shared state/types/prototypes for split files.
+|-- ExampleModel.cpp     State transitions and app behavior.
+|-- ExampleInput.cpp
+|-- ExampleView.cpp
+|-- ExampleStorage.cpp
+|-- ExampleService.cpp
+|-- ExampleMetadata.h
+`-- ExampleMetadata.cpp
+```
+
+File naming convention:
+
+| File | Role |
+| --- | --- |
+| `<App>.h` | Public API only. Keep this small and intentional. |
+| `<App>App.*` | Runtime adapter named by `app.json`. It should mostly call public app functions. |
+| `<App>Internal.h` | Private declarations shared only inside the app folder. |
+| `<App>Model.cpp` | State changes, selection math, parsing, calculations, and commands. |
+| `<App>Input.cpp` | App-local key handling after shell routing. |
+| `<App>View.cpp` | Drawing and UI model construction. |
+| `<App>Storage.cpp` | SD card or file persistence. |
+| `<App>Service.cpp` | Long-lived external work such as streaming, playback, scans, or network jobs. |
+| `<App>Metadata.*` | Help entries and Options rows. |
+| `app.json` | App registration, callbacks, Help, Options, and quick-access metadata. |
 
 Only public lifecycle callbacks belong in `Example.h`. Keep internal state and
 helpers private to the app rather than adding them to `core/State.h` unless the
@@ -109,18 +138,23 @@ for frequent changes, but always retain one complete redraw path.
 
 ## Input Ownership
 
-The shell handles these before app input on a host screen:
+The keyboard router first asks `SurfaceManager` which surface is on top. It then
+handles shell navigation before handing input to the active surface.
 
 | Input | Owner |
 | --- | --- |
 | `Esc` | Surface manager: close topmost surface or open Applications. |
-| `Alt` | Applications menu. |
-| `Opt` | Active app's Options. |
-| `Ctrl` | Control Panel. |
+| `Alt` | Applications menu navigation. |
+| `Opt` | Active app's Options navigation. |
+| `Ctrl` | Control Panel navigation. |
 | `C` | Quick Calculator where supported. |
 | `N` | Quick Note where supported. |
 
-Do not reimplement global menu or ESC behavior in a new app. App input should
+`Alt`, `Opt`, and `Ctrl` work from host apps and shell menus, so users can move
+between Applications, Options, and Control Panel without closing the current menu
+first. Modal editors and confirmation dialogs keep input until closed.
+
+Do not reimplement shell menu or ESC behavior in a new app. App input should
 only handle local commands left after shell routing. Modal editors must expose
 their state to `SurfaceManager` if ESC needs to close them before the host app.
 
@@ -149,10 +183,11 @@ bool exampleQuickAccessAvailable(HostApp foreground)
 }
 ```
 
-The shell only evaluates quick-access keys when the active surface is `HostApp`.
-Menus, Help, Debug, editors, confirmations, and existing quick overlays therefore
-retain their input. A quick-access key takes precedence over an app-local key on
-eligible host screens, so keys must be unique and intentionally reserved.
+The shell evaluates quick-access keys only on host-like surfaces where they will
+not steal text input from a modal editor. Menus, Help, Debug, editors,
+confirmations, and existing quick overlays therefore retain their input. A
+quick-access key takes precedence over an app-local key on eligible host screens,
+so keys must be unique and intentionally reserved.
 
 ## Help Metadata
 

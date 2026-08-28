@@ -50,110 +50,12 @@ bool keyboardTextInputChar(Keyboard_Class::KeysState &ks, char c)
 
 namespace
 {
-static const uint8_t HID_KEY_N = 0x11;
-
-enum class KeyboardInputMode
-{
-    Options,
-    Calculator,
-    Applications,
-    Settings,
-    Debug,
-    Help,
-    Notes,
-    Wifi,
-    RadioOverlay,
-    Radio,
-    Player
-};
-
-bool isFnN(
-    Keyboard_Class::KeysState &ks)
-{
-    if (!ks.fn)
-        return false;
-
-    for (auto c : ks.word)
-    {
-        if (c == 'n' ||
-            c == 'N')
-            return true;
-    }
-
-    for (auto key : ks.hid_keys)
-    {
-        if (key == HID_KEY_N)
-            return true;
-    }
-
-    return false;
-}
-
-void openNotesAppFromShortcut()
-{
-    settingsMenuVisible = false;
-    debugOverlayVisible = false;
-    calculatorVisible = false;
-    helpVisible = false;
-
-    wifiMenuVisible = false;
-    wifiPassOverlayVisible = false;
-
-    addUrlOverlayVisible = false;
-    addNameOverlayVisible = false;
-    removeConfirmVisible = false;
-
-    appRuntimeOpen(HostApp::Notes);
-}
-
-KeyboardInputMode currentKeyboardInputMode()
-{
-    if (optionsMenuVisible)
-        return KeyboardInputMode::Options;
-
-    if (helpVisible)
-        return KeyboardInputMode::Help;
-
-    if (applicationsMenuVisible)
-        return KeyboardInputMode::Applications;
-
-    if (settingsMenuVisible)
-        return KeyboardInputMode::Settings;
-
-    if (debugOverlayVisible)
-        return KeyboardInputMode::Debug;
-
-    if (notesEditorVisible() || notesMoveDateInputActive())
-        return KeyboardInputMode::Notes;
-
-    if (calculatorInputActive())
-        return KeyboardInputMode::Calculator;
-
-    if (notesInputActive())
-        return KeyboardInputMode::Notes;
-
-    if (wifiInputActive())
-        return KeyboardInputMode::Wifi;
-
-    if (webRadioMode)
-        return radioOverlayActive()
-                   ? KeyboardInputMode::RadioOverlay
-                   : KeyboardInputMode::Radio;
-
-    return KeyboardInputMode::Player;
-}
-
-bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
+bool handleHostUtilityHotkey(Keyboard_Class::KeysState &ks)
 {
     for (auto c : ks.word)
     {
         switch (c)
         {
-        case 'w':
-        case 'W':
-            appRuntimeOpen(webRadioMode ? HostApp::Music : HostApp::Radio);
-            return true;
-
         case 'h':
         case 'H':
             toggleHelp();
@@ -167,26 +69,6 @@ bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
         case 'o':
         case 'O':
             toggleScreen();
-            return true;
-
-        case '1':
-            setTheme(0);
-            return true;
-
-        case '2':
-            setTheme(1);
-            return true;
-
-        case '3':
-            setTheme(2);
-            return true;
-
-        case '4':
-            setTheme(3);
-            return true;
-
-        case '5':
-            setTheme(4);
             return true;
         }
     }
@@ -215,6 +97,176 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
         else
             drawAll();
     }
+}
+
+bool shellNavigationAllowed(const ActiveSurface &surface)
+{
+    return surface.kind == SurfaceKind::HostApp ||
+           surface.kind == SurfaceKind::MainMenu ||
+           surface.kind == SurfaceKind::ContextMenu ||
+           surface.kind == SurfaceKind::QuickPopup;
+}
+
+void closeActiveShellMenu()
+{
+    if (applicationsMenuVisible)
+    {
+        exitApplicationsMenu();
+        return;
+    }
+
+    if (optionsMenuVisible)
+    {
+        exitOptionsMenu();
+        return;
+    }
+
+    if (settingsMenuVisible)
+    {
+        exitSettingsMenu();
+        return;
+    }
+
+    if (wifiMenuVisible)
+    {
+        closeWifiInput();
+        if (webRadioMode)
+            drawRadioAll();
+        else
+            drawAll();
+    }
+}
+
+bool handleShellNavigationShortcut(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!shellNavigationAllowed(surface) || !ks.word.empty())
+        return false;
+
+    if (ks.ctrl)
+    {
+        if (settingsMenuVisible)
+            exitSettingsMenu();
+        else
+        {
+            closeActiveShellMenu();
+            enterSettingsMenu();
+        }
+        return true;
+    }
+
+    if (ks.alt)
+    {
+        if (applicationsMenuVisible)
+            exitApplicationsMenu();
+        else
+        {
+            closeActiveShellMenu();
+            enterApplicationsMenu();
+        }
+        return true;
+    }
+
+    if (ks.opt)
+    {
+        if (optionsMenuVisible)
+            exitOptionsMenu();
+        else
+        {
+            closeActiveShellMenu();
+            enterOptionsMenu();
+        }
+        return true;
+    }
+
+    return false;
+}
+
+void handleModalSurfaceInput(Keyboard_Class::KeysState &ks)
+{
+    if (appRuntimeHandleQuickAccessInput(ks))
+        return;
+
+    if (settingsInputOverlayActive())
+    {
+        handleSettingsInput(ks);
+        return;
+    }
+
+    if (notesMoveDateInputActive())
+    {
+        handleNotesInput(ks);
+        return;
+    }
+
+    if (calculatorEditActive())
+    {
+        handleCalculatorInput(ks);
+        return;
+    }
+
+    if (wifiPassOverlayVisible)
+    {
+        handleWifiModeInput(ks);
+        return;
+    }
+
+    if (radioOverlayActive())
+    {
+        handleRadioOverlayInput(ks);
+        return;
+    }
+}
+
+void handlePopupSurfaceInput(Keyboard_Class::KeysState &ks)
+{
+    if (helpVisible)
+    {
+        handleHelpInput(ks);
+        return;
+    }
+
+    if (debugOverlayVisible)
+    {
+        handleDebugInput(ks);
+        return;
+    }
+}
+
+void handleContextSurfaceInput(Keyboard_Class::KeysState &ks)
+{
+    if (optionsMenuVisible)
+    {
+        handleOptionsInput(ks);
+        return;
+    }
+
+    if (settingsMenuVisible)
+    {
+        handleSettingsInput(ks);
+        return;
+    }
+
+    if (wifiMenuVisible)
+    {
+        handleWifiModeInput(ks);
+        return;
+    }
+}
+
+void handleHostSurfaceInput(Keyboard_Class::KeysState &ks)
+{
+    if (appRuntimeHandleQuickAccess(ks))
+        return;
+
+    if ((foregroundApp == HostApp::Music || foregroundApp == HostApp::Radio) &&
+        handleHostUtilityHotkey(ks))
+    {
+        return;
+    }
+
+    appRuntimeHandleForegroundInput(ks);
 }
 } // namespace
 
@@ -246,109 +298,33 @@ void keyboardLoop()
     if (keyboardBackPressed(ks) && closeTopmostSurface(surface))
         return;
 
-    if (!optionsMenuVisible &&
-        surface.kind == SurfaceKind::HostApp &&
-        !notesMode &&
-        !calculatorInputActive() &&
-        isFnN(ks))
+    if (handleShellNavigationShortcut(surface, ks))
+        return;
+
+    switch (surface.kind)
     {
-        openNotesAppFromShortcut();
-        return;
-    }
-
-    const bool modifierOnly = ks.word.empty();
-    const bool modalInputActive =
-        surface.kind == SurfaceKind::OverlayModal;
-
-    if (surface.kind == SurfaceKind::HostApp &&
-        !modalInputActive &&
-        modifierOnly &&
-        ks.ctrl)
-    {
-        enterSettingsMenu();
-        return;
-    }
-
-    const bool applicationHostActive =
-        surface.kind == SurfaceKind::HostApp;
-
-    if (applicationHostActive && modifierOnly && ks.alt)
-    {
-        enterApplicationsMenu();
-        return;
-    }
-
-    if (applicationHostActive && modifierOnly && ks.opt)
-    {
-        enterOptionsMenu();
-        return;
-    }
-
-    KeyboardInputMode mode = currentKeyboardInputMode();
-
-    if (surface.kind == SurfaceKind::HostApp &&
-        appRuntimeHandleQuickAccess(ks))
+    case SurfaceKind::HostApp:
+    case SurfaceKind::QuickPopup:
+        handleHostSurfaceInput(ks);
         return;
 
-    if (surface.kind == SurfaceKind::HostApp &&
-        (mode == KeyboardInputMode::Player ||
-         mode == KeyboardInputMode::Radio) &&
-        handleGlobalHotkey(ks))
-        return;
-
-    if (!surfaceBlocksHostInput(surface))
-    {
-        appRuntimeHandleForegroundInput(ks);
-        return;
-    }
-
-    if (surface.kind == SurfaceKind::OverlayModal &&
-        appRuntimeHandleQuickAccessInput(ks))
-    {
-        return;
-    }
-
-    switch (mode)
-    {
-    case KeyboardInputMode::Options:
-        handleOptionsInput(ks);
-        return;
-
-    case KeyboardInputMode::Calculator:
-        handleCalculatorInput(ks);
-        return;
-
-    case KeyboardInputMode::Applications:
+    case SurfaceKind::MainMenu:
         handleApplicationsInput(ks);
         return;
 
-    case KeyboardInputMode::Settings:
-        handleSettingsInput(ks);
+    case SurfaceKind::ContextMenu:
+        handleContextSurfaceInput(ks);
         return;
 
-    case KeyboardInputMode::Debug:
-        handleDebugInput(ks);
+    case SurfaceKind::OverlayModal:
+        handleModalSurfaceInput(ks);
         return;
 
-    case KeyboardInputMode::Help:
-        handleHelpInput(ks);
+    case SurfaceKind::OverlayPopup:
+        handlePopupSurfaceInput(ks);
         return;
 
-    case KeyboardInputMode::Notes:
-        handleNotesInput(ks);
-        return;
-
-    case KeyboardInputMode::Wifi:
-        handleWifiModeInput(ks);
-        return;
-
-    case KeyboardInputMode::RadioOverlay:
-        handleRadioOverlayInput(ks);
-        return;
-
-    case KeyboardInputMode::Radio:
-    case KeyboardInputMode::Player:
-        appRuntimeHandleForegroundInput(ks);
+    case SurfaceKind::None:
         return;
     }
 }

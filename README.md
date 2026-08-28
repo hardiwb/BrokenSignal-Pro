@@ -5,8 +5,8 @@ An audio player, web radio, quick notes, and utility shell for the **Cardputer A
 **Pro stands for Productivity**: fast access to music, radio, notes,
 calculations, and everyday utilities from one keyboard-driven interface.
 
-**Current development version:** `v1.2.0-dev`  
-**Latest tagged release:** `v1.1.0`
+**Current release:** `v1.3.0`
+**Latest tagged release:** `v1.3.0`
 
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
 
@@ -16,8 +16,11 @@ BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt
 
 ## Current Status
 
-BrokenSignal Pro is preparing for the `v1.2.0` release. The main UI uses a
-modular primitive architecture:
+BrokenSignal Pro `v1.3.0` is organized as a small embedded shell runtime. A
+foreground app runs under shared Applications, Options, Control Panel, Help,
+Debug, quick-access, and modal surface layers.
+
+The main UI is built from reusable primitives:
 
 - `Header`
 - `List`
@@ -26,7 +29,8 @@ modular primitive architecture:
 - `Toast`
 
 Themes change color and mood, not layout. Music Player, Web Radio, Notes,
-Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
+Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives
+and keyboard routing rules.
 
 ## v1.2.0 Development Changes
 
@@ -40,7 +44,8 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
   contextual note actions.
 - Added granular redraw for two-field overlays and guarded covered screens from
   background refresh.
-- Reorganized source modules into `programs`, `shell`, and `service` folders.
+- Reorganized host apps under `src/apps/`, with shell surfaces and shared
+  services split under `src/module/`.
 
 ## Gallery
 
@@ -118,6 +123,37 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
 
 ## UI Architecture
 
+BrokenSignal Pro is structured as an embedded shell/app runtime:
+
+```text
++---------------------+     +---------------------+
+| Shell surfaces      |     | Host apps           |
+| Apps / Options      |     | Music / Radio       |
+| Control / Help      |     | Notes / Calculator  |
++----------+----------+     +----------+----------+
+           |                           |
+           +------------+--------------+
+                        |
+           +------------v--------------+
+           | Core runtime              |
+           | State / System            |
+           | AppRuntime / Registry     |
+           | SurfaceManager / Keyboard |
+           +------------+--------------+
+                        |
++----------v----------+     +----------v----------+
+| UI primitives       |     | Shared services     |
+| Header/List/Footer  |     | FileBrowser/WiFi    |
+| Overlay/Toast       |     | Clock/Audio         |
++----------+----------+     +----------+----------+
+           |                           |
+           +------------+--------------+
+                        |
+           +------------v--------------+
+           | Platform, hardware, SD    |
+           +---------------------------+
+```
+
 The production UI is built from reusable primitives:
 
 ```text
@@ -151,16 +187,18 @@ Music can replace the footer center area with a segmented progress bar.
 Application-facing code is organized by responsibility:
 
 ```text
-src/apps/       App-owned metadata and the destination for app modules
-src/core/       App registry/runtime, state, routing, and system lifecycle
+src/apps/       App-owned lifecycle, input, metadata, views, and storage
+src/core/       App registry/runtime, surface routing, state, and system flow
+src/UI/         Header, List, Footer, Overlay, Toast, and Themes
 src/module/
-|-- programs/   Legacy Music, Radio, Notes, and Calculator implementations
 |-- shell/      Applications, Options, Control Panel, Help, and Debug
-`-- service/    Clock and WiFi
+`-- service/    Clock, WiFi, and File Browser
 ```
 
-See [App Development](docs/APP_DEVELOPMENT.md) for the host-app API,
-registration checklist, and compile-safe example templates.
+See [Architecture](docs/ARCHITECTURE.md) for the firmware layer map and input
+ownership model. See [Vocabulary](docs/VOCABULARY.md) for project terms, and
+[App Development](docs/APP_DEVELOPMENT.md) for the host-app API, registration
+checklist, and compile-safe example templates.
 
 Apps are discovered from `src/apps/*/app.json` during the PlatformIO pre-build
 step. A third-party host app can be installed as one self-contained folder
@@ -178,13 +216,14 @@ without editing core, shell, keyboard, or existing app sources.
 | `Ctrl` | Toggle Control Panel |
 | `C` | Calculator |
 | `N` | Quick note |
-| `Fn+N` | Notes app |
 | `D` | Debug |
 | `O` | Screen on / off |
-| `1` to `5` | Switch theme |
 | `+` / `-` | Volume up / down |
 
 Volume changes are shown as a transient header message, for example `VOL 50%`.
+
+`Alt`, `Opt`, and `Ctrl` can switch directly between Applications, Options, and
+Control Panel. Modal editors and confirmations keep input until closed.
 
 ### Music
 
@@ -223,7 +262,6 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | `T` | Today |
 | `U` / `B` | Top / bottom |
 | `Esc` | Back |
-| `N` | Close Notes |
 
 Notes use monthly files under `/Notes/`.
 
@@ -290,15 +328,17 @@ and thousands separators.
 
 ## Themes
 
-| Key | Name |
-| --- | ---- |
-| `1` | Neon Noir |
-| `2` | Glitch Terminal |
-| `3` | Corpo Chrome |
-| `4` | Miami Vice |
-| `5` | Ash |
+Available themes:
 
-Theme selection is saved to `/Music/settings.cfg`.
+| Name |
+| --- |
+| Neon Noir |
+| Glitch Terminal |
+| Corpo Chrome |
+| Miami Vice |
+| Ash |
+
+Theme selection is available from Control Panel and saved to `/Music/settings.cfg`.
 
 ## RTC Module
 

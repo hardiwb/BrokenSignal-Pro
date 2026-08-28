@@ -18,7 +18,6 @@ const HelpEntry MUSIC_HELP_ENTRIES[] = {
     {"[C]", "Calculator"},
     {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
-    {"[1-5]", "Theme"},
     {"[H]", "Close help"},
 };
 

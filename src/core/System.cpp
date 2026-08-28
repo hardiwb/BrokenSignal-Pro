@@ -104,15 +104,6 @@ void drawCurrentScreen()
     appRuntimeDrawForeground();
 }
 
-void drawMusicApp()
-{
-    drawPlayerHeader();
-    pumpAudio();
-    drawPlayerList();
-    pumpAudio();
-    drawPlayerStatus();
-}
-
 void drawAll()
 {
     drawCurrentScreen();

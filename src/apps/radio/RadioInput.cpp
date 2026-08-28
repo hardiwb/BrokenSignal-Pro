@@ -232,6 +232,11 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
     {
         switch (c)
         {
+        case 'w':
+        case 'W':
+            exitWebRadioMode();
+            return;
+
         case ';':
             if (radioCount > 0)
             {

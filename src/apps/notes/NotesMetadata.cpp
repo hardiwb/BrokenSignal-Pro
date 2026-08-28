@@ -17,7 +17,6 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[T]", "Today"},
     {"[U/B]", "Top / bottom"},
     {"[Esc]", "Applications"},
-    {"[N]", "Close notes"},
     {"[H]", "Close help"},
 };
 

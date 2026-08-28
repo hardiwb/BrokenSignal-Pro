@@ -17,8 +17,26 @@ void openMusicApp()
         drawMusicApp();
 }
 
+void drawMusicApp()
+{
+    drawPlayerHeader();
+    pumpAudio();
+    drawPlayerList();
+    pumpAudio();
+    drawPlayerStatus();
+}
+
 bool handleMusicAppInput(Keyboard_Class::KeysState &keys)
 {
+    for (auto c : keys.word)
+    {
+        if (c == 'w' || c == 'W')
+        {
+            enterWebRadioMode();
+            return true;
+        }
+    }
+
     if (handleBrowserInput(keys))
         return true;
     handlePlayerInput(keys);

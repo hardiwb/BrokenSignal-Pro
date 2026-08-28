@@ -71,7 +71,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
             {
                 if (c == ';' || c == '.')
                 {
-                    shiftQuickNoteDate(c == ';' ? -1 : 1);
+                    shiftQuickNoteDate(c == ';' ? 1 : -1);
                     return;
                 }
                 if (c == ',' || c == '/')
@@ -166,7 +166,6 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
     {
         switch (c)
         {
-        case 'n': case 'N': notesClose(); return;
         case 'h': case 'H': toggleHelp(); return;
         case 'a': case 'A': beginNoteEditor(-1); return;
         case 't': case 'T': jumpToToday(); return;

@@ -137,7 +137,12 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         return false;
 
     case SurfaceKind::MainMenu:
-        return applicationsMenuVisible;
+        if (applicationsMenuVisible)
+        {
+            exitApplicationsMenu();
+            return true;
+        }
+        return false;
 
     case SurfaceKind::ContextMenu:
         if (optionsMenuVisible)
