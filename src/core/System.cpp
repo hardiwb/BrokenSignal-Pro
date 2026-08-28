@@ -119,10 +119,7 @@ void showHdrMsg(const char *msg)
     if (!hostScreenVisible)
         return;
 
-    if (webRadioMode)
-        drawRadioHeader();
-    else
-        drawPlayerHeader();
+    drawCurrentScreen();
 }
 
 void showVolumeMessage()
@@ -141,7 +138,7 @@ void adjustSystemVolume(int direction)
 
     char buf[16];
     snprintf(buf, sizeof(buf), "VOL %d%%", (volume * 100) / 255);
-    showToast(buf, 800);
+    showHdrMsg(buf);
 }
 
 void adjustSystemBrightness(int direction)
@@ -171,7 +168,7 @@ void adjustSystemBrightness(int direction)
 
     char buf[16];
     snprintf(buf, sizeof(buf), "BRI %d%%", (screenBrightness * 100) / 255);
-    showToast(buf, 800);
+    showHdrMsg(buf);
 }
 
 void setTheme(uint8_t idx)

@@ -50,8 +50,11 @@ bool keyboardTextInputChar(Keyboard_Class::KeysState &ks, char c)
 
 namespace
 {
-bool globalHotkeysAllowed(const ActiveSurface &surface)
+bool hostLikeGlobalHotkeysAllowed(const ActiveSurface &surface)
 {
+    // QuickPopup is visual-only feedback, not a text/input overlay, so it
+    // passes keys through to the host. OverlayModal owns text input and rejects
+    // global hotkeys by never reaching this path.
     return surface.kind == SurfaceKind::HostApp ||
            surface.kind == SurfaceKind::QuickPopup;
 }
@@ -66,22 +69,19 @@ bool foregroundAllowsGlobalUtilityHotkeys()
 
 bool foregroundAllowsGlobalVolumeHotkeys()
 {
-    // Calculator owns arithmetic symbols. Notes list can safely use playback
-    // volume, while editors remain protected by OverlayModal routing.
-    return foregroundApp == HostApp::Notes;
-}
-
-bool globalHardwareHotkeysAllowed(const ActiveSurface &surface)
-{
-    return surface.kind == SurfaceKind::HostApp ||
-           surface.kind == SurfaceKind::QuickPopup;
+    // Text/edit overlays are protected by OverlayModal routing. Calculator only
+    // joins global volume on its full-screen history/list surface.
+    return foregroundApp == HostApp::Music ||
+           foregroundApp == HostApp::Radio ||
+           foregroundApp == HostApp::Notes ||
+           (foregroundApp == HostApp::Calculator && calculatorHistoryActive());
 }
 
 bool handleGlobalQuickAccessHotkey(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
 {
-    if (!globalHotkeysAllowed(surface))
+    if (!hostLikeGlobalHotkeysAllowed(surface))
         return false;
 
     return appRuntimeHandleQuickAccess(ks);
@@ -91,7 +91,7 @@ bool handleGlobalHardwareHotkey(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
 {
-    if (!globalHardwareHotkeysAllowed(surface))
+    if (!hostLikeGlobalHotkeysAllowed(surface))
         return false;
 
     for (auto c : ks.word)
@@ -132,7 +132,7 @@ bool handleGlobalUtilityHotkey(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
 {
-    if (!globalHotkeysAllowed(surface) ||
+    if (!hostLikeGlobalHotkeysAllowed(surface) ||
         !foregroundAllowsGlobalUtilityHotkeys())
     {
         return false;

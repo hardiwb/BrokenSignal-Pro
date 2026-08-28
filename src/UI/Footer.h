@@ -25,6 +25,7 @@ constexpr int FOOTER_PROGRESS_W = FOOTER_CENTER_W;
 struct FooterModel
 {
     String left;
+    // Reserve center for status/progress. Put key hints in left when possible.
     String center;
     String battery;
 

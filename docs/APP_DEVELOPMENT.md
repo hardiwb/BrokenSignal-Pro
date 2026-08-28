@@ -153,9 +153,10 @@ handles shell navigation, host-safe global hotkeys, and finally app-local input.
 | `[`, `]` | Global brightness down/up on host screens. |
 | `,`, `/` | Left/right adjustment for list-style property rows. |
 
-`-` and `+` are reserved for playback volume only on foreground host
-screens that do not give those keys a stronger local meaning. Full-screen Notes
-can use them for volume; Calculator keeps them for arithmetic.
+`-` and `+` are reserved for playback volume only on foreground host/list
+surfaces that do not give those keys a stronger local meaning. Full-screen Notes
+and Calculator history can use them for volume; Calculator entry keeps them for
+arithmetic.
 
 `Alt`, `Opt`, and `Ctrl` work from host apps and shell menus, so users can move
 between Applications, Options, and Control Panel without closing the current menu
@@ -164,6 +165,10 @@ first. Modal editors and confirmation dialogs keep input until closed.
 Overlay/modal input rejects global launch and utility keys. For example, typing
 `n`, `c`, or `o` in a text editor must insert text or be handled by that editor;
 it must not open Notes, Calculator, or toggle the screen.
+
+`QuickPopup` is not treated as a text overlay. It is visual-only transient
+feedback, so host-safe global keys can still repeat while `VOL` or `BRI` is
+visible.
 
 Do not reimplement shell menu or ESC behavior in a new app. App input should
 only handle local commands left after shell routing. Modal editors must expose

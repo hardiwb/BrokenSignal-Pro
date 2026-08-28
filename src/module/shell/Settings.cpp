@@ -208,8 +208,7 @@ static void redrawSettingsSelection(
 static void drawSettingsFooter()
 {
     FooterModel model;
-    model.left = "[;/.]Sel [Ctrl]Close";
-    model.center = "[,/]Change";
+    model.left = "[;/.]Sel [,/]Change [Ctrl]Close";
     model.battery = footerBatteryText();
     drawFooter(model);
 }

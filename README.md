@@ -180,10 +180,11 @@ The default layout is Glitch Terminal:
 Footer convention:
 
 ```text
-Left slot / navigation hints        Battery
+Left slot / key hints               Battery
 ```
 
-Music can replace the footer center area with a segmented progress bar.
+Keep key hints in the left slot so they can use the widest predictable space.
+The center slot is reserved for status text or a segmented progress bar.
 
 Application-facing code is organized by responsibility:
 
@@ -227,8 +228,9 @@ List-style property rows use `,` / `/` as left / right adjustment keys. This
 keeps `-` and `+` available for playback volume muscle memory in host
 apps where those keys do not have a stronger local meaning.
 
-Music, Radio, and full-screen Notes support playback volume with `-` / `+`.
-Volume changes are shown as transient feedback, for example `VOL 50%`.
+Music, Radio, full-screen Notes, and Calculator history support playback volume
+with `-` / `+`. Volume and brightness changes are shown as transient header
+feedback, for example `VOL 50%` or `BRI 78%`.
 
 `Alt`, `Opt`, and `Ctrl` can switch directly between Applications, Options, and
 Control Panel. Modal editors and confirmations keep input until closed.
@@ -338,7 +340,8 @@ Settings include:
 
 Calculator history uses `A`, `S`, `M`, and `D` to append addition,
 subtraction, multiplication, and division rows. `,` / `/` changes the selected
-history row operator, and `I` inserts a row above the current selection.
+history row operator, `-` / `+` changes volume, and `I` inserts a row above the
+current selection. Calculator entry keeps `+`, `-`, and `/` for arithmetic.
 Calculator Options control decimal places, rounding mode, and thousands
 separators.
 

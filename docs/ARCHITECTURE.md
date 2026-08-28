@@ -101,6 +101,10 @@ Storage
 | `src/apps/` | App-owned lifecycle, input, metadata, views, and storage. |
 | `src/UI/` | Reusable drawing primitives and themes. |
 
+Footer convention: put key hints in the left slot whenever possible. The center
+slot is reserved for status text or progress, which avoids truncating hints
+between narrow footer regions.
+
 ## Input Flow
 
 ```text
@@ -117,13 +121,13 @@ Shell modifiers route between shell menus
   Opt  -> active app Options
   Ctrl -> Control Panel
         |
-Host/quick-popup surfaces check global quick access
+Host-like surfaces check global quick access
   C -> quick calculator
   N -> quick note
         |
-Host surfaces check hardware-safe global keys
+Host-like surfaces check hardware-safe global keys
   [ -> brightness down, ] -> brightness up
-  -/+ -> volume only where the host app does not own math/text symbols
+  -/+ -> volume on playback-safe host/list surfaces
         |
 Collision-safe host utility hotkeys may run
   H -> context help, O -> screen
@@ -148,6 +152,12 @@ Shell navigation works from host apps and shell menus, so users can browse
 Applications, Options, and Control Panel without first closing the current menu.
 Modal editors and confirmation dialogs keep ownership of input until closed.
 They reject global launch and utility hotkeys so normal text entry remains safe.
+`QuickPopup` is the exception by design: it is visual-only feedback, such as a
+header message, and does not own text input.
+
+Header transient messages are drawn by the `Header` primitive. Normal headers
+keep the title on the left and transient feedback on the right; value/result
+headers can right-align the title and the transient feedback moves to the left.
 
 ## App Registration
 

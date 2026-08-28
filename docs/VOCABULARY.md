@@ -29,7 +29,7 @@ or another architecture term and the boundary is not obvious.
 | Modal | A blocking input or confirmation surface that owns keyboard input until closed. | App state plus `SurfaceManager` routing | Popup |
 | Overlay | A drawn UI layer over the host screen. Some overlays are modal, some are informational. | `src/UI/Overlay.*`, app modal code | Host app |
 | Popup | A temporary or non-editing overlay such as Help or Debug. | `src/module/shell/Help.*`, `Debug.*` | Modal editor |
-| Quick popup | A transient visual message such as a toast or header message. | `src/UI/Toast.*`, `showHdrMsg()` | Quick access |
+| Quick popup | A transient visual message such as a toast or header message. It does not own text input, so host-safe global keys can pass through. | `src/UI/Toast.*`, `showHdrMsg()` | Quick access or modal input |
 | Quick access | A descriptor-owned shortcut that opens a small tool from another host app. | App `quick_access` manifest field, `AppRuntime.cpp` | Global hotkey |
 | Help row | One static key/description pair for an app's Help screen. | `<App>Metadata.cpp` | Keyboard routing |
 | Option row | One dynamic app setting/action exposed through the shell Options menu. | `<App>Metadata.cpp` | Control Panel setting |

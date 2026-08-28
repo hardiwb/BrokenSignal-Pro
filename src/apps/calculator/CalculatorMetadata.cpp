@@ -12,6 +12,7 @@ const HelpEntry CALCULATOR_HELP_ENTRIES[] = {
     {"[D//]", "Divide"},
     {"[Ok]", "Calculate"},
     {"[F]", "Toggle full screen"},
+    {"[-/+]", "Volume in history"},
     {"[H]", "Toggle Help"},
     {"[N]", "Quick note"},
     {"[Del]", "Backspace"},

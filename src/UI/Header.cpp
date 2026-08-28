@@ -19,6 +19,9 @@ constexpr int HEADER_MODE_GAP = 3;
 constexpr int HEADER_TITLE_X = HEADER_CURSOR_X + HEADER_CURSOR_W + 5;
 constexpr int HEADER_TITLE_Y = 15;
 constexpr int HEADER_TITLE_H = HEADER_H - HEADER_TITLE_Y - 1;
+constexpr int HEADER_MESSAGE_LEFT_W = 54;
+constexpr int HEADER_REVERSED_TITLE_X =
+    HEADER_TITLE_X + HEADER_MESSAGE_LEFT_W + 4;
 
 String fitHeaderMode(const String &mode, int maxWidth)
 {
@@ -144,12 +147,16 @@ void drawHeaderWifiStatus()
 
 void drawHeaderTitle(
     const String &title,
-    bool rightAligned)
+    bool rightAligned,
+    bool messageVisible)
 {
+    const int titleLeft = rightAligned && messageVisible
+                              ? HEADER_REVERSED_TITLE_X
+                              : HEADER_TITLE_X;
     const int titleRight = rightAligned
                                ? SCREEN_W - 4
                                : HEADER_MESSAGE_X - 4;
-    const int titleW = titleRight - HEADER_TITLE_X;
+    const int titleW = titleRight - titleLeft;
 
     M5Cardputer.Display.setTextDatum(
         rightAligned ? middle_right : middle_left);
@@ -158,9 +165,42 @@ void drawHeaderTitle(
         rightAligned
             ? fitHeaderTitleFromEnd(title, titleW)
             : fitHeaderTitle(title, titleW),
-        rightAligned ? titleRight : HEADER_TITLE_X,
+        rightAligned ? titleRight : titleLeft,
         HEADER_ROW2_Y,
         &fonts::Font2);
+}
+
+bool headerMessageVisible()
+{
+    return hdrMsgEnd > 0 && millis() < hdrMsgEnd && hdrMsg.length() > 0;
+}
+
+void drawHeaderMessageSlot(
+    const String &message,
+    bool leftAligned)
+{
+    const int slotX = leftAligned ? HEADER_TITLE_X : HEADER_MESSAGE_X;
+    const int slotW = leftAligned
+                          ? HEADER_MESSAGE_LEFT_W
+                          : SCREEN_W - HEADER_MESSAGE_X;
+
+    M5Cardputer.Display.fillRect(
+        slotX,
+        HEADER_TITLE_Y,
+        slotW,
+        HEADER_H - HEADER_TITLE_Y - 1,
+        T->hdrBg);
+
+    if (message.length() == 0)
+        return;
+
+    M5Cardputer.Display.setTextDatum(leftAligned ? middle_left : middle_right);
+    M5Cardputer.Display.setTextColor(T->accent2);
+    M5Cardputer.Display.drawString(
+        fitHeaderMode(message, slotW - 4),
+        leftAligned ? slotX + 2 : SCREEN_W - 4,
+        HEADER_MESSAGE_Y,
+        &fonts::Font0);
 }
 } // namespace
 
@@ -191,7 +231,13 @@ void drawHeader(
 
     drawHeaderTitle(
         model.appHeaderTitle,
-        model.appHeaderTitleRightAligned);
+        model.appHeaderTitleRightAligned,
+        headerMessageVisible());
+
+    if (headerMessageVisible())
+        drawHeaderMessageSlot(
+            hdrMsg,
+            model.appHeaderTitleRightAligned);
 
     drawHeaderCursor(model.cursor);
     drawBottomSeparator();
@@ -262,22 +308,5 @@ void drawHeaderMessage(
     const String &message)
 {
     ensureTheme();
-
-    M5Cardputer.Display.fillRect(
-        HEADER_MESSAGE_X,
-        HEADER_TITLE_Y,
-        SCREEN_W - HEADER_MESSAGE_X,
-        HEADER_H - HEADER_TITLE_Y - 1,
-        T->hdrBg);
-
-    if (message.length() == 0)
-        return;
-
-    M5Cardputer.Display.setTextDatum(middle_right);
-    M5Cardputer.Display.setTextColor(T->accent2);
-    M5Cardputer.Display.drawString(
-        fitHeaderMode(message, SCREEN_W - HEADER_MESSAGE_X - 4),
-        SCREEN_W - 4,
-        HEADER_MESSAGE_Y,
-        &fonts::Font0);
+    drawHeaderMessageSlot(message, false);
 }

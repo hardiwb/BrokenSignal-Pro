@@ -547,6 +547,11 @@ bool calculatorOverlayActive()
     return calculatorVisible && calculatorOverlayMode;
 }
 
+bool calculatorHistoryActive()
+{
+    return calculatorVisible && calculatorHistoryVisible && !calculatorOverlayMode;
+}
+
 bool calculatorEditActive()
 {
     return calculatorVisible && calcEditingHistory;

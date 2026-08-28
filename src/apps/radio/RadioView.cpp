@@ -49,8 +49,6 @@ void drawRadioHeader()
     model.appHeaderTitle = station;
     model.cursor = radioIsPlaying && cursorVisible;
     drawHeader(model);
-    if (hdrMsgEnd > 0 && millis() < hdrMsgEnd)
-        drawHeaderMessage(hdrMsg);
 }
 
 void drawRadioRow(int index)

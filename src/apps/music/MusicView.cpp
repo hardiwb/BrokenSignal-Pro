@@ -92,8 +92,6 @@ void drawPlayerHeader()
 
     drawHeader(model);
 
-    if (hdrMsgEnd > 0 && millis() < hdrMsgEnd)
-        drawHeaderMessage(hdrMsg);
 }
 
 void drawPlayerList()

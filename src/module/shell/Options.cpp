@@ -97,7 +97,7 @@ void drawOptionsMenu()
     footer.left = "[Opt]Close";
     if (optionsApp().optionsShowRunHint)
         footer.left += " [Ok]Run";
-    footer.center = "[,/]Change";
+    footer.left += " [,/]Change";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }

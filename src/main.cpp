@@ -11,6 +11,7 @@
 #include "core/State.h"
 #include "core/AppRuntime.h"
 #include "core/Keyboard.h"
+#include "core/SurfaceManager.h"
 #include "core/System.h"
 #include "apps/music/MusicPlayer.h"
 #include "module/service/FileBrowser.h"
@@ -250,17 +251,8 @@ void loop()
   if (hdrMsgEnd > 0 && millis() >= hdrMsgEnd)
   {
     hdrMsgEnd = 0;
-    if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
-        !settingsMenuVisible && !notesInputActive() &&
-        !calculatorInputActive() &&
-        !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
-        !removeConfirmVisible)
-    {
-      if (webRadioMode)
-        drawRadioHeader();
-      else
-        drawPlayerHeader();
-    }
+    if (screenOn && !surfaceBlocksHostInput(resolveActiveSurface()))
+      drawCurrentScreen();
   }
 
   if (settingsDirty && !isPlaying && !isPaused &&

@@ -8,6 +8,7 @@ void closeCalculator();
 void drawCalculator();
 bool calculatorInputActive();
 bool calculatorOverlayActive();
+bool calculatorHistoryActive();
 bool calculatorEditActive();
 void cancelCalculatorEdit();
 void refreshCalculatorFormatting();
