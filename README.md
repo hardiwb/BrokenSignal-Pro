@@ -6,6 +6,7 @@ An audio player, web radio, quick notes, and utility shell for the **Cardputer A
 calculations, and everyday utilities from one keyboard-driven interface.
 
 **Current release:** `v1.3.0`
+
 **Latest tagged release:** `v1.3.0`
 
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
@@ -32,7 +33,7 @@ Themes change color and mood, not layout. Music Player, Web Radio, Notes,
 Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives
 and keyboard routing rules.
 
-## v1.2.0 Development Changes
+## v1.3.0 Release Highlights
 
 - Added the Applications shell with Music Player, Web Radio, Notes, and Calculator.
 - Added contextual Options for Music, Radio, Notes, and Calculator.
@@ -218,9 +219,9 @@ without editing core, shell, keyboard, or existing app sources.
 | `N` | Quick note |
 | `D` | Debug |
 | `O` | Screen on / off |
-| `+` / `-` | Volume up / down |
 
-Volume changes are shown as a transient header message, for example `VOL 50%`.
+Music and Radio own playback volume locally with `+` / `-`. Volume changes are
+shown as a transient header message, for example `VOL 50%`.
 
 `Alt`, `Opt`, and `Ctrl` can switch directly between Applications, Options, and
 Control Panel. Modal editors and confirmations keep input until closed.
@@ -234,6 +235,9 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `SPACE` | Pause / resume |
 | `DEL` | Parent folder |
 | `,` / `/` | Seek back / forward |
+| `+` / `-` | Volume up / down |
+| `R` | Cycle repeat mode |
+| `S` | Toggle shuffle |
 | `W` | Switch to Radio |
 
 ### Radio
@@ -246,6 +250,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `X` | Remove station |
 | `R` | Reconnect |
 | `I` | Force AAC |
+| `+` / `-` | Volume up / down |
 | `W` | Back to Music |
 
 ### Notes
