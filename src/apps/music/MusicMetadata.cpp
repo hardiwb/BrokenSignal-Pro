@@ -16,7 +16,6 @@ const HelpEntry MUSIC_HELP_ENTRIES[] = {
     {"[Alt]", "Toggle Applications"},
     {"[Ctrl]", "Toggle Control Panel"},
     {"[C]", "Calculator"},
-    {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
     {"[H]", "Close help"},
 };

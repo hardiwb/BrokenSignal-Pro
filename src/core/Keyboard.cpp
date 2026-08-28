@@ -50,8 +50,40 @@ bool keyboardTextInputChar(Keyboard_Class::KeysState &ks, char c)
 
 namespace
 {
-bool handleHostUtilityHotkey(Keyboard_Class::KeysState &ks)
+bool globalHotkeysAllowed(const ActiveSurface &surface)
 {
+    return surface.kind == SurfaceKind::HostApp ||
+           surface.kind == SurfaceKind::QuickPopup;
+}
+
+bool foregroundAllowsGlobalUtilityHotkeys()
+{
+    // Text-heavy apps may reserve common letters. Keep letter utilities only on
+    // hosts that do not collide today.
+    return foregroundApp == HostApp::Music ||
+           foregroundApp == HostApp::Radio;
+}
+
+bool handleGlobalQuickAccessHotkey(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!globalHotkeysAllowed(surface))
+        return false;
+
+    return appRuntimeHandleQuickAccess(ks);
+}
+
+bool handleGlobalUtilityHotkey(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!globalHotkeysAllowed(surface) ||
+        !foregroundAllowsGlobalUtilityHotkeys())
+    {
+        return false;
+    }
+
     for (auto c : ks.word)
     {
         switch (c)
@@ -59,11 +91,6 @@ bool handleHostUtilityHotkey(Keyboard_Class::KeysState &ks)
         case 'h':
         case 'H':
             toggleHelp();
-            return true;
-
-        case 'd':
-        case 'D':
-            toggleDebug();
             return true;
 
         case 'o':
@@ -257,14 +284,13 @@ void handleContextSurfaceInput(Keyboard_Class::KeysState &ks)
 
 void handleHostSurfaceInput(Keyboard_Class::KeysState &ks)
 {
-    if (appRuntimeHandleQuickAccess(ks))
+    const ActiveSurface surface = resolveActiveSurface();
+
+    if (handleGlobalQuickAccessHotkey(surface, ks))
         return;
 
-    if ((foregroundApp == HostApp::Music || foregroundApp == HostApp::Radio) &&
-        handleHostUtilityHotkey(ks))
-    {
+    if (handleGlobalUtilityHotkey(surface, ks))
         return;
-    }
 
     appRuntimeHandleForegroundInput(ks);
 }

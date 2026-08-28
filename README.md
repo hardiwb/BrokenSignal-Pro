@@ -207,7 +207,7 @@ without editing core, shell, keyboard, or existing app sources.
 
 ## Controls
 
-### Global
+### Global Host Shortcuts
 
 | Key | Action |
 | --- | ------ |
@@ -217,8 +217,10 @@ without editing core, shell, keyboard, or existing app sources.
 | `Ctrl` | Toggle Control Panel |
 | `C` | Calculator |
 | `N` | Quick note |
-| `D` | Debug |
 | `O` | Screen on / off |
+
+Global host shortcuts are ignored by modal text inputs and confirmation overlays.
+If a foreground app reserves the same letter, the app-specific meaning wins.
 
 Music and Radio own playback volume locally with `+` / `-`. Volume changes are
 shown as a transient header message, for example `VOL 50%`.
@@ -307,6 +309,7 @@ Settings include:
 | Sync Clock | NTP sync when WiFi is available |
 | Manual Clock | Time and date editor |
 | WiFi power save | Toggle WiFi modem sleep |
+| Debug | Runtime diagnostics |
 | WiFi menu | Opens WiFi service menu |
 
 ### Calculator
@@ -366,6 +369,21 @@ The firmware uses:
 #define RTC_SDA 13
 #define RTC_SCL 15
 ```
+
+### RTC and GPS Wiring Note
+
+The DS3231 wiring above uses GPIO 13 and GPIO 15 for I2C. If your build also
+adds a GPS module, do not assume it can share the same connector or pins.
+
+- I2C RTC modules can share an I2C bus only with other I2C devices that use
+  unique addresses and compatible voltage levels.
+- Most GPS modules use UART serial instead of I2C, so they need their own RX/TX
+  wiring or a deliberately chosen alternate port.
+- If a GPS module is already connected to GPIO 13/15, move either the GPS or RTC
+  wiring before enabling both modules.
+- This firmware currently prioritizes the RTC for instant offline clock restore;
+  GPS time can be added later as a separate time source if the hardware wiring
+  leaves a safe serial path.
 
 ## SD Card Layout
 

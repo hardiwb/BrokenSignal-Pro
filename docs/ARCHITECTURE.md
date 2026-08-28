@@ -117,9 +117,12 @@ Shell modifiers route between shell menus
   Opt  -> active app Options
   Ctrl -> Control Panel
         |
-Host screens check descriptor quick access
+Host/quick-popup surfaces check global quick access
   C -> quick calculator
   N -> quick note
+        |
+Collision-safe host utility hotkeys may run
+  H -> context help, O -> screen
         |
 Active surface handles input
   Host app, shell menu, modal editor, help/debug popup, or service menu
@@ -131,13 +134,15 @@ Input ownership rules:
 | --- | --- |
 | Shell navigation (`Alt`, `Opt`, `Ctrl`) | `Keyboard.cpp`, using `SurfaceManager` state. |
 | Back/Esc close behavior | `SurfaceManager.cpp`. |
-| Quick access launch/input/close | App descriptors through `AppRuntime.cpp`. |
+| Global quick access (`C`, `N`) | App descriptors through `AppRuntime.cpp`, only on host-like surfaces. |
+| Global utility keys (`H`, `O`) | `Keyboard.cpp`, only where they do not collide with app-local keys. |
 | App-specific keys | The app's own input module. |
 | Modal editor keys | The modal owner, routed by active surface. |
 
 Shell navigation works from host apps and shell menus, so users can browse
 Applications, Options, and Control Panel without first closing the current menu.
 Modal editors and confirmation dialogs keep ownership of input until closed.
+They reject global launch and utility hotkeys so normal text entry remains safe.
 
 ## App Registration
 

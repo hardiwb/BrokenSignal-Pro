@@ -42,7 +42,7 @@ or another architecture term and the boundary is not obvious.
 | Input owner | The layer that is allowed to consume the current key event. | Resolved by `SurfaceManager` and `Keyboard.cpp` | Whoever sees the key first |
 | Shell navigation | Modifier-only shortcuts for moving between shell menus: `Alt`, `Opt`, and `Ctrl`. | `src/core/Keyboard.cpp` | App-specific hotkeys |
 | App-specific hotkey | A key that only means something inside one host app. | `<App>Input.cpp` or app input callback | Quick access launcher |
-| Global utility hotkey | A firmware-level action allowed on host screens, such as Help, Debug, or screen toggle. | `src/core/Keyboard.cpp` | Text/editor input |
+| Global utility hotkey | A firmware-level action allowed only on host-like surfaces where it does not collide with app-local keys, such as Help or screen toggle. | `src/core/Keyboard.cpp` | Text/editor input |
 | Back/Esc | The close/back action. It closes the topmost surface before app input sees it. | `SurfaceManager.cpp`, `Keyboard.cpp` | App-local delete |
 
 ## App File Terms
@@ -91,3 +91,5 @@ Use these rules when adding docs or files:
 - Say `stream` only for live, ongoing data flow such as network audio.
 - Say `playback` for local audio file control.
 - Say `quick access` for descriptor-owned tools launched from another host app.
+- Say `global hotkey` only for host-safe shell navigation, quick access, or
+  utility keys; modal overlays should reject them unless they own that overlay.

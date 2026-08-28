@@ -139,7 +139,7 @@ for frequent changes, but always retain one complete redraw path.
 ## Input Ownership
 
 The keyboard router first asks `SurfaceManager` which surface is on top. It then
-handles shell navigation before handing input to the active surface.
+handles shell navigation, host-safe global hotkeys, and finally app-local input.
 
 | Input | Owner |
 | --- | --- |
@@ -147,12 +147,17 @@ handles shell navigation before handing input to the active surface.
 | `Alt` | Applications menu navigation. |
 | `Opt` | Active app's Options navigation. |
 | `Ctrl` | Control Panel navigation. |
-| `C` | Quick Calculator where supported. |
-| `N` | Quick Note where supported. |
+| `C` | Global quick Calculator launch where supported. |
+| `N` | Global quick Note launch where supported. |
+| `H`, `O` | Global utility keys only on host screens where they do not collide. |
 
 `Alt`, `Opt`, and `Ctrl` work from host apps and shell menus, so users can move
 between Applications, Options, and Control Panel without closing the current menu
 first. Modal editors and confirmation dialogs keep input until closed.
+
+Overlay/modal input rejects global launch and utility keys. For example, typing
+`n`, `c`, or `o` in a text editor must insert text or be handled by that editor;
+it must not open Notes, Calculator, or toggle the screen.
 
 Do not reimplement shell menu or ESC behavior in a new app. App input should
 only handle local commands left after shell routing. Modal editors must expose
@@ -183,8 +188,8 @@ bool exampleQuickAccessAvailable(HostApp foreground)
 }
 ```
 
-The shell evaluates quick-access keys only on host-like surfaces where they will
-not steal text input from a modal editor. Menus, Help, Debug, editors,
+The shell evaluates quick-access launch keys only on host-like surfaces where
+they will not steal text input from a modal editor. Menus, Help, Debug, editors,
 confirmations, and existing quick overlays therefore retain their input. A
 quick-access key takes precedence over an app-local key on eligible host screens,
 so keys must be unique and intentionally reserved.

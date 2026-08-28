@@ -4,6 +4,7 @@
 #include "core/Keyboard.h"
 #include "core/State.h"
 #include "core/System.h"
+#include "module/shell/Debug.h"
 #include "module/shell/Help.h"
 #include "apps/radio/Radio.h"
 #include "module/service/Clock.h"
@@ -22,7 +23,7 @@ static String manualClockDate = "";
 static int manualClockField = 0;
 static int manualClockTimeCursor = 0;
 static int manualClockDateCursor = 0;
-static const int SETTINGS_COUNT = 11;
+static const int SETTINGS_COUNT = 12;
 static int settingsScrollTop = 0;
 
 enum SettingRow
@@ -37,6 +38,7 @@ enum SettingRow
     SettingSyncClock,
     SettingManualClock,
     SettingWifiPowerSave,
+    SettingDebug,
     SettingWifi
 };
 
@@ -79,6 +81,7 @@ static const char *settingsLabel(int index)
         "Sync Clock",
         "Manual Clock",
         "WiFi power save",
+        "Debug",
         "WiFi"};
 
     if (index < 0 || index >= SETTINGS_COUNT)
@@ -113,6 +116,7 @@ static String settingsValue(int index)
         return formatTimezoneValue();
     case SettingSyncClock:
     case SettingManualClock:
+    case SettingDebug:
     case SettingWifi:
         return "Enter";
     case SettingWifiPowerSave:
@@ -665,6 +669,11 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             saveSettings();
             settingsDirty = false;
             openWifiMenu();
+            return;
+        }
+        else if (settingsSel == SettingDebug)
+        {
+            toggleDebug();
             return;
         }
         changed = true;

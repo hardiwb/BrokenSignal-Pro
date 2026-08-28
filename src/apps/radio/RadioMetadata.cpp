@@ -18,9 +18,7 @@ const HelpEntry RADIO_HELP_ENTRIES[] = {
     {"[Alt]", "Toggle Applications"},
     {"[Ctrl]", "Toggle Control Panel"},
     {"[C]", "Calculator"},
-    {"[D]", "Debug"},
     {"[O]", "Screen on / off"},
-    {"[1-5]", "Theme"},
     {"[H]", "Close help"},
 };
 
