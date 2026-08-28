@@ -1,0 +1,29 @@
+{
+  "id": "Radio",
+  "persistent_id": 1,
+  "order": 1,
+  "name": "Web Radio",
+  "header_tag": "RADIO",
+  "includes": [
+    "apps/radio/RadioApp.h",
+    "apps/radio/RadioMetadata.h",
+    "apps/radio/Radio.h"
+  ],
+  "callbacks": {
+    "open": "openRadioApp",
+    "draw": "drawRadioAll",
+    "input": "handleRadioAppInput",
+    "tick": "tickRadioApp"
+  },
+  "help": {
+    "title": "RADIO KEYS",
+    "entries": "RADIO_HELP_ENTRIES",
+    "count": "RADIO_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildRadioOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": null
+}

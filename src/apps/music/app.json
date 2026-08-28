@@ -1,0 +1,29 @@
+{
+  "id": "Music",
+  "persistent_id": 0,
+  "order": 0,
+  "name": "Music Player",
+  "header_tag": "MUSIC",
+  "includes": [
+    "apps/music/MusicApp.h",
+    "apps/music/MusicMetadata.h",
+    "core/System.h"
+  ],
+  "callbacks": {
+    "open": "openMusicApp",
+    "draw": "drawMusicApp",
+    "input": "handleMusicAppInput",
+    "tick": "tickMusicApp"
+  },
+  "help": {
+    "title": "MUSIC KEYS",
+    "entries": "MUSIC_HELP_ENTRIES",
+    "count": "MUSIC_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildMusicOptions",
+    "enter_enabled": false,
+    "show_run_hint": false
+  },
+  "quick_access": null
+}

@@ -1,0 +1,36 @@
+{
+  "id": "Calculator",
+  "persistent_id": 3,
+  "order": 3,
+  "name": "Calculator",
+  "header_tag": "CALCULATOR",
+  "includes": [
+    "apps/calculator/CalculatorApp.h",
+    "apps/calculator/CalculatorMetadata.h",
+    "apps/calculator/Calculator.h"
+  ],
+  "callbacks": {
+    "open": "openCalculatorApp",
+    "draw": "drawCalculator",
+    "input": "handleCalculatorAppInput",
+    "tick": "tickCalculatorApp"
+  },
+  "help": {
+    "title": "CALC KEYS",
+    "entries": "CALCULATOR_HELP_ENTRIES",
+    "count": "CALCULATOR_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildCalculatorOptions",
+    "enter_enabled": true,
+    "show_run_hint": false
+  },
+  "quick_access": {
+    "key": "c",
+    "open": "openCalculator",
+    "available": "calculatorQuickAccessAvailable",
+    "active": "calculatorOverlayActive",
+    "close": "closeCalculator",
+    "input": "handleCalculatorAppInput"
+  }
+}

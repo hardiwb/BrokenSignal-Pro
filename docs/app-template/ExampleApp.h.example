@@ -1,0 +1,13 @@
+#pragma once
+
+#include "core/App.h"
+
+void openExampleApp();
+void openExampleQuickOverlay();
+bool exampleQuickAccessAvailable(HostApp foreground);
+bool exampleQuickOverlayActive();
+void closeExampleQuickOverlay();
+bool handleExampleQuickInput(Keyboard_Class::KeysState &keys);
+void drawExampleApp();
+bool handleExampleAppInput(Keyboard_Class::KeysState &keys);
+void tickExampleApp();

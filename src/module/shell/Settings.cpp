@@ -5,7 +5,7 @@
 #include "core/State.h"
 #include "core/System.h"
 #include "module/shell/Help.h"
-#include "module/programs/Radio.h"
+#include "apps/radio/Radio.h"
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
 #include "UI/Footer.h"
@@ -445,20 +445,33 @@ static void adjustSetting(int sel, int dir)
         idx = (idx + dir + n) % n;
         autoScreenOffSec = opts[idx];
     }
-    else if (sel == SettingDeepSleep || sel == SettingPlaybackTimer)
+    else if (sel == SettingDeepSleep)
     {
-        static const uint32_t opts[] = {0, 1800, 3600, 7200, 10800};
+        static const uint32_t opts[] = {0, 300, 900, 1800, 3600, 7200, 10800};
         const int n = sizeof(opts) / sizeof(opts[0]);
-        uint32_t &timer = sel == SettingDeepSleep ? deepSleepSec : playbackOffSec;
         int idx = 0;
         for (int i = 0; i < n; i++)
-            if (opts[i] == timer)
+            if (opts[i] == deepSleepSec)
             {
                 idx = i;
                 break;
             }
         idx = (idx + dir + n) % n;
-        timer = opts[idx];
+        deepSleepSec = opts[idx];
+    }
+    else if (sel == SettingPlaybackTimer)
+    {
+        static const uint32_t opts[] = {0, 1800, 3600, 7200, 10800};
+        const int n = sizeof(opts) / sizeof(opts[0]);
+        int idx = 0;
+        for (int i = 0; i < n; i++)
+            if (opts[i] == playbackOffSec)
+            {
+                idx = i;
+                break;
+            }
+        idx = (idx + dir + n) % n;
+        playbackOffSec = opts[idx];
     }
     else if (sel == SettingTheme)
     {
@@ -502,6 +515,12 @@ void drawSettingsMenu()
 bool settingsInputOverlayActive()
 {
     return manualClockVisible;
+}
+
+void cancelSettingsInputOverlay()
+{
+    manualClockVisible = false;
+    drawSettingsMenu();
 }
 
 void enterSettingsMenu()
@@ -573,11 +592,6 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
                 oldScrollTop);
             return;
         }
-
-        case 'h':
-        case 'H':
-            toggleHelp();
-            return;
 
         case '+':
         case '=':

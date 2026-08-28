@@ -1,4 +1,4 @@
-#include "module/programs/Calculator.h"
+#include "apps/calculator/Calculator.h"
 
 #include <cstdlib>
 #include <cmath>
@@ -157,7 +157,9 @@ OverlayModel calculatorOverlayModel()
     model.helperText = "[A]Add [S]Sub [X]Mul [D]Div";
     model.confirmText = calcEditingHistory
                             ? "[Esc]Cancel [Ok]Save"
-                            : "[Esc]Clear/Close [H]History [Ok]Calc";
+                            : calculatorOverlayMode
+                                  ? "[Esc]Close [F]Full [Ok]="
+                                  : "[Esc]Apps [F]Full [H]Help [Ok]=";
     model.inputFont = OverlayFontSize::Large;
     return model;
 }
@@ -411,8 +413,8 @@ void drawCalculationHistory()
     drawList(calculationHistoryListModel());
 
     FooterModel footer;
-    footer.left = "[H]Calc [Del]Rmv [Ok]Edit";
-    footer.center = "[+/-]Change";
+    footer.left = "[F]Calc [H]Help";
+    footer.center = "[Ok]Edit";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }
@@ -535,10 +537,16 @@ void handleCalculationHistoryInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
-        if (c == 'h' || c == 'H')
+        if (c == 'f' || c == 'F')
         {
             calculatorHistoryVisible = false;
             drawOverlay(calculatorOverlayModel());
+            return;
+        }
+
+        if (c == 'h' || c == 'H')
+        {
+            toggleHelp();
             return;
         }
 
@@ -601,6 +609,7 @@ void handleCalculationHistoryInput(Keyboard_Class::KeysState &ks)
 
 void openCalculator()
 {
+    calculatorOverlayMode = true;
     calculatorVisible = true;
     resetCalculator();
     drawCalculator();
@@ -608,6 +617,9 @@ void openCalculator()
 
 void openCalculatorHistory()
 {
+    calculatorOverlayMode = false;
+    notesMode = false;
+    rememberLastOpenedApp(HostApp::Calculator);
     calculatorVisible = true;
     resetCalculator();
     calculatorHistoryVisible = true;
@@ -619,14 +631,36 @@ void openCalculatorHistory()
 
 void closeCalculator()
 {
+    const bool wasOverlay = calculatorOverlayMode;
     calculatorVisible = false;
+    calculatorOverlayMode = false;
     resetCalculator();
+
+    if (!wasOverlay)
+        rememberLastOpenedApp(webRadioMode ? HostApp::Radio : HostApp::Music);
+
     drawAll();
 }
 
 bool calculatorInputActive()
 {
     return calculatorVisible;
+}
+
+bool calculatorOverlayActive()
+{
+    return calculatorVisible && calculatorOverlayMode;
+}
+
+bool calculatorEditActive()
+{
+    return calculatorVisible && calcEditingHistory;
+}
+
+void cancelCalculatorEdit()
+{
+    if (calcEditingHistory)
+        cancelHistoryEdit();
 }
 
 void refreshCalculatorFormatting()
@@ -734,11 +768,24 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
-        if (c == 'h' || c == 'H')
+        if (c == 'f' || c == 'F')
         {
+            if (calculatorOverlayMode)
+            {
+                calculatorOverlayMode = false;
+                notesMode = false;
+                rememberLastOpenedApp(HostApp::Calculator);
+            }
             calculatorHistoryVisible = true;
             ensureHistorySelectionVisible();
             drawCalculationHistory();
+            return;
+        }
+
+        if (c == 'h' || c == 'H')
+        {
+            if (!calculatorOverlayMode)
+                toggleHelp();
             return;
         }
 

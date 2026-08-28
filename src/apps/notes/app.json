@@ -1,0 +1,36 @@
+{
+  "id": "Notes",
+  "persistent_id": 2,
+  "order": 2,
+  "name": "Notes",
+  "header_tag": "NOTES",
+  "includes": [
+    "apps/notes/NotesApp.h",
+    "apps/notes/NotesMetadata.h",
+    "apps/notes/Notes.h"
+  ],
+  "callbacks": {
+    "open": "openNotesApp",
+    "draw": "drawNotes",
+    "input": "handleNotesAppInput",
+    "tick": "tickNotesApp"
+  },
+  "help": {
+    "title": "NOTES KEYS",
+    "entries": "NOTES_HELP_ENTRIES",
+    "count": "NOTES_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildNotesOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": {
+    "key": "n",
+    "open": "notesQuickOpen",
+    "available": "notesQuickAccessAvailable",
+    "active": "notesEditorVisible",
+    "close": "cancelNoteEditor",
+    "input": "handleNotesAppInput"
+  }
+}

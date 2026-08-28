@@ -14,6 +14,14 @@
 #include "Types.h"
 #include "UI/Themes.h"
 #include "AudioCodecs.h"
+#include "core/generated/AppIds.generated.h"
+
+enum class AudioSource
+{
+    None,
+    Music,
+    Radio
+};
 
 extern AudioGeneratorMP3 *mp3;
 extern AudioGeneratorAAC *aac;
@@ -96,6 +104,9 @@ extern uint8_t screenBrightness;  // display brightness 0..255
 extern uint16_t autoScreenOffSec; // 0 = off, else idle seconds before screen off
 extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep sleep
 extern uint32_t playbackOffSec;   // 0 = off, else playback seconds before deep sleep
+extern HostApp lastOpenedApp;
+extern HostApp foregroundApp;
+extern AudioSource audioSource;
 extern int8_t calculatorDecimalPlaces; // -1 = Auto, otherwise fixed decimal places
 extern uint8_t calculatorRoundingMode; // 0 = Half Up, 1 = Half Even, 2 = Truncate
 extern bool calculatorThousandsSeparator;
@@ -106,9 +117,12 @@ extern bool optionsMenuVisible;
 extern int settingsSel;
 extern bool debugOverlayVisible;
 extern bool calculatorVisible;
+extern bool calculatorOverlayMode;
 
 // Notes app
 extern bool notesMode;
 extern int notesSelected;
 extern int notesScrollTop;
 extern uint32_t notesMarqueeStartMs;
+
+void rememberLastOpenedApp(HostApp app);

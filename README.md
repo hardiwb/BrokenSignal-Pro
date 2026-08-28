@@ -105,9 +105,10 @@ Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives.
 - **Background audio**: Music or radio can keep playing while opening Settings, Notes, Help, WiFi, Debug, or Calculator.
 - **Notes**: Monthly note storage with quick note overlay, day/month filtering, and done-state dimming.
 - **Applications**: `Alt` opens a full application list for switching between Music Player, Web Radio, Notes, and Calculator.
+- **Registry-driven quick access**: Apps can publish one overlay shortcut without changing every host app.
 - **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
-- **Context-aware Help**: `H` opens help in application screens; Calculator reserves `H` for history.
-- **Calculator**: `C` opens the calculator overlay; `H` toggles its full-screen calculation history.
+- **Context-aware Help**: `H` opens Help for the active full-screen application.
+- **Calculator**: `C` opens its quick overlay and `F` expands it to the full app.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
 - **Granular redraw**: Header, list rows, footer slots, progress bar, and overlay input can update independently.
@@ -150,11 +151,20 @@ Music can replace the footer center area with a segmented progress bar.
 Application-facing code is organized by responsibility:
 
 ```text
+src/apps/       App-owned metadata and the destination for app modules
+src/core/       App registry/runtime, state, routing, and system lifecycle
 src/module/
-|-- programs/   Music, Radio, Notes, and Calculator
+|-- programs/   Legacy Music, Radio, Notes, and Calculator implementations
 |-- shell/      Applications, Options, Control Panel, Help, and Debug
 `-- service/    Clock and WiFi
 ```
+
+See [App Development](docs/APP_DEVELOPMENT.md) for the host-app API,
+registration checklist, and compile-safe example templates.
+
+Apps are discovered from `src/apps/*/app.json` during the PlatformIO pre-build
+step. A third-party host app can be installed as one self-contained folder
+without editing core, shell, keyboard, or existing app sources.
 
 ## Controls
 
@@ -162,7 +172,7 @@ src/module/
 
 | Key | Action |
 | --- | ------ |
-| `H` | Context help; Calculator uses it for history |
+| `H` | Context help |
 | `Opt` | Toggle contextual Options |
 | `Alt` | Toggle Applications |
 | `Ctrl` | Toggle Control Panel |
@@ -197,7 +207,7 @@ Volume changes are shown as a transient header message, for example `VOL 50%`.
 | `X` | Remove station |
 | `R` | Reconnect |
 | `I` | Force AAC |
-| `W` / `Esc` | Back to Music |
+| `W` | Back to Music |
 
 ### Notes
 
@@ -267,8 +277,9 @@ Settings include:
 | `D` / `/` | Divide |
 | `Ok` | Calculate |
 | `DEL` | Backspace |
-| `Esc` | Clear / close |
-| `H` | Toggle calculation history |
+| `Esc` | Close top surface / Applications |
+| `F` | Open full-screen calculation history |
+| `H` | Toggle Calculator Help |
 | `Opt` | Toggle Calculator Options |
 | `C` | Close |
 

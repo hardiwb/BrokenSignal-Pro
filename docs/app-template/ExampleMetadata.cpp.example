@@ -1,0 +1,33 @@
+#include "apps/example/ExampleMetadata.h"
+
+const HelpEntry EXAMPLE_HELP_ENTRIES[] = {
+    {"[Ok]", "Run selected item"},
+    {"[;/.]", "Cursor up / down"},
+    {"[H]", "Close help"},
+};
+
+const uint8_t EXAMPLE_HELP_COUNT =
+    sizeof(EXAMPLE_HELP_ENTRIES) / sizeof(EXAMPLE_HELP_ENTRIES[0]);
+
+namespace
+{
+bool featureEnabled = false;
+
+void toggleFeature(int)
+{
+    featureEnabled = !featureEnabled;
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+}
+} // namespace
+
+void buildExampleOptions(std::vector<AppOption> &options)
+{
+    options.push_back({
+        "Feature",
+        featureEnabled ? "On" : "Off",
+        true,
+        true,
+        false,
+        toggleFeature});
+}

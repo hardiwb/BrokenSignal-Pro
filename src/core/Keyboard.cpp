@@ -3,17 +3,19 @@
 #include "State.h"
 
 #include "System.h"
+#include "core/AppRuntime.h"
+#include "core/SurfaceManager.h"
 
-#include "module/programs/Browser.h"
-#include "module/programs/Calculator.h"
+#include "module/service/FileBrowser.h"
+#include "apps/calculator/Calculator.h"
 #include "module/shell/Debug.h"
 #include "module/shell/Help.h"
-#include "module/programs/Player.h"
+#include "apps/music/MusicPlayer.h"
 #include "module/shell/Settings.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Options.h"
-#include "module/programs/Notes.h"
-#include "module/programs/Radio.h"
+#include "apps/notes/Notes.h"
+#include "apps/radio/Radio.h"
 #include "module/service/WiFi.h"
 
 bool keyboardBackPressed(Keyboard_Class::KeysState &ks)
@@ -101,17 +103,13 @@ void openNotesAppFromShortcut()
     addNameOverlayVisible = false;
     removeConfirmVisible = false;
 
-    notesOpen();
+    appRuntimeOpen(HostApp::Notes);
 }
 
 KeyboardInputMode currentKeyboardInputMode()
 {
     if (optionsMenuVisible)
         return KeyboardInputMode::Options;
-
-    // Calculator is an overlay and always receives input before its host screen.
-    if (calculatorInputActive())
-        return KeyboardInputMode::Calculator;
 
     if (helpVisible)
         return KeyboardInputMode::Help;
@@ -124,6 +122,12 @@ KeyboardInputMode currentKeyboardInputMode()
 
     if (debugOverlayVisible)
         return KeyboardInputMode::Debug;
+
+    if (notesEditorVisible() || notesMoveDateInputActive())
+        return KeyboardInputMode::Notes;
+
+    if (calculatorInputActive())
+        return KeyboardInputMode::Calculator;
 
     if (notesInputActive())
         return KeyboardInputMode::Notes;
@@ -139,74 +143,15 @@ KeyboardInputMode currentKeyboardInputMode()
     return KeyboardInputMode::Player;
 }
 
-bool calculatorHostAllowsOverlay(KeyboardInputMode mode)
-{
-    switch (mode)
-    {
-    case KeyboardInputMode::Options:
-        return false;
-    case KeyboardInputMode::Settings:
-        return !settingsInputOverlayActive();
-    case KeyboardInputMode::Applications:
-        return false;
-    case KeyboardInputMode::Notes:
-        return !notesEditorVisible();
-    case KeyboardInputMode::Wifi:
-        return wifiMenuVisible && !wifiPassOverlayVisible;
-    case KeyboardInputMode::RadioOverlay:
-    case KeyboardInputMode::Calculator:
-        return false;
-    case KeyboardInputMode::Debug:
-    case KeyboardInputMode::Help:
-    case KeyboardInputMode::Radio:
-    case KeyboardInputMode::Player:
-        return true;
-    }
-
-    return false;
-}
-
-bool tryOpenCalculatorOverlay(
-    KeyboardInputMode mode,
-    const Keyboard_Class::KeysState &ks)
-{
-    if (!calculatorHostAllowsOverlay(mode))
-        return false;
-
-    for (auto c : ks.word)
-    {
-        if (c == 'c' || c == 'C')
-        {
-            openCalculator();
-            return true;
-        }
-    }
-
-    return false;
-}
-
 bool handleGlobalHotkey(Keyboard_Class::KeysState &ks)
 {
     for (auto c : ks.word)
     {
         switch (c)
         {
-        case 'n':
-        case 'N':
-            notesQuickOpen();
-            return true;
-
         case 'w':
         case 'W':
-            if (webRadioMode)
-                exitWebRadioMode();
-            else
-                enterWebRadioMode();
-            return true;
-
-        case 'c':
-        case 'C':
-            openCalculator();
+            appRuntimeOpen(webRadioMode ? HostApp::Music : HostApp::Radio);
             return true;
 
         case 'h':
@@ -266,7 +211,7 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
     if (result == WifiInputResult::ExitRequested)
     {
         if (webRadioMode)
-            exitWebRadioMode();
+            appRuntimeOpen(HostApp::Music);
         else
             drawAll();
     }
@@ -296,14 +241,15 @@ void keyboardLoop()
         return;
     }
 
+    const ActiveSurface surface = resolveActiveSurface();
+
+    if (keyboardBackPressed(ks) && closeTopmostSurface(surface))
+        return;
+
     if (!optionsMenuVisible &&
+        surface.kind == SurfaceKind::HostApp &&
         !notesMode &&
         !calculatorInputActive() &&
-        !settingsInputOverlayActive() &&
-        !notesEditorVisible() &&
-        !notesMoveDateInputActive() &&
-        !wifiPassOverlayVisible &&
-        !radioOverlayActive() &&
         isFnN(ks))
     {
         openNotesAppFromShortcut();
@@ -312,23 +258,19 @@ void keyboardLoop()
 
     const bool modifierOnly = ks.word.empty();
     const bool modalInputActive =
-        optionsMenuVisible || calculatorInputActive() ||
-        settingsInputOverlayActive() ||
-        notesEditorVisible() || notesMoveDateInputActive() ||
-        wifiPassOverlayVisible || radioOverlayActive();
+        surface.kind == SurfaceKind::OverlayModal;
 
-    if (!settingsMenuVisible && !modalInputActive && modifierOnly && ks.ctrl)
+    if (surface.kind == SurfaceKind::HostApp &&
+        !modalInputActive &&
+        modifierOnly &&
+        ks.ctrl)
     {
         enterSettingsMenu();
         return;
     }
 
     const bool applicationHostActive =
-        !applicationsMenuVisible && !settingsMenuVisible &&
-        !helpVisible && !debugOverlayVisible &&
-        !wifiInputActive() && !notesEditorVisible() &&
-        !notesMoveDateInputActive() &&
-        !radioOverlayActive();
+        surface.kind == SurfaceKind::HostApp;
 
     if (applicationHostActive && modifierOnly && ks.alt)
     {
@@ -336,10 +278,7 @@ void keyboardLoop()
         return;
     }
 
-    const bool optionsHostActive =
-        !optionsMenuVisible && applicationHostActive;
-
-    if (optionsHostActive && modifierOnly && ks.opt)
+    if (applicationHostActive && modifierOnly && ks.opt)
     {
         enterOptionsMenu();
         return;
@@ -347,13 +286,27 @@ void keyboardLoop()
 
     KeyboardInputMode mode = currentKeyboardInputMode();
 
-    if (tryOpenCalculatorOverlay(mode, ks))
+    if (surface.kind == SurfaceKind::HostApp &&
+        appRuntimeHandleQuickAccess(ks))
         return;
 
-    if ((mode == KeyboardInputMode::Player ||
+    if (surface.kind == SurfaceKind::HostApp &&
+        (mode == KeyboardInputMode::Player ||
          mode == KeyboardInputMode::Radio) &&
         handleGlobalHotkey(ks))
         return;
+
+    if (!surfaceBlocksHostInput(surface))
+    {
+        appRuntimeHandleForegroundInput(ks);
+        return;
+    }
+
+    if (surface.kind == SurfaceKind::OverlayModal &&
+        appRuntimeHandleQuickAccessInput(ks))
+    {
+        return;
+    }
 
     switch (mode)
     {
@@ -394,15 +347,8 @@ void keyboardLoop()
         return;
 
     case KeyboardInputMode::Radio:
-        handleRadioInput(ks);
-        return;
-
     case KeyboardInputMode::Player:
-        break;
-    }
-
-    if (handleBrowserInput(ks))
+        appRuntimeHandleForegroundInput(ks);
         return;
-
-    handlePlayerInput(ks);
+    }
 }

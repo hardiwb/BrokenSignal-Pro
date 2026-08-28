@@ -3,13 +3,16 @@
 #include <esp_sleep.h>
 #include "core/System.h"
 #include "core/State.h"
+#include "core/AppRegistry.h"
+#include "core/AppRuntime.h"
+#include "core/SurfaceManager.h"
 #include "core/Config.h"
 #include "UI/Themes.h"
 #include "UI/Toast.h"
-#include "module/programs/Player.h"
-#include "module/programs/Calculator.h"
-#include "module/programs/Notes.h"
-#include "module/programs/Radio.h"
+#include "apps/music/MusicPlayer.h"
+#include "apps/calculator/Calculator.h"
+#include "apps/notes/Notes.h"
+#include "apps/radio/Radio.h"
 #include "module/shell/Settings.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Options.h"
@@ -23,12 +26,6 @@ void drawCurrentScreen()
     if (optionsMenuVisible)
     {
         drawOptionsMenu();
-        return;
-    }
-
-    if (calculatorVisible)
-    {
-        drawCalculator();
         return;
     }
 
@@ -68,9 +65,9 @@ void drawCurrentScreen()
         return;
     }
 
-    if (notesMode)
+    if (calculatorOverlayActive())
     {
-        drawNotes();
+        drawCalculator();
         return;
     }
 
@@ -104,11 +101,11 @@ void drawCurrentScreen()
         return;
     }
 
-    if (webRadioMode)
-    {
-        drawRadioAll();
-        return;
-    }
+    appRuntimeDrawForeground();
+}
+
+void drawMusicApp()
+{
     drawPlayerHeader();
     pumpAudio();
     drawPlayerList();
@@ -127,10 +124,7 @@ void showHdrMsg(const char *msg)
     hdrMsgEnd = millis() + 1000;
 
     const bool hostScreenVisible =
-        !optionsMenuVisible && !calculatorVisible && !helpVisible &&
-        !applicationsMenuVisible && !settingsMenuVisible &&
-        !debugOverlayVisible && !notesInputActive() &&
-        !wifiInputActive() && !radioOverlayActive();
+        !surfaceBlocksHostInput(resolveActiveSurface());
     if (!hostScreenVisible)
         return;
 
@@ -235,6 +229,13 @@ void loadSettings()
         if (key == "playbackoff" && val >= 0 && val <= 10800)
             playbackOffSec = (uint32_t)val;
 
+        if (key == "lastapp" && val >= 0 && val <= 255)
+        {
+            const HostApp savedApp = (HostApp)val;
+            if (appIndex(savedApp) >= 0)
+                lastOpenedApp = savedApp;
+        }
+
         if (key == "calcdecimals" &&
             (val == -1 || val == 0 || val == 2 || val == 4 || val == 6))
             calculatorDecimalPlaces = (int8_t)val;
@@ -269,6 +270,7 @@ void saveSettings()
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
     f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);
     f.printf("playbackoff=%lu\n", (unsigned long)playbackOffSec);
+    f.printf("lastapp=%d\n", (int)lastOpenedApp);
     f.printf("calcdecimals=%d\n", (int)calculatorDecimalPlaces);
     f.printf("calcrounding=%d\n", calculatorRoundingMode);
     f.printf("calcthousands=%d\n", calculatorThousandsSeparator ? 1 : 0);

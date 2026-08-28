@@ -1,0 +1,8 @@
+#pragma once
+
+#include "core/App.h"
+
+extern const HelpEntry EXAMPLE_HELP_ENTRIES[];
+extern const uint8_t EXAMPLE_HELP_COUNT;
+
+void buildExampleOptions(std::vector<AppOption> &options);

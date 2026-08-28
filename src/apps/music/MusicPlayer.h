@@ -1,6 +1,8 @@
 #pragma once
+
 #include <M5Cardputer.h>
 #include "core/State.h"
+
 unsigned long readM4ADuration(const char *path);
 unsigned long readMP3Duration(const char *path, size_t fileSize);
 void startTrack(int idx);

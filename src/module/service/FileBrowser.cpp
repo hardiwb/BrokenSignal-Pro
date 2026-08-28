@@ -1,8 +1,122 @@
 #include "core/System.h"
-#include "module/programs/Browser.h"
-#include "module/programs/Player.h"
+#include "module/service/FileBrowser.h"
 #include "UI/Header.h"
 #include <algorithm>
+
+namespace
+{
+bool defaultAcceptFile(const String &, const String &)
+{
+    return false;
+}
+
+String defaultDisplayLabel(const String &name, const String &)
+{
+    return name;
+}
+
+unsigned long defaultReadDuration(const String &, size_t)
+{
+    return 0;
+}
+
+void defaultOpenFile(int, const BrowserItem &)
+{
+}
+
+void defaultStopActive()
+{
+}
+
+void defaultSeek(int)
+{
+}
+
+void defaultSelectionChanged(int)
+{
+}
+
+void defaultRedraw()
+{
+}
+
+void defaultClearActiveItem()
+{
+}
+
+bool defaultPlaybackActive()
+{
+    return false;
+}
+
+bool defaultItemActive(int, const BrowserItem &)
+{
+    return false;
+}
+
+FileBrowserConfig activeBrowserConfig = {
+    "/",
+    "Files",
+    nullptr,
+    "RECENT",
+    false,
+    defaultAcceptFile,
+    defaultDisplayLabel,
+    defaultReadDuration,
+    defaultOpenFile,
+    defaultStopActive,
+    defaultSeek,
+    defaultSelectionChanged,
+    defaultRedraw,
+    defaultClearActiveItem,
+    defaultPlaybackActive,
+    defaultItemActive};
+
+void stopActiveBrowserItem()
+{
+    if (activeBrowserConfig.onStopActive)
+        activeBrowserConfig.onStopActive();
+}
+
+void redrawBrowserHost()
+{
+    if (activeBrowserConfig.onRedraw)
+        activeBrowserConfig.onRedraw();
+}
+
+void clearActiveBrowserItem()
+{
+    if (activeBrowserConfig.onClearActiveItem)
+        activeBrowserConfig.onClearActiveItem();
+}
+} // namespace
+
+void configureFileBrowser(const FileBrowserConfig &config)
+{
+    activeBrowserConfig = config;
+}
+
+void resetFileBrowserSession()
+{
+    allFolders.clear();
+    allFolders.shrink_to_fit();
+    folderStack.clear();
+    folderStack.shrink_to_fit();
+    items.clear();
+    items.shrink_to_fit();
+    scanLRUCount = 0;
+    currentFolderIdx = 0;
+    folderPage = 0;
+    selectedItem = 0;
+    isRecentView = false;
+}
+
+int scanFileBrowserRoot()
+{
+    const char *rootPath = activeBrowserConfig.rootPath ? activeBrowserConfig.rootPath : "/";
+    const char *rootLabel = activeBrowserConfig.rootLabel ? activeBrowserConfig.rootLabel : "Files";
+    return scanDir(rootPath, rootLabel);
+}
 
 
 //==================================================
@@ -157,16 +271,18 @@ void scanFolderNow(int idx)
                 subDirs.push_back(fullPath);
                 subDirNames.push_back(nm);
             }
-            else if (lo.endsWith(".mp3") || lo.endsWith(".m4a"))
+            else if (!f.isDirectory() &&
+                     activeBrowserConfig.acceptFile &&
+                     activeBrowserConfig.acceptFile(nm, fullPath))
             {
                 totalTrackCount++;
                 NameEntry ne;
                 ne.fullPath = fullPath;
                 ne.fileSize = f.size();
                 ne.isM4A = lo.endsWith(".m4a");
-                int dot = nm.lastIndexOf('.');
-                ne.label = (dot > 0) ? nm.substring(0, dot) : nm;
-                ne.label.replace('_', ' ');
+                ne.label = activeBrowserConfig.displayLabel
+                               ? activeBrowserConfig.displayLabel(nm, fullPath)
+                               : nm;
                 auto pos = std::lower_bound(
                     fe.nameCache.begin(),
                     fe.nameCache.end(),
@@ -254,7 +370,9 @@ void scanFolderNow(int idx)
         te.fileSize = ne.fileSize;
         te.isM4A = ne.isM4A;
         te.label = ne.label;
-        te.durationMs = ne.isM4A ? readM4ADuration(ne.fullPath.c_str()) : readMP3Duration(ne.fullPath.c_str(), ne.fileSize);
+        te.durationMs = activeBrowserConfig.readDuration
+                            ? activeBrowserConfig.readDuration(ne.fullPath, ne.fileSize)
+                            : 0;
         allFolders[idx].tracks.push_back(te);
     }
 
@@ -301,17 +419,17 @@ void loadFolderIdx(int idx)
     M5Cardputer.update();
     currentFolderIdx = idx;
     viewFolder = allFolders[idx].path;
-    currentTrack = -1;
+    clearActiveBrowserItem();
     selectedItem = 0;
     isRecentView = false;
     items.clear();
 
-    if (idx == 0 && recentCount > 0)
+    if (idx == 0 && activeBrowserConfig.showRecent && recentCount > 0)
     {
         BrowserItem ri;
         ri.isFolder = true;
         ri.path = "__RECENT__";
-        ri.label = "RECENT";
+        ri.label = activeBrowserConfig.recentLabel ? activeBrowserConfig.recentLabel : "RECENT";
         items.push_back(ri);
     }
 
@@ -391,31 +509,31 @@ void enterItem(int idx)
     {
         if (items[idx].path == "__RECENT__")
         {
-            stopAudio();
+            stopActiveBrowserItem();
             folderStack.push_back(currentFolderIdx);
             loadRecentView();
-            drawAll();
+            redrawBrowserHost();
             return;
         }
         if (items[idx].path == "__PREV__")
         {
-            stopAudio();
+            stopActiveBrowserItem();
             folderPage--;
             loadFolderIdx(currentFolderIdx);
             selectedItem = (int)items.size() - 1;
-            drawAll();
+            redrawBrowserHost();
             return;
         }
         if (items[idx].path == "__MORE__")
         {
-            stopAudio();
+            stopActiveBrowserItem();
             folderPage++;
             loadFolderIdx(currentFolderIdx);
             selectedItem = 0;
-            drawAll();
+            redrawBrowserHost();
             return;
         }
-        stopAudio();
+        stopActiveBrowserItem();
         for (int i = 0; i < (int)allFolders.size(); i++)
         {
             if (allFolders[i].path == items[idx].path)
@@ -423,17 +541,15 @@ void enterItem(int idx)
                 folderStack.push_back(currentFolderIdx);
                 folderPage = 0;
                 loadFolderIdx(i);
-                drawAll();
+                redrawBrowserHost();
                 return;
             }
         }
     }
     else
     {
-        if ((isPlaying || isPaused) && idx == currentTrack)
-            stopAudio();
-        else
-            startTrack(idx);
+        if (activeBrowserConfig.onOpenFile)
+            activeBrowserConfig.onOpenFile(idx, items[idx]);
     }
 }
 
@@ -443,11 +559,11 @@ void goBack()
         return;
     int parentIdx = folderStack.back();
     folderStack.pop_back();
-    stopAudio();
+    stopActiveBrowserItem();
     isRecentView = false;
     folderPage = 0;
     loadFolderIdx(parentIdx);
-    drawAll();
+    redrawBrowserHost();
 }
 
 //==================================================
@@ -458,7 +574,7 @@ void loadRecentView()
 {
     isRecentView = true;
     viewFolder = "__RECENT__";
-    currentTrack = -1;
+    clearActiveBrowserItem();
     selectedItem = 0;
     items.clear();
     for (int i = 0; i < recentCount; i++)
@@ -497,18 +613,16 @@ void loadRecentView()
             f.close();
             String lo = recentPaths[i];
             lo.toLowerCase();
-            if (lo.endsWith(".m4a"))
-                bi.durationMs = readM4ADuration(recentPaths[i].c_str());
-            else
-                bi.durationMs = readMP3Duration(recentPaths[i].c_str(), bi.fileSize);
+            bi.durationMs = activeBrowserConfig.readDuration
+                                ? activeBrowserConfig.readDuration(recentPaths[i], bi.fileSize)
+                                : 0;
         }
 
         int sl = recentPaths[i].lastIndexOf('/');
         String n = (sl >= 0) ? recentPaths[i].substring(sl + 1) : recentPaths[i];
-        int dot = n.lastIndexOf('.');
-        if (dot > 0)
-            n = n.substring(0, dot);
-        n.replace('_', ' ');
+        n = activeBrowserConfig.displayLabel
+                ? activeBrowserConfig.displayLabel(n, recentPaths[i])
+                : n;
         if ((int)n.length() > 19)
             n = n.substring(0, 18) + ">";
         bi.label = n;
@@ -544,7 +658,8 @@ void addRecent(const String &path)
 
 void saveRecentToSD()
 {
-    File f = SD.open("/recent.txt", FILE_WRITE);
+    const char *path = activeBrowserConfig.recentPath ? activeBrowserConfig.recentPath : "/recent.txt";
+    File f = SD.open(path, FILE_WRITE);
     if (!f)
         return;
     for (int i = 0; i < recentCount; i++)
@@ -555,7 +670,8 @@ void saveRecentToSD()
 void loadRecentFromSD()
 {
     recentCount = 0;
-    File f = SD.open("/recent.txt", FILE_READ);
+    const char *path = activeBrowserConfig.recentPath ? activeBrowserConfig.recentPath : "/recent.txt";
+    File f = SD.open(path, FILE_READ);
     if (!f)
         return;
     while (f.available() && recentCount < RECENT_MAX)
@@ -601,17 +717,8 @@ void evictFolderCachesForHeap(uint32_t threshold)
 
 void purgeAudioPlayerMemory()
 {
-    stopAudio();
-    allFolders.clear();
-    allFolders.shrink_to_fit();
-    folderStack.clear();
-    folderStack.shrink_to_fit();
-    items.clear();
-    items.shrink_to_fit();
-    scanLRUCount = 0;
-    currentFolderIdx = 0;
-    folderPage = 0;
-    isRecentView = false;
+    stopActiveBrowserItem();
+    resetFileBrowserSession();
 }
 //==================================================
 // KEYBOARD INPUT
@@ -638,25 +745,28 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
                 return true;
             }
 
-            // Track
-            if (isPlaying || isPaused)
+            // File
+            const bool hasActiveItem = activeBrowserConfig.isPlaybackActive &&
+                                       activeBrowserConfig.isPlaybackActive();
+            const bool selectedIsActive = activeBrowserConfig.isItemActive &&
+                                          activeBrowserConfig.isItemActive(selectedItem, item);
+            if (hasActiveItem)
             {
-                if (currentTrack == selectedItem)
+                if (selectedIsActive)
                 {
-                    // ENTER on current track = STOP
-                    stopAudio();
+                    stopActiveBrowserItem();
                 }
                 else
                 {
-                    // ENTER on another track = switch track
-                    stopAudio();
-                    startTrack(selectedItem);
+                    stopActiveBrowserItem();
+                    if (activeBrowserConfig.onOpenFile)
+                        activeBrowserConfig.onOpenFile(selectedItem, item);
                 }
             }
             else
             {
-                // Nothing playing = PLAY
-                startTrack(selectedItem);
+                if (activeBrowserConfig.onOpenFile)
+                    activeBrowserConfig.onOpenFile(selectedItem, item);
             }
 
             return true;
@@ -698,7 +808,8 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
                     (selectedItem - 1 + (int)items.size()) %
                     (int)items.size();
 
-                drawPlayerSelection(oldSelected);
+                if (activeBrowserConfig.onSelectionChanged)
+                    activeBrowserConfig.onSelectionChanged(oldSelected);
             }
 
             return true;
@@ -717,7 +828,8 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
                     (selectedItem + 1) %
                     (int)items.size();
 
-                drawPlayerSelection(oldSelected);
+                if (activeBrowserConfig.onSelectionChanged)
+                    activeBrowserConfig.onSelectionChanged(oldSelected);
             }
 
             return true;
@@ -728,17 +840,19 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
         //==================================================
 
         case ',':
-            if (isPlaying || isPaused)
+            if (activeBrowserConfig.isPlaybackActive &&
+                activeBrowserConfig.isPlaybackActive())
             {
-                seekTrack(-(int)seekSeconds * 1000);
+                if (activeBrowserConfig.onSeek)
+                    activeBrowserConfig.onSeek(-(int)seekSeconds * 1000);
             }
             else if (folderPage > 0)
             {
-                stopAudio();
+                stopActiveBrowserItem();
                 folderPage--;
                 loadFolderIdx(currentFolderIdx);
                 selectedItem = 0;
-                drawAll();
+                redrawBrowserHost();
             }
             else
             {
@@ -752,9 +866,11 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
         //==================================================
 
         case '/':
-            if (isPlaying || isPaused)
+            if (activeBrowserConfig.isPlaybackActive &&
+                activeBrowserConfig.isPlaybackActive())
             {
-                seekTrack((int)seekSeconds * 1000);
+                if (activeBrowserConfig.onSeek)
+                    activeBrowserConfig.onSeek((int)seekSeconds * 1000);
             }
             else
             {
@@ -762,11 +878,11 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
                     allFolders[currentFolderIdx].totalItems;
                 if ((folderPage + 1) * PAGE_SIZE < total)
                 {
-                    stopAudio();
+                    stopActiveBrowserItem();
                     folderPage++;
                     loadFolderIdx(currentFolderIdx);
                     selectedItem = 0;
-                    drawAll();
+                    redrawBrowserHost();
                 }
             }
             return true;

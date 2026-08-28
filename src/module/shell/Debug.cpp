@@ -4,7 +4,7 @@
 #include "core/State.h"
 #include "core/System.h"
 #include "module/shell/Help.h"
-#include "module/programs/Radio.h"
+#include "apps/radio/Radio.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -176,11 +176,6 @@ void handleDebugInput(Keyboard_Class::KeysState &ks)
         case 'd':
         case 'D':
             toggleDebug();
-            return;
-
-        case 'h':
-        case 'H':
-            toggleHelp();
             return;
 
         case ';':

@@ -80,6 +80,9 @@ uint8_t screenBrightness = SCREEN_BRIGHTNESS_DEFAULT;
 uint16_t autoScreenOffSec = AUTO_SCREEN_OFF_DEFAULT;
 uint32_t deepSleepSec = DEEP_SLEEP_DEFAULT;
 uint32_t playbackOffSec = PLAYBACK_OFF_DEFAULT;
+HostApp lastOpenedApp = HostApp::Notes;
+HostApp foregroundApp = HostApp::Notes;
+AudioSource audioSource = AudioSource::None;
 int8_t calculatorDecimalPlaces = -1;
 uint8_t calculatorRoundingMode = 0;
 bool calculatorThousandsSeparator = true;
@@ -88,9 +91,22 @@ bool settingsMenuVisible = false;
 int settingsSel = 0;
 bool debugOverlayVisible = false;
 bool calculatorVisible = false;
+bool calculatorOverlayMode = false;
 
 //notes
 bool notesMode = false;
 int notesSelected = 0;
 int notesScrollTop = 0;
 uint32_t notesMarqueeStartMs = 0;
+
+void rememberLastOpenedApp(HostApp app)
+{
+    foregroundApp = app;
+
+    if (lastOpenedApp == app)
+        return;
+
+    lastOpenedApp = app;
+    settingsDirty = true;
+    settingsDirtyMs = millis();
+}

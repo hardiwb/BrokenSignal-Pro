@@ -388,11 +388,6 @@ WifiInputResult handleWifiInput(Keyboard_Class::KeysState &ks)
                 showWifiMenu();
                 return WifiInputResult::Consumed;
             }
-            if (c == 'h' || c == 'H')
-            {
-                toggleHelp();
-                return WifiInputResult::Consumed;
-            }
         }
 
         if (ks.enter && wifiNetCount > 0)

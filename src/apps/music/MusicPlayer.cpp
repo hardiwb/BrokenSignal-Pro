@@ -1,7 +1,8 @@
 #include "core/System.h"
 #include <M5Cardputer.h>
-#include "module/programs/Player.h"
-#include "module/programs/Browser.h"
+#include "apps/music/MusicPlayer.h"
+#include "module/service/FileBrowser.h"
+#include "apps/radio/Radio.h"
 #include "core/Utils.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -407,6 +408,8 @@ void toggleShuffle()
 
 void startTrack(int idx)
 {
+    if (audioSource == AudioSource::Radio)
+        stopRadioStream();
     stopAudio();
     if (helpVisible)
         helpVisible = false;
@@ -461,6 +464,7 @@ void startTrack(int idx)
     }
 
     isPlaying = true;
+    audioSource = AudioSource::Music;
     addRecent(path);
     drawAll();
 }
@@ -537,6 +541,8 @@ void stopAudio()
         output->stop();
     isPlaying = false;
     isPaused = false;
+    if (audioSource == AudioSource::Music)
+        audioSource = AudioSource::None;
 }
 
 void pauseAudio()

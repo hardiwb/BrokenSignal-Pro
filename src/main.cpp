@@ -3,22 +3,25 @@
 #include <SPI.h>
 #include <WiFi.h>
 #include <cstring>
+#include <esp_sleep.h>
 #include "UI/SplashScreen.h"
 #include "UI/Header.h"
 #include "UI/Footer.h"
 #include "UI/Toast.h"
 #include "core/State.h"
+#include "core/AppRuntime.h"
 #include "core/Keyboard.h"
 #include "core/System.h"
-#include "module/programs/Player.h"
-#include "module/programs/Browser.h"
-#include "module/programs/Calculator.h"
+#include "apps/music/MusicPlayer.h"
+#include "module/service/FileBrowser.h"
+#include "apps/music/MusicBrowser.h"
+#include "apps/calculator/Calculator.h"
 #include "module/shell/Debug.h"
-#include "module/programs/Radio.h"
+#include "apps/radio/Radio.h"
 #include "module/shell/Settings.h"
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
-#include "module/programs/Notes.h"
+#include "apps/notes/Notes.h"
 
 namespace
 {
@@ -120,8 +123,9 @@ void setup()
   output = new AudioOutputM5Speaker(&M5Cardputer.Speaker, 0);
 
   Serial.println("[10] Scan music");
-  allFolders.clear();
-  scanDir("/Music", "Music");
+  useMusicFileBrowser();
+  resetFileBrowserSession();
+  scanFileBrowserRoot();
   Serial.printf("Folders found: %d\n", allFolders.size());
 
   Serial.println("[11] Load settings");
@@ -142,7 +146,13 @@ void setup()
   Serial.printf("Tracks: %d\n", totalTracks);
 
   Serial.println("[14] Draw UI");
-  notesOpen();
+  batteryLevel = (int)min((int32_t)99, M5.Power.getBatteryLevel());
+  batteryLastMs = millis();
+  const HostApp bootApp =
+      esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0
+          ? lastOpenedApp
+          : HostApp::Notes;
+  appRuntimeOpen(bootApp);
 
   Serial.println("=== SETUP DONE ===");
 }
@@ -166,10 +176,7 @@ void loop()
   else if (playbackSleepStartMs == 0)
     playbackSleepStartMs = millis();
 
-  if (notesInputActive())
-  {
-    notesLoop();
-  }
+  appRuntimeTickForeground();
 
   // UI Update
   static unsigned long lastDraw = 0;

@@ -1,0 +1,99 @@
+#include "apps/example/ExampleApp.h"
+
+#include "UI/Footer.h"
+#include "UI/Header.h"
+#include "UI/List.h"
+#include "core/State.h"
+#include "core/System.h"
+
+namespace
+{
+int selected = 0;
+bool quickOverlayVisible = false;
+
+ListModel buildListModel()
+{
+    ListModel model;
+    model.selected = selected;
+
+    ListItemModel item;
+    item.type = ListItemType::Normal;
+    item.label = "Example item";
+    item.isSelected = true;
+    model.items.push_back(item);
+    return model;
+}
+} // namespace
+
+void openExampleApp()
+{
+    selected = 0;
+    drawExampleApp();
+}
+
+void openExampleQuickOverlay()
+{
+    quickOverlayVisible = true;
+    // Draw the app's OverlayModel here.
+}
+
+bool exampleQuickAccessAvailable(HostApp foreground)
+{
+    return foreground != HostApp::Example;
+}
+
+bool exampleQuickOverlayActive()
+{
+    return quickOverlayVisible;
+}
+
+void closeExampleQuickOverlay()
+{
+    quickOverlayVisible = false;
+    drawAll();
+}
+
+bool handleExampleQuickInput(Keyboard_Class::KeysState &keys)
+{
+    if (!quickOverlayVisible)
+        return false;
+
+    if (keys.enter)
+    {
+        closeExampleQuickOverlay();
+        return true;
+    }
+    return false;
+}
+
+void drawExampleApp()
+{
+    HeaderModel header;
+    header.appHeaderTag = "EXAMPLE";
+    header.appHeaderTitle = "Example";
+    header.cursor = true;
+    drawHeader(header);
+
+    drawList(buildListModel());
+
+    FooterModel footer;
+    footer.left = "[Ok]Run [H]Help";
+    footer.battery = footerBatteryText();
+    drawFooter(footer);
+}
+
+bool handleExampleAppInput(Keyboard_Class::KeysState &keys)
+{
+    if (keys.enter)
+    {
+        showHdrMsg("EXAMPLE RUN");
+        return true;
+    }
+
+    return false;
+}
+
+void tickExampleApp()
+{
+    // Keep foreground work short and non-blocking.
+}

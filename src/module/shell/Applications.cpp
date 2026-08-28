@@ -1,11 +1,10 @@
 #include "module/shell/Applications.h"
 
 #include "core/Keyboard.h"
+#include "core/AppRegistry.h"
+#include "core/AppRuntime.h"
 #include "core/State.h"
 #include "core/System.h"
-#include "module/programs/Calculator.h"
-#include "module/programs/Notes.h"
-#include "module/programs/Radio.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -14,28 +13,6 @@ bool applicationsMenuVisible = false;
 
 namespace
 {
-enum class ApplicationId
-{
-    MusicPlayer,
-    WebRadio,
-    Notes,
-    Calculator
-};
-
-struct ApplicationDescriptor
-{
-    ApplicationId id;
-    const char *displayName;
-    const char *headerTag;
-};
-
-static const ApplicationDescriptor APPLICATIONS[] = {
-    {ApplicationId::MusicPlayer, "Music Player", "MUSIC"},
-    {ApplicationId::WebRadio, "Web Radio", "RADIO"},
-    {ApplicationId::Notes, "Notes", "NOTES"},
-    {ApplicationId::Calculator, "Calculator", "CALCULATOR"}};
-static constexpr int APPLICATION_COUNT =
-    sizeof(APPLICATIONS) / sizeof(APPLICATIONS[0]);
 static int applicationSelected = 2;
 
 static ListModel buildApplicationsListModel()
@@ -44,12 +21,12 @@ static ListModel buildApplicationsListModel()
     model.selected = applicationSelected;
     model.scrollTop = 0;
 
-    for (int i = 0; i < APPLICATION_COUNT; ++i)
+    for (size_t i = 0; i < appCount(); ++i)
     {
         ListItemModel item;
         item.type = ListItemType::Normal;
-        item.label = APPLICATIONS[i].displayName;
-        item.isSelected = i == applicationSelected;
+        item.label = appDescriptorAt(i).name;
+        item.isSelected = (int)i == applicationSelected;
         model.items.push_back(item);
     }
     return model;
@@ -58,30 +35,7 @@ static ListModel buildApplicationsListModel()
 static void openSelectedApplication()
 {
     applicationsMenuVisible = false;
-
-    switch (APPLICATIONS[applicationSelected].id)
-    {
-    case ApplicationId::MusicPlayer:
-        notesClose();
-        if (webRadioMode)
-            exitWebRadioMode();
-        else
-            drawAll();
-        break;
-    case ApplicationId::WebRadio:
-        notesClose();
-        if (!webRadioMode)
-            enterWebRadioMode();
-        else
-            drawRadioAll();
-        break;
-    case ApplicationId::Notes:
-        notesOpen();
-        break;
-    case ApplicationId::Calculator:
-        openCalculatorHistory();
-        break;
-    }
+    appRuntimeOpen(appDescriptorAt(applicationSelected).id);
 }
 } // namespace
 
@@ -105,12 +59,12 @@ void drawApplicationsMenu()
 void enterApplicationsMenu()
 {
     optionsMenuVisible = false;
-    calculatorVisible = false;
     settingsMenuVisible = false;
     helpVisible = false;
     debugOverlayVisible = false;
     applicationsMenuVisible = true;
-    applicationSelected = notesMode ? 2 : (webRadioMode ? 1 : 0);
+    const int foregroundIndex = appIndex(foregroundApp);
+    applicationSelected = foregroundIndex >= 0 ? foregroundIndex : 0;
     drawApplicationsMenu();
 }
 
@@ -134,19 +88,23 @@ void handleApplicationsInput(Keyboard_Class::KeysState &ks)
         return;
     }
 
+    const int applicationCount = (int)appCount();
+    if (applicationCount <= 0)
+        return;
+
     for (auto c : ks.word)
     {
         if (c == ';')
         {
             int oldSelected = applicationSelected;
-            applicationSelected = (applicationSelected - 1 + APPLICATION_COUNT) % APPLICATION_COUNT;
+            applicationSelected = (applicationSelected - 1 + applicationCount) % applicationCount;
             drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
             return;
         }
         if (c == '.')
         {
             int oldSelected = applicationSelected;
-            applicationSelected = (applicationSelected + 1) % APPLICATION_COUNT;
+            applicationSelected = (applicationSelected + 1) % applicationCount;
             drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
             return;
         }

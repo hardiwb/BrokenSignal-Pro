@@ -1,0 +1,35 @@
+{
+  "id": "Example",
+  "persistent_id": 20,
+  "order": 20,
+  "name": "Example",
+  "header_tag": "EXAMPLE",
+  "includes": [
+    "apps/example/ExampleApp.h",
+    "apps/example/ExampleMetadata.h"
+  ],
+  "callbacks": {
+    "open": "openExampleApp",
+    "draw": "drawExampleApp",
+    "input": "handleExampleAppInput",
+    "tick": "tickExampleApp"
+  },
+  "help": {
+    "title": "EXAMPLE KEYS",
+    "entries": "EXAMPLE_HELP_ENTRIES",
+    "count": "EXAMPLE_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildExampleOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": {
+    "key": "e",
+    "open": "openExampleQuickOverlay",
+    "available": "exampleQuickAccessAvailable",
+    "active": "exampleQuickOverlayActive",
+    "close": "closeExampleQuickOverlay",
+    "input": "handleExampleQuickInput"
+  }
+}
