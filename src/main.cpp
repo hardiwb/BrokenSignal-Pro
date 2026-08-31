@@ -17,6 +17,7 @@
 #include "module/service/FileBrowser.h"
 #include "apps/music/MusicBrowser.h"
 #include "apps/calculator/Calculator.h"
+#include "apps/expenses/Expenses.h"
 #include "module/shell/Debug.h"
 #include "apps/radio/Radio.h"
 #include "module/shell/Settings.h"
@@ -180,13 +181,17 @@ void loop()
   else if (playbackSleepStartMs == 0)
     playbackSleepStartMs = millis();
 
-  appRuntimeTickForeground();
+  // A quick-access overlay owns the display until it closes. Do not let the
+  // underlying foreground app repaint rows through it.
+  if (!appRuntimeQuickAccessActive())
+    appRuntimeTickForeground();
 
   // UI Update
   static unsigned long lastDraw = 0;
   if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
+      !expensesModalActive() &&
       millis() - lastDraw >= 500)
   {
     lastDraw = millis();
@@ -196,7 +201,7 @@ void loop()
     {
       drawHeaderCursor(cursorVisible);
     }
-    else if (webRadioMode)
+    else if (foregroundApp == HostApp::Radio)
     {
       bool overlayOpen = wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
                          removeConfirmVisible;
@@ -213,7 +218,7 @@ void loop()
           drawRadioRow(radioSelected);
       }
     }
-    else
+    else if (foregroundApp == HostApp::Music)
     {
       drawHeaderCursor(cursorVisible);
       if (selectedItem >= 0 && selectedItem < (int)items.size())
@@ -221,11 +226,16 @@ void loop()
       if (isPlaying)
         updatePlayerStatus();
     }
+    else
+    {
+      drawHeaderCursor(cursorVisible);
+    }
   }
 
   if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
+      !expensesModalActive() &&
       !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
       !removeConfirmVisible)
   {
@@ -246,6 +256,7 @@ void loop()
     if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
         !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
+        !expensesModalActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
       drawAll();
@@ -272,6 +283,7 @@ void loop()
     if (screenOn && !optionsMenuVisible && !applicationsMenuVisible && !helpVisible &&
         !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
+        !expensesModalActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
     {

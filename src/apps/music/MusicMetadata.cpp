@@ -11,6 +11,7 @@ const HelpEntry MUSIC_HELP_ENTRIES[] = {
     {"[-/+]", "Volume"},
     {"[W]", "Switch to radio"},
     {"[N]", "Quick note"},
+    {"[E]", "Quick expense"},
     {"[Esc]", "Applications"},
     {"[Opt]", "Toggle Options"},
     {"[Alt]", "Toggle Applications"},

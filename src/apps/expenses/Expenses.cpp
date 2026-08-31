@@ -25,6 +25,7 @@ uint32_t marqueeStart = 0;
 int editVisibleIndex = -1, editorField = 0, nameCursor = 0, amountCursor = 0;
 String editName, editAmount, moveDate, currencyInput;
 bool invalidInput = false;
+bool quickLogActive = false;
 std::vector<String> qrPages;
 int qrPage = 0;
 
@@ -147,7 +148,12 @@ void saveEditor() {
         e.shared = false;
         entries[actual] = e;
     } else entries.push_back(e);
-    saveEntries(); modal = Modal::None; rebuildVisible(); drawExpenses();
+    saveEntries(); rebuildVisible();
+    modal = Modal::None;
+    if (quickLogActive) {
+        quickLogActive = false;
+        drawAll();
+    } else drawExpenses();
 }
 bool appendToMonth(const ExpenseEntry &e, const String &target) {
     String month = target.substring(0, 7); if (month == currentMonth) return true;
@@ -186,9 +192,14 @@ void drawQr() {
 String expensesDefaultCurrency() { return defaultCurrency; }
 bool expensesHasSelection() { return !visible.empty(); }
 bool expensesModalActive() { return modal != Modal::None; }
+bool expensesQuickActive() { return quickLogActive; }
 void expensesOpen() {
     rememberLastOpenedApp(HostApp::Expenses); loadDefaultCurrency(); dayOffset = 0;
-    selected = scrollTop = 0; modal = Modal::None; loadEntries(); drawExpenses();
+    selected = scrollTop = 0; modal = Modal::None; quickLogActive = false; loadEntries(); drawExpenses();
+}
+void expensesQuickOpen() {
+    loadDefaultCurrency(); dayOffset = 0; selected = scrollTop = 0; loadEntries();
+    quickLogActive = true; beginEditor(-1);
 }
 void drawExpenses() {
     if (foregroundApp != HostApp::Expenses) return;
@@ -196,8 +207,8 @@ void drawExpenses() {
     if (modal == Modal::MoveDate) { drawTextModal("Move to Date", "YYYY-MM-DD", moveDate); return; }
     if (modal == Modal::Currency) { drawTextModal("Edit Currency", "Default currency", currencyInput); return; }
     if (modal == Modal::Qr) { drawQr(); return; }
-    HeaderModel header; header.appHeaderTag = "EXPENSES"; header.appHeaderTitle = displayDate(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[A]Add [R]Rm"; footer.center = "[Ok]Edit";
+    HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = displayDate(); header.cursor = true; drawHeader(header);
+    drawList(listModel()); FooterModel footer; footer.left = "[A]+ [R]- [X]Hide"; footer.center = "[Ok]Edit";
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
@@ -205,6 +216,11 @@ void expensesEdit() { if (!visible.empty()) beginEditor(selected); }
 void expensesDelete() {
     if (visible.empty()) return; entries.erase(entries.begin() + visible[selected]);
     saveEntries(); rebuildVisible(); drawExpenses();
+}
+void expensesToggleSynced() {
+    if (visible.empty()) return;
+    ExpenseEntry &entry = entries[visible[selected]];
+    entry.shared = !entry.shared; saveEntries(); drawListRow(listModel(), selected);
 }
 void expensesMoveTomorrow() {
     if (visible.empty()) return; struct tm date{};
@@ -228,7 +244,13 @@ void expensesShareQr() {
     if (page.length()) qrPages.push_back(page);
     saveEntries(); qrPage = 0; modal = Modal::Qr; drawExpenses();
 }
-void cancelExpensesModal() { modal = Modal::None; drawExpenses(); }
+void cancelExpensesModal() {
+    modal = Modal::None;
+    if (quickLogActive) {
+        quickLogActive = false;
+        drawAll();
+    } else drawExpenses();
+}
 
 void handleExpensesInput(Keyboard_Class::KeysState &ks) {
     if (modal == Modal::Qr) {
@@ -280,6 +302,7 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
     for (char c : ks.word) {
         if (c == 'a' || c == 'A') { expensesNew(); return; }
         if (c == 'r' || c == 'R') { expensesDelete(); return; }
+        if (c == 'x' || c == 'X') { expensesToggleSynced(); return; }
         if (c == ',' || c == '/') {
             dayOffset += c == ',' ? -1 : 1; selected = scrollTop = 0; loadEntries(); drawExpenses(); return;
         }

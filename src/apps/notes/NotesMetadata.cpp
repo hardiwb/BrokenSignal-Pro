@@ -8,6 +8,7 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[Ctrl]", "Toggle Control Panel"},
     {"[A]", "Add note"},
     {"[C]", "Quick calculator"},
+    {"[E]", "Quick expense"},
     {"[-/+]", "Volume"},
     {"[R]", "Remove note"},
     {"[S]", "Send active to Xteink"},

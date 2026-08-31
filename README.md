@@ -115,6 +115,7 @@ and keyboard routing rules.
 - **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
 - **Context-aware Help**: `H` opens Help for the active full-screen application.
 - **Calculator**: `C` opens its quick overlay and `F` expands it to the full app.
+- **Expense Tracker**: `E` opens a quick expense entry overlay from any other full-screen app.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
 - **Granular redraw**: Header, list rows, footer slots, progress bar, and overlay input can update independently.

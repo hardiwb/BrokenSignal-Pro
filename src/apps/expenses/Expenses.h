@@ -1,9 +1,11 @@
 #pragma once
 #include <M5Cardputer.h>
 void expensesOpen();
+void expensesQuickOpen();
 void drawExpenses();
 void handleExpensesInput(Keyboard_Class::KeysState &keys);
 bool expensesModalActive();
+bool expensesQuickActive();
 void cancelExpensesModal();
 bool expensesHasSelection();
 void expensesNew();
@@ -11,6 +13,7 @@ void expensesMoveTomorrow();
 void expensesPromptMoveDate();
 void expensesEdit();
 void expensesDelete();
+void expensesToggleSynced();
 void expensesShareQr();
 void expensesEditDefaultCurrency();
 String expensesDefaultCurrency();

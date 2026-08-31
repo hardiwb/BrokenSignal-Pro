@@ -142,7 +142,7 @@ Input ownership rules:
 | --- | --- |
 | Shell navigation (`Alt`, `Opt`, `Ctrl`) | `Keyboard.cpp`, using `SurfaceManager` state. |
 | Back/Esc close behavior | `SurfaceManager.cpp`. |
-| Global quick access (`C`, `N`) | App descriptors through `AppRuntime.cpp`, only on host-like surfaces. |
+| Global quick access (`C`, `N`, `E`) | App descriptors through `AppRuntime.cpp`, only on host-like surfaces. |
 | Hardware hotkeys (`[`, `]`, safe `-`, `+`) | `Keyboard.cpp` calls shared system adjustment helpers. |
 | Global utility keys (`H`, `O`) | `Keyboard.cpp`, only where they do not collide with app-local keys. |
 | App-specific keys | The app's own input module. |

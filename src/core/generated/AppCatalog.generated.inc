@@ -28,9 +28,9 @@
         {'c', openCalculator, calculatorQuickAccessAvailable, calculatorOverlayActive, closeCalculator, handleCalculatorAppInput}
     },
     {
-        HostApp::Expenses, "Expenses", "EXPENSES",
+        HostApp::Expenses, "Expense Tracker", "EXPENSE",
         openExpensesApp, drawExpenses, handleExpensesAppInput, tickExpensesApp,
         "EXPENSE KEYS", EXPENSES_HELP_ENTRIES, EXPENSES_HELP_COUNT,
         buildExpensesOptions, true, true,
-        {0, nullptr, nullptr, nullptr, nullptr, nullptr}
+        {'e', expensesQuickOpen, expensesQuickAccessAvailable, expensesQuickActive, cancelExpensesModal, handleExpensesAppInput}
     },

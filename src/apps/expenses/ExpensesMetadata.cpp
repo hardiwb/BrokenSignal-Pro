@@ -2,7 +2,7 @@
 #include "apps/expenses/Expenses.h"
 const HelpEntry EXPENSES_HELP_ENTRIES[] = {
     {"[Opt]", "Toggle Options"}, {"[Alt]", "Toggle Applications"},
-    {"[A]", "Add expense"}, {"[R]", "Remove expense"}, {"[Ok]", "Edit expense"},
+    {"[A]", "Add expense"}, {"[R]", "Remove expense"}, {"[X]", "Toggle expense hidden"}, {"[Ok]", "Edit expense"},
     {"[;/.]", "Cursor up / down"}, {"[,/]", "Previous / next date"},
     {"[Tab]", "Switch editor field"}, {"[Fn L/R]", "Move text cursor"}, {"[Esc]", "Applications"}};
 const uint8_t EXPENSES_HELP_COUNT = sizeof(EXPENSES_HELP_ENTRIES) / sizeof(EXPENSES_HELP_ENTRIES[0]);

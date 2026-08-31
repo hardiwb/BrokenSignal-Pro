@@ -3,3 +3,4 @@
 void openExpensesApp();
 bool handleExpensesAppInput(Keyboard_Class::KeysState &keys);
 void tickExpensesApp();
+bool expensesQuickAccessAvailable(HostApp foreground);

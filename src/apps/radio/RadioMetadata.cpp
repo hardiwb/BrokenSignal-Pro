@@ -14,6 +14,7 @@ const HelpEntry RADIO_HELP_ENTRIES[] = {
     {"[W]", "Back to music"},
     {"[Esc]", "Applications"},
     {"[N]", "Quick note"},
+    {"[E]", "Quick expense"},
     {"[Opt]", "Toggle Options"},
     {"[Alt]", "Toggle Applications"},
     {"[Ctrl]", "Toggle Control Panel"},
@@ -82,8 +83,8 @@ void openWifi(int)
 
 void buildRadioOptions(std::vector<AppOption> &options)
 {
-    options.push_back({"New Radio", "", radioCount < RADIO_MAX, false, true, newRadio});
-    options.push_back({"Delete Radio", "", radioCount > 0, false, true, deleteRadio});
+    options.push_back({"Add Station", "", radioCount < RADIO_MAX, false, true, newRadio});
+    options.push_back({"Remove Station", "", radioCount > 0, false, true, deleteRadio});
     options.push_back({"Force AAC", radioForceAac ? "On" : "Off", true, true, false, adjustForceAac});
     options.push_back({"Playback Timer", playbackTimerLabel(), true, true, false, adjustPlaybackTimer});
     options.push_back({"WiFi", wifiLabel(), true, false, true, openWifi});
