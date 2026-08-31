@@ -448,6 +448,7 @@ Dependencies are managed by `platformio.ini`.
 
 - Add infrared module.
 - Add Bluetooth functionality.
+- Prototype ESP-NOW daily note send to ESP32-C3 e-ink devices such as Xteink X3.
 - Continue removing legacy UI code.
 - Further tune overlay and keyboard input behavior on-device.
 

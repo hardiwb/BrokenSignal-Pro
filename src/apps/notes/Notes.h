@@ -24,4 +24,6 @@ void notesMoveSelectedToTomorrow();
 void notesPromptMoveSelectedToDate();
 void notesEditSelected();
 void notesDeleteSelected();
+// Day view: viewed day. Month view: selected note's day.
+void notesSendViewedDayToXteink(bool includeCompleted = false);
 void handleNotesInput(Keyboard_Class::KeysState &keys);

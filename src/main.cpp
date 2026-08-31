@@ -22,6 +22,7 @@
 #include "module/shell/Settings.h"
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
+#include "module/service/EspNowNotes.h"
 #include "apps/notes/Notes.h"
 
 namespace
@@ -167,6 +168,8 @@ void loop()
   else
     pumpAudio();
 
+  tickEspNowNotes();
+
   bool anyPlaying = isPlaying || radioIsPlaying;
   delay(anyPlaying ? 1 : 10);
 
@@ -284,7 +287,7 @@ void loop()
     M5Cardputer.Display.setBrightness(0);
   }
 
-  if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying &&
+  if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying && !espNowNotesBusy() &&
       millis() - lastActivityMs >= (unsigned long)deepSleepSec * 1000UL)
   {
     saveSettings();

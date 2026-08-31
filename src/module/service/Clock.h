@@ -3,6 +3,7 @@
 #include <time.h>
 
 bool initRtcClock();
+// Configured local date/time (system clock and RTC remain UTC).
 bool getCurrentTime(struct tm &out);
 bool syncSystemClockFromRtc();
 bool syncRtcFromSystemClock();

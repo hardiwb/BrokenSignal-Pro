@@ -11,6 +11,7 @@
 #include "core/System.h"
 #include "module/shell/Help.h"
 #include "module/service/Clock.h"
+#include "module/service/EspNowNotes.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -71,6 +72,8 @@ bool getViewedTime(struct tm &viewed)
     }
     else
     {
+        // Month navigation must not overflow short months (e.g. Aug 31 -> Oct 1).
+        viewed.tm_mday = 1;
         viewed.tm_mon += notesMonthOffset;
     }
 
@@ -116,8 +119,18 @@ void updateViewedDateCache()
 {
     struct tm viewed{};
     getViewedTime(viewed);
-    currentDay = viewedDateKey();
-    currentMonth = viewedMonthKey();
+    currentDay = formatDateKey(viewed);
+    currentMonth = currentDay.substring(0, 7);
+}
+
+bool refreshViewedDate()
+{
+    if (viewedDateKey() == currentDay)
+        return false;
+
+    resetNotesCursor();
+    loadNote();
+    return true;
 }
 
 String getDisplayDateString()
@@ -647,6 +660,107 @@ void notesDeleteSelected()
     removeSelectedNote();
 }
 
+void notesSendViewedDayToXteink(const bool includeCompleted)
+{
+    // Keep transient labels within the narrow header slot (eight characters).
+    constexpr size_t MAX_MESSAGE_BYTES = sticky_note::MAX_MESSAGE_BYTES;
+    if (refreshViewedDate())
+        drawNotes();
+    if (visibleNoteIndices.empty())
+    {
+        showHdrMsg("NO NOTES");
+        return;
+    }
+
+    // In Month view, send the selected entry's day, not today's date or
+    // the entire month under one date. Day view sends the day being browsed.
+    String sendDay = currentDay;
+    if (notesViewMode == NotesViewMode::Month)
+    {
+        const int selectedIndex = noteEntryIndexFromVisible(notesSelected);
+        if (selectedIndex < 0 || selectedIndex >= static_cast<int>(noteEntries.size()))
+        {
+            showHdrMsg("NO NOTES");
+            return;
+        }
+        sendDay = noteEntries[selectedIndex].stamp.substring(0, 10);
+    }
+    struct tm sendDate{};
+    if (!parseDateKey(sendDay, sendDate))
+    {
+        showHdrMsg("BAD DATE");
+        return;
+    }
+
+    // Single reusable composition buffer; do not place 2 KB on the task stack.
+    static char message[MAX_MESSAGE_BYTES + 1] = {};
+    size_t messageLength = 0;
+    for (size_t visibleIndex = 0; visibleIndex < visibleNoteIndices.size(); ++visibleIndex)
+    {
+        const int noteIndex = visibleNoteIndices[visibleIndex];
+        if (noteIndex < 0 || noteIndex >= static_cast<int>(noteEntries.size()))
+            continue;
+
+        const NoteEntry &entry = noteEntries[noteIndex];
+        if (entry.stamp.substring(0, 10) != sendDay)
+            continue;
+        if (entry.done && !includeCompleted)
+            continue;
+
+        const char *separator = messageLength == 0 ? "" : "\n";
+        const char *status = entry.done ? "[x] " : "[ ] ";
+        const size_t separatorLength = strlen(separator);
+        const size_t statusLength = strlen(status);
+        const size_t textLength = entry.text.length();
+        if (messageLength + separatorLength + statusLength + textLength > MAX_MESSAGE_BYTES)
+        {
+            showHdrMsg("TOO LONG");
+            return;
+        }
+
+        memcpy(message + messageLength, separator, separatorLength);
+        messageLength += separatorLength;
+        memcpy(message + messageLength, status, statusLength);
+        messageLength += statusLength;
+        for (size_t i = 0; i < textLength; ++i)
+        {
+            const char value = entry.text.charAt(i);
+            message[messageLength++] = value == '\n' || value == '\r' || value == '\t' ? ' ' : value;
+        }
+    }
+    if (messageLength == 0)
+    {
+        showHdrMsg("ALL DONE");
+        return;
+    }
+    message[messageLength] = '\0';
+
+    const EspNowNotesStartResult result = startEspNowNoteSend(
+        message,
+        messageLength,
+        static_cast<uint16_t>(sendDate.tm_year + 1900),
+        static_cast<uint8_t>(sendDate.tm_mon + 1),
+        static_cast<uint8_t>(sendDate.tm_mday));
+    switch (result)
+    {
+    case EspNowNotesStartResult::Started:
+        showHdrMsg("SENDING");
+        break;
+    case EspNowNotesStartResult::Busy:
+        showHdrMsg("BUSY");
+        break;
+    case EspNowNotesStartResult::RadioPlaying:
+        showHdrMsg("RADIO ON");
+        break;
+    case EspNowNotesStartResult::InvalidNote:
+        showHdrMsg("BAD NOTE");
+        break;
+    case EspNowNotesStartResult::RadioError:
+        showHdrMsg("ERROR");
+        break;
+    }
+}
+
 
 void notesLoop()
 {
@@ -663,6 +777,31 @@ void notesLoop()
         !debugOverlayVisible && !calculatorVisible;
     if (!notesScreenVisible)
         return;
+
+    // Reload both the date label and SD month when local midnight or a clock
+    // correction changes the viewed date, even when the notes list is empty.
+    static unsigned long lastDateCheckMs = 0;
+    if (millis() - lastDateCheckMs >= 1000)
+    {
+        lastDateCheckMs = millis();
+        if (refreshViewedDate())
+            drawNotes();
+    }
+
+    switch (takeEspNowNotesResult())
+    {
+    case EspNowNotesResult::Sent:
+        showHdrMsg("SENT");
+        break;
+    case EspNowNotesResult::Timeout:
+        showHdrMsg("TIMEOUT");
+        break;
+    case EspNowNotesResult::RadioError:
+        showHdrMsg("ERROR");
+        break;
+    case EspNowNotesResult::None:
+        break;
+    }
 
     char clockBuf[6];
     formatClock(clockBuf, sizeof(clockBuf));

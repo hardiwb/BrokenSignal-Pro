@@ -172,6 +172,8 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         case 'u': case 'U': selectTopNote(); return;
         case 'b': case 'B': selectBottomNote(); return;
         case 'r': case 'R': removeSelectedNote(); return;
+        case 's': notesSendViewedDayToXteink(false); return;
+        case 'S': notesSendViewedDayToXteink(true); return;
         case 'x': case 'X': toggleSelectedNoteDone(); return;
         case ';':
         case '.':

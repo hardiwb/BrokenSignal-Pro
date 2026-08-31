@@ -72,7 +72,7 @@ void saveNote()
     File f = SD.open(notePath, FILE_WRITE);
     if (!f)
     {
-        showHdrMsg("NOTE SAVE FAIL");
+        showHdrMsg("SD ERROR");
         return;
     }
 

@@ -25,7 +25,7 @@ inline void drawFullBlock(int x, int centerY, int cellW, int cellH, uint16_t col
 inline void drawDashedCellLine(int x, int y, int width, uint16_t color)
 {
     String line;
-    const int dashW = max(1, M5Cardputer.Display.textWidth("-", &fonts::Font0));
+    const int dashW = max(1, static_cast<int>(M5Cardputer.Display.textWidth("-", &fonts::Font0)));
     for (int used = 0; used + dashW <= width; used += dashW)
         line += '-';
 

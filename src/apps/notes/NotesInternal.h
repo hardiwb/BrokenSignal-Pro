@@ -43,6 +43,7 @@ String formatEntryLabel(const NoteEntry &entry);
 int visibleNoteCount();
 int noteEntryIndexFromVisible(int visibleIndex);
 void updateViewedDateCache();
+void resetNotesCursor();
 void shiftNotesView(int delta);
 void clampNotesSelection();
 

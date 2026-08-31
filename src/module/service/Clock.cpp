@@ -331,9 +331,8 @@ bool getCurrentTime(struct tm &out)
     if (now < 1000000000)
         return false;
 
-    localtime_r(&now, &out);
-
-    return true;
+    // NTP/system time stays UTC; apps must use the same local date as the clock.
+    return getDisplayTm(out);
 }
 
 //==================================================
