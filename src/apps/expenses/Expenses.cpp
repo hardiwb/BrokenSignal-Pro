@@ -114,7 +114,7 @@ void drawEditor() {
     model.title = invalidInput ? "Invalid Entry" : (editVisibleIndex >= 0 ? "Edit Entry" : "New Entry");
     model.value = editName; model.secondValue = editAmount; model.activeField = editorField;
     model.cursorIndex = editorField == 0 ? nameCursor : amountCursor;
-    model.prompt = "Entry name"; model.secondPrompt = "5000 " + defaultCurrency;
+    model.prompt = "Entry name"; model.secondPrompt = defaultCurrency;
     model.helperText = "[Tab]Switch [Fn L/R]Cursor"; model.confirmText = "[Esc]Close [Ok]Save"; drawOverlay(model);
 }
 void drawTextModal(const String &title, const String &prompt, const String &value) {
@@ -129,11 +129,12 @@ bool splitAmount(const String &input, String &value, String &currency) {
     return true;
 }
 void beginEditor(int index) {
-    editVisibleIndex = index; editName = ""; editAmount = "5000 " + defaultCurrency;
+    editVisibleIndex = index; editName = ""; editAmount = " " + defaultCurrency;
     if (index >= 0 && index < (int)visible.size()) {
         const auto &e = entries[visible[index]]; editName = e.name; editAmount = e.value + " " + e.currency;
     }
-    editorField = 0; nameCursor = editName.length(); amountCursor = editAmount.length();
+    editorField = 0; nameCursor = editName.length();
+    amountCursor = index >= 0 ? editAmount.length() : 0;
     invalidInput = false; modal = Modal::Editor; drawEditor();
 }
 void saveEditor() {
