@@ -15,6 +15,7 @@
 #include "module/shell/Applications.h"
 #include "module/shell/Options.h"
 #include "apps/notes/Notes.h"
+#include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
 #include "module/service/WiFi.h"
 
@@ -278,6 +279,12 @@ void handleModalSurfaceInput(Keyboard_Class::KeysState &ks)
     if (notesMoveDateInputActive())
     {
         handleNotesInput(ks);
+        return;
+    }
+
+    if (expensesModalActive())
+    {
+        handleExpensesInput(ks);
         return;
     }
 

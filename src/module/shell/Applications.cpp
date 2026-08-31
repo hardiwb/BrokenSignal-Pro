@@ -94,6 +94,18 @@ void handleApplicationsInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
+        if (c >= '0' && c <= '9')
+        {
+            // 1..9 open the matching visible row; 0 is the tenth row.
+            const int shortcutIndex = c == '0' ? 9 : c - '1';
+            if (shortcutIndex < applicationCount)
+            {
+                applicationSelected = shortcutIndex;
+                openSelectedApplication();
+            }
+            return;
+        }
+
         if (c == ';')
         {
             int oldSelected = applicationSelected;

@@ -4,6 +4,7 @@
 #include "core/System.h"
 #include "apps/calculator/Calculator.h"
 #include "apps/notes/Notes.h"
+#include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
 #include "module/service/WiFi.h"
 #include "module/shell/Applications.h"
@@ -27,7 +28,7 @@ ActiveSurface resolveActiveSurface()
 
     if (wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
         removeConfirmVisible || settingsInputOverlayActive() ||
-        notesMoveDateInputActive() || calculatorEditActive() ||
+        notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
         appRuntimeQuickAccessActive())
     {
         return {SurfaceKind::OverlayModal, owner};
@@ -83,6 +84,12 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         if (notesMoveDateInputActive())
         {
             cancelNotesMoveDateInput();
+            return true;
+        }
+
+        if (expensesModalActive())
+        {
+            cancelExpensesModal();
             return true;
         }
 

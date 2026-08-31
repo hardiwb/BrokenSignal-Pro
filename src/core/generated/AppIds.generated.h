@@ -9,4 +9,5 @@ enum class HostApp : uint8_t
     Radio = 1,
     Notes = 2,
     Calculator = 3,
+    Expenses = 4,
 };

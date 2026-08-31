@@ -1,0 +1,12 @@
+{
+  "id": "Expenses",
+  "persistent_id": 4,
+  "order": 3,
+  "name": "Expenses",
+  "header_tag": "EXPENSES",
+  "includes": ["apps/expenses/Expenses.h", "apps/expenses/ExpensesApp.h", "apps/expenses/ExpensesMetadata.h"],
+  "callbacks": {"open": "openExpensesApp", "draw": "drawExpenses", "input": "handleExpensesAppInput", "tick": "tickExpensesApp"},
+  "help": {"title": "EXPENSE KEYS", "entries": "EXPENSES_HELP_ENTRIES", "count": "EXPENSES_HELP_COUNT"},
+  "options": {"build": "buildExpensesOptions", "enter_enabled": true, "show_run_hint": true},
+  "quick_access": null
+}
