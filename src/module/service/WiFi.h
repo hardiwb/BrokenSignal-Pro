@@ -48,6 +48,6 @@ void showWifiPassOverlay(const String &ssid);
 
 void openWifiMenu();
 void closeWifiInput();
-WifiStartupResult ensureWifiForRadio();
+WifiStartupResult ensureWifiConnected();
 bool wifiInputActive();
 WifiInputResult handleWifiInput(Keyboard_Class::KeysState &ks);

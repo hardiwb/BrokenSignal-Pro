@@ -284,6 +284,28 @@ Notes use monthly files under `/Notes/`.
 In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
 changes the date, while `Fn+Left/Right` moves the active field cursor.
 
+### Expense Tracker
+
+Press `E` from another full-screen app to open quick expense entry. The full
+Expenses app provides date navigation, editing, QR sharing, and authenticated
+upload to the PC companion.
+
+| Key | Action |
+| --- | ------ |
+| `A` | Add expense |
+| `R` | Remove selected expense |
+| `T` | Show the displayed day's total as a toast |
+| `X` | Toggle the selected expense's shared/processed display state |
+| `Ok` | Edit selected expense |
+| `;` / `.` | Cursor up / down |
+| `,` / `/` | Previous / next date |
+| `Opt` | Open expense actions |
+
+Expense Options include moving an entry, editing/deleting it, uploading the
+selected entry to the PC, sharing the day's entries as QR pages, and changing
+the default currency. Upload automatically opens the WiFi connection flow when
+the Cardputer is offline and resumes after a successful connection.
+
 ### WiFi
 
 WiFi is available from Settings.
@@ -412,10 +434,16 @@ SD/
 |       |-- 01 - Track.mp3
 |       `-- 02 - Track.m4a
 |
-`-- Notes/
+|-- Notes/
+|   |-- 2026-08.txt
+|   |-- 2026-09.txt
+|   `-- 2026-10.txt
+|
+`-- Expenses/
+    |-- settings.cfg
+    |-- sync.cfg
     |-- 2026-08.txt
-    |-- 2026-09.txt
-    `-- 2026-10.txt
+    `-- 2026-09.txt
 ```
 
 Notes are stored per month. Each note line is stored as:
@@ -426,6 +454,16 @@ YYYY-MM-DD|x|done note text
 ```
 
 `-` means active, `x` means done.
+
+Expenses are stored per month. Current rows include a stable entry ID:
+
+```text
+YYYY-MM-DD|-|stable-entry-id|name|amount|currency
+```
+
+Older five-field rows are migrated automatically when their month is opened.
+`/Expenses/sync.cfg` contains only the PC bridge address and Cardputer shared
+token; Notion credentials always remain on the PC.
 
 ## Build
 
@@ -438,6 +476,27 @@ platformio run -e cardputeradv
 ```
 
 Dependencies are managed by `platformio.ini`.
+
+## PC Expense Companion
+
+The isolated [`companion/`](companion/README.md) project accepts pasted QR
+payloads and authenticated Cardputer uploads over trusted local Wi-Fi. It uses
+Codex to normalize titles/categories, keeps duplicate and retry state in
+SQLite, supports safe dry-run modes, and can create one Notion page per expense.
+
+Windows setup:
+
+```powershell
+cd companion
+.\configure-notion.bat
+.\start-expense-server.bat
+```
+
+The main BAT currently enables LAN and real Notion submission. Use
+`.\start-expense-server.ps1 -Lan` for a Codex-powered dry run. See the companion
+guide before enabling sync; every user must supply their own Notion token and
+expense database ID. A related Account page ID is needed only when their schema
+uses that relation; leave the setup prompt blank otherwise.
 
 ## Hardware Requirements
 

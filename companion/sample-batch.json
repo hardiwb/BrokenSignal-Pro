@@ -1,0 +1,26 @@
+{
+  "device": "cardputer",
+  "entries": [
+    {
+      "id": "20260901-001",
+      "name": "Ayam Goreng",
+      "value": "20000",
+      "currency": "IDR",
+      "date": "2026-09-01"
+    },
+    {
+      "id": "20260901-002",
+      "name": "Es Doger",
+      "value": "6000",
+      "currency": "IDR",
+      "date": "2026-09-01"
+    },
+    {
+      "id": "20260901-003",
+      "name": "Nasi Rendang",
+      "value": "20000",
+      "currency": "IDR",
+      "date": "2026-09-01"
+    }
+  ]
+}

@@ -22,7 +22,7 @@ void enterWebRadioMode()
     radioScrollTop = 0;
     loadRadioList();
 
-    if (ensureWifiForRadio() == WifiStartupResult::Connected)
+    if (ensureWifiConnected() == WifiStartupResult::Connected)
     {
         drawRadioAll();
         return;

@@ -1,5 +1,7 @@
 #include "apps/expenses/Expenses.h"
+#include "apps/expenses/ExpenseSyncTransport.h"
 #include <SD.h>
+#include <esp_system.h>
 #include <qrcode.h>
 #include <time.h>
 #include <vector>
@@ -7,15 +9,17 @@
 #include "core/State.h"
 #include "core/System.h"
 #include "module/service/Clock.h"
+#include "module/service/WiFi.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
 #include "UI/Overlay.h"
 #include "UI/Themes.h"
+#include "UI/Toast.h"
 
 namespace {
-struct ExpenseEntry { String date; bool shared = false; String name; String value; String currency; };
-enum class Modal { None, Editor, MoveDate, Currency, Qr };
+struct ExpenseEntry { String date; bool shared = false; String id; String name; String value; String currency; };
+enum class Modal { None, Editor, MoveDate, Currency, Qr, UploadResult };
 std::vector<ExpenseEntry> entries;
 std::vector<int> visible;
 Modal modal = Modal::None;
@@ -28,6 +32,70 @@ bool invalidInput = false;
 bool quickLogActive = false;
 std::vector<String> qrPages;
 int qrPage = 0;
+String uploadResult;
+bool uploadPending = false;
+
+struct CurrencyTotal { String currency; String value; };
+
+String addWholeAmounts(const String &left, const String &right) {
+    int leftIndex = left.length() - 1, rightIndex = right.length() - 1, carry = 0;
+    String result;
+    result.reserve(max(left.length(), right.length()) + 1);
+    while (leftIndex >= 0 || rightIndex >= 0 || carry) {
+        const int leftDigit = leftIndex >= 0 ? left[leftIndex--] - '0' : 0;
+        const int rightDigit = rightIndex >= 0 ? right[rightIndex--] - '0' : 0;
+        const int sum = leftDigit + rightDigit + carry;
+        result = String(static_cast<char>('0' + sum % 10)) + result;
+        carry = sum / 10;
+    }
+    int leadingZeros = 0;
+    while (leadingZeros + 1 < (int)result.length() && result[leadingZeros] == '0') leadingZeros++;
+    return leadingZeros ? result.substring(leadingZeros) : result;
+}
+
+String formatWholeAmount(const String &value) {
+    String formatted;
+    formatted.reserve(value.length() + value.length() / 3);
+    for (int i = 0; i < (int)value.length(); ++i) {
+        if (i > 0 && ((int)value.length() - i) % 3 == 0) formatted += '.';
+        formatted += value[i];
+    }
+    return formatted;
+}
+
+void showDayTotal() {
+    std::vector<CurrencyTotal> totals;
+    for (int actual : visible) {
+        const ExpenseEntry &entry = entries[actual];
+        bool wholeAmount = entry.value.length() > 0;
+        for (int i = 0; i < (int)entry.value.length(); ++i)
+            if (entry.value[i] < '0' || entry.value[i] > '9') { wholeAmount = false; break; }
+        if (!wholeAmount) continue;
+
+        CurrencyTotal *total = nullptr;
+        for (auto &candidate : totals)
+            if (candidate.currency.equalsIgnoreCase(entry.currency)) { total = &candidate; break; }
+        if (!total) {
+            totals.push_back({entry.currency, "0"});
+            total = &totals.back();
+        }
+        total->value = addWholeAmounts(total->value, entry.value);
+    }
+
+    String text = "Total: ";
+    if (totals.empty()) text += "0 " + defaultCurrency;
+    for (int i = 0; i < (int)totals.size(); ++i) {
+        if (i > 0) text += " + ";
+        text += formatWholeAmount(totals[i].value) + " " + totals[i].currency;
+    }
+    showToast(text, 2000);
+}
+
+String makeExpenseId(const String &date) {
+    String compact = date; compact.replace("-", "");
+    char suffix[18]; snprintf(suffix, sizeof(suffix), "-%08lx%08lx", (unsigned long)esp_random(), (unsigned long)esp_random());
+    return compact + suffix;
+}
 
 bool parseDate(const String &text, struct tm &date) {
     int y, m, d; char tail;
@@ -73,24 +141,31 @@ void saveEntries() {
     SD.mkdir("/Expenses"); SD.remove(filePath.c_str()); File f = SD.open(filePath, FILE_WRITE);
     if (!f) { showHdrMsg("SD ERROR"); return; }
     for (const auto &e : entries)
-        f.printf("%s|%c|%s|%s|%s\n", e.date.c_str(), e.shared ? 'X' : '-', e.name.c_str(), e.value.c_str(), e.currency.c_str());
+        f.printf("%s|%c|%s|%s|%s|%s\n", e.date.c_str(), e.shared ? 'X' : '-', e.id.c_str(), e.name.c_str(), e.value.c_str(), e.currency.c_str());
     f.close();
 }
 void loadEntries() {
-    entries.clear(); updateDate(); File f = SD.open(filePath, FILE_READ);
+    entries.clear(); updateDate(); bool migrated = false; File f = SD.open(filePath, FILE_READ);
     if (f) {
         while (f.available()) {
             String line = f.readStringUntil('\n'); line.trim();
             int p1 = line.indexOf('|'), p2 = line.indexOf('|', p1 + 1);
-            int p3 = line.indexOf('|', p2 + 1), p4 = line.indexOf('|', p3 + 1);
+            int p3 = line.indexOf('|', p2 + 1), p4 = line.indexOf('|', p3 + 1), p5 = line.indexOf('|', p4 + 1);
             if (p1 < 0 || p2 < 0 || p3 < 0 || p4 < 0) continue;
             ExpenseEntry e; e.date = line.substring(0, p1);
             e.shared = line.substring(p1 + 1, p2).equalsIgnoreCase("X");
-            e.name = line.substring(p2 + 1, p3); e.value = line.substring(p3 + 1, p4);
-            e.currency = line.substring(p4 + 1); e.currency.trim(); entries.push_back(e);
+            if (p5 >= 0) {
+                e.id = line.substring(p2 + 1, p3); e.name = line.substring(p3 + 1, p4);
+                e.value = line.substring(p4 + 1, p5); e.currency = line.substring(p5 + 1);
+            } else {
+                e.id = makeExpenseId(e.date); e.name = line.substring(p2 + 1, p3);
+                e.value = line.substring(p3 + 1, p4); e.currency = line.substring(p4 + 1); migrated = true;
+            }
+            e.currency.trim(); entries.push_back(e);
         }
         f.close();
     }
+    if (migrated) saveEntries();
     rebuildVisible();
 }
 String displayDate() {
@@ -110,13 +185,15 @@ ListModel listModel() {
     }
     return model;
 }
-void drawEditor() {
+void drawEditor(bool inputOnly = false) {
     OverlayModel model; model.type = OverlayType::TwoFieldInput;
     model.title = invalidInput ? "Invalid Entry" : (editVisibleIndex >= 0 ? "Edit Entry" : "New Entry");
     model.value = editName; model.secondValue = editAmount; model.activeField = editorField;
     model.cursorIndex = editorField == 0 ? nameCursor : amountCursor;
     model.prompt = "Entry name"; model.secondPrompt = defaultCurrency;
-    model.helperText = "[Tab]Switch [Fn L/R]Cursor"; model.confirmText = "[Esc]Close [Ok]Save"; drawOverlay(model);
+    model.helperText = "[Tab]Switch [Fn L/R]Cursor"; model.confirmText = "[Esc]Close [Ok]Save";
+    if (inputOnly) drawOverlayTwoFieldInputValues(model);
+    else drawOverlay(model);
 }
 void drawTextModal(const String &title, const String &prompt, const String &value) {
     OverlayModel model; model.type = OverlayType::TextInput; model.title = invalidInput ? "Invalid " + title : title;
@@ -144,10 +221,10 @@ void saveEditor() {
     ExpenseEntry e; e.date = currentDate; e.name = editName; e.value = value; e.currency = cleanField(currency);
     if (editVisibleIndex >= 0 && editVisibleIndex < (int)visible.size()) {
         const int actual = visible[editVisibleIndex];
-        // Editing changes the serialized payload, so it must be shared again.
+        e.id = entries[actual].shared ? makeExpenseId(currentDate) : entries[actual].id;
         e.shared = false;
         entries[actual] = e;
-    } else entries.push_back(e);
+    } else { e.id = makeExpenseId(currentDate); entries.push_back(e); }
     saveEntries(); rebuildVisible();
     modal = Modal::None;
     if (quickLogActive) {
@@ -158,14 +235,14 @@ void saveEditor() {
 bool appendToMonth(const ExpenseEntry &e, const String &target) {
     String month = target.substring(0, 7); if (month == currentMonth) return true;
     SD.mkdir("/Expenses"); File f = SD.open("/Expenses/" + month + ".txt", FILE_APPEND); if (!f) return false;
-    f.printf("%s|%c|%s|%s|%s\n", target.c_str(), e.shared ? 'X' : '-', e.name.c_str(), e.value.c_str(), e.currency.c_str());
+    f.printf("%s|%c|%s|%s|%s|%s\n", target.c_str(), e.shared ? 'X' : '-', e.id.c_str(), e.name.c_str(), e.value.c_str(), e.currency.c_str());
     f.close(); return true;
 }
 bool moveSelected(const String &target) {
     struct tm parsed{}; if (!parseDate(target, parsed) || visible.empty()) return false;
     int actual = visible[selected]; ExpenseEntry moved = entries[actual];
     moved.date = target;
-    // The date is part of the QR payload.
+    if (moved.shared) moved.id = makeExpenseId(target);
     moved.shared = false;
     if (target.substring(0, 7) == currentMonth) entries[actual] = moved;
     else { if (!appendToMonth(moved, target)) return false; entries.erase(entries.begin() + actual); }
@@ -187,6 +264,10 @@ void drawQr() {
     d.setTextDatum(middle_center); d.setTextColor(T->accent1, T->bg);
     d.drawString("QR " + String(qrPage + 1) + "/" + String(qrPages.size()) + " [Esc]Close [,/]Page", 120, 130, &fonts::Font0);
 }
+void drawUploadResult() {
+    OverlayModel model; model.type = OverlayType::Message; model.title = "PC PREVIEW";
+    model.items.push_back(uploadResult); model.confirmText = "[Esc/Ok] Close"; drawOverlay(model);
+}
 }
 
 String expensesDefaultCurrency() { return defaultCurrency; }
@@ -207,8 +288,9 @@ void drawExpenses() {
     if (modal == Modal::MoveDate) { drawTextModal("Move to Date", "YYYY-MM-DD", moveDate); return; }
     if (modal == Modal::Currency) { drawTextModal("Edit Currency", "Default currency", currencyInput); return; }
     if (modal == Modal::Qr) { drawQr(); return; }
+    if (modal == Modal::UploadResult) { drawUploadResult(); return; }
     HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = displayDate(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[A]+ [R]- [X]Hide"; footer.center = "[Ok]Edit";
+    drawList(listModel()); FooterModel footer; footer.left = "[A]+ [R]- [T]Total"; footer.center = "[Ok]Edit";
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
@@ -233,6 +315,31 @@ void expensesPromptMoveDate() {
 void expensesEditDefaultCurrency() {
     currencyInput = defaultCurrency; invalidInput = false; modal = Modal::Currency; drawExpenses();
 }
+void expensesUploadSelected() {
+    if (visible.empty()) return;
+    ExpenseSyncConfig config; String error;
+    if (!loadExpenseSyncConfig(config, error)) {
+        uploadResult = error; modal = Modal::UploadResult; drawExpenses(); return;
+    }
+    if (WiFi.status() != WL_CONNECTED) {
+        uploadPending = true;
+        if (ensureWifiConnected() != WifiStartupResult::Connected) return;
+        uploadPending = false;
+    }
+    OverlayModel progress; progress.type = OverlayType::Message; progress.title = "PC PREVIEW";
+    progress.items.push_back("Uploading expense..."); progress.confirmText = "Please wait"; drawOverlay(progress);
+    ExpenseEntry &entry = entries[visible[selected]];
+    const bool accepted = uploadExpensePreview(config, entry.id, entry.name, entry.value, entry.currency, entry.date, uploadResult);
+    if (accepted) { entry.shared = true; saveEntries(); }
+    modal = Modal::UploadResult; drawExpenses();
+}
+bool expensesResumePendingUpload() {
+    if (!uploadPending) return false;
+    uploadPending = false;
+    expensesUploadSelected();
+    return true;
+}
+void expensesCancelPendingUpload() { uploadPending = false; }
 void expensesShareQr() {
     if (visible.empty()) return;
     qrPages.clear(); String page; constexpr int maxPayload = 220;
@@ -253,6 +360,10 @@ void cancelExpensesModal() {
 }
 
 void handleExpensesInput(Keyboard_Class::KeysState &ks) {
+    if (modal == Modal::UploadResult) {
+        if (keyboardBackPressed(ks) || ks.enter) cancelExpensesModal();
+        return;
+    }
     if (modal == Modal::Qr) {
         if (keyboardBackPressed(ks)) { cancelExpensesModal(); return; }
         for (char c : ks.word) if (c == ',' || c == '/') {
@@ -283,17 +394,21 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
     }
     if (modal == Modal::Editor) {
         if (keyboardBackPressed(ks)) { cancelExpensesModal(); return; }
-        if (ks.tab) { editorField = 1 - editorField; drawEditor(); return; }
+        if (ks.tab) { editorField = 1 - editorField; drawEditor(true); return; }
         if (ks.enter) { saveEditor(); return; }
         String &value = editorField == 0 ? editName : editAmount;
         int &cursor = editorField == 0 ? nameCursor : amountCursor;
         if (ks.fn) for (char c : ks.word) if (c == ',' || c == '/') {
-            cursor = constrain(cursor + (c == ',' ? -1 : 1), 0, (int)value.length()); drawEditor(); return;
+            cursor = constrain(cursor + (c == ',' ? -1 : 1), 0, (int)value.length()); drawEditor(true); return;
         }
-        if (ks.del && cursor > 0) { value.remove(cursor - 1, 1); cursor--; invalidInput = false; drawEditor(); return; }
+        if (ks.del && cursor > 0) {
+            const bool redrawFrame = invalidInput;
+            value.remove(cursor - 1, 1); cursor--; invalidInput = false; drawEditor(!redrawFrame); return;
+        }
         for (char c : ks.word) if (keyboardTextInputChar(ks, c) && value.length() < 80) {
+            const bool redrawFrame = invalidInput;
             value = value.substring(0, cursor) + String(c) + value.substring(cursor);
-            cursor++; invalidInput = false; drawEditor();
+            cursor++; invalidInput = false; drawEditor(!redrawFrame);
         }
         return;
     }
@@ -302,6 +417,7 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
     for (char c : ks.word) {
         if (c == 'a' || c == 'A') { expensesNew(); return; }
         if (c == 'r' || c == 'R') { expensesDelete(); return; }
+        if (c == 't' || c == 'T') { showDayTotal(); return; }
         if (c == 'x' || c == 'X') { expensesToggleSynced(); return; }
         if (c == ',' || c == '/') {
             dayOffset += c == ',' ? -1 : 1; selected = scrollTop = 0; loadEntries(); drawExpenses(); return;

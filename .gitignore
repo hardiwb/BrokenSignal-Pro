@@ -2,3 +2,6 @@
 .vscode/*
 blueprint
 build
+__pycache__/
+*.py[cod]
+companion/data/

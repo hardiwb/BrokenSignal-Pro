@@ -330,7 +330,7 @@ void closeWifiInput()
     wifiPassOverlayVisible = false;
 }
 
-WifiStartupResult ensureWifiForRadio()
+WifiStartupResult ensureWifiConnected()
 {
     if (WiFi.status() == WL_CONNECTED)
     {

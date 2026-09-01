@@ -162,8 +162,18 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 {
     WifiInputResult result = handleWifiInput(ks);
 
-    if (result == WifiInputResult::Connected ||
-        result == WifiInputResult::ReturnToHost)
+    if (result == WifiInputResult::Connected)
+    {
+        if (expensesResumePendingUpload())
+            return;
+        if (webRadioMode)
+            drawRadioAll();
+        else
+            drawAll();
+        return;
+    }
+
+    if (result == WifiInputResult::ReturnToHost)
     {
         if (webRadioMode)
             drawRadioAll();
@@ -174,6 +184,7 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 
     if (result == WifiInputResult::ExitRequested)
     {
+        expensesCancelPendingUpload();
         if (webRadioMode)
             appRuntimeOpen(HostApp::Music);
         else
@@ -211,6 +222,7 @@ void closeActiveShellMenu()
 
     if (wifiMenuVisible)
     {
+        expensesCancelPendingUpload();
         closeWifiInput();
         if (webRadioMode)
             drawRadioAll();

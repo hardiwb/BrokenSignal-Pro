@@ -1,0 +1,4 @@
+2026-09-01
+Ayam Goreng|20000|IDR
+Es Doger|6000|IDR
+Nasi Rendang|20000|IDR

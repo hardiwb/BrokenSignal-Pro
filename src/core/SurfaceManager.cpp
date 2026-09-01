@@ -166,6 +166,7 @@ bool closeTopmostSurface(const ActiveSurface &surface)
 
         if (wifiMenuVisible || wifiPassOverlayVisible)
         {
+            expensesCancelPendingUpload();
             closeWifiInput();
             if (webRadioMode)
                 drawRadioAll();
