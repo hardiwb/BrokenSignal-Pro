@@ -5,9 +5,9 @@ An audio player, web radio, quick notes, and utility shell for the **Cardputer A
 **Pro stands for Productivity**: fast access to music, radio, notes,
 calculations, and everyday utilities from one keyboard-driven interface.
 
-**Current release:** `v1.3.0`
+**Current release:** `v1.4.0`
 
-**Latest tagged release:** `v1.3.0`
+**Latest tagged release:** `v1.4.0`
 
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
 
@@ -17,7 +17,7 @@ BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt
 
 ## Current Status
 
-BrokenSignal Pro `v1.3.0` is organized as a small embedded shell runtime. A
+BrokenSignal Pro `v1.4.0` is organized as a small embedded shell runtime. A
 foreground app runs under shared Applications, Options, Control Panel, Help,
 Debug, quick-access, and modal surface layers.
 
@@ -33,20 +33,19 @@ Themes change color and mood, not layout. Music Player, Web Radio, Notes,
 Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives
 and keyboard routing rules.
 
-## v1.3.0 Release Highlights
+## v1.4.0 Release Highlights
 
-- Added the Applications shell with Music Player, Web Radio, Notes, and Calculator.
-- Added contextual Options for Music, Radio, Notes, and Calculator.
-- Standardized modifier routing: `Alt` toggles Applications, `Opt` toggles
-  Options, and `Ctrl` toggles Control Panel.
-- Expanded Calculator with full-screen history, operator-row editing, decimal
-  precision, rounding modes, and optional thousands separators.
-- Expanded Notes with Day/Month filtering in Options, date-aware editors, and
-  contextual note actions.
-- Added granular redraw for two-field overlays and guarded covered screens from
-  background refresh.
-- Reorganized host apps under `src/apps/`, with shell surfaces and shared
-  services split under `src/module/`.
+- Added the Expense Tracker with quick entry, date navigation, editing, moving,
+  deletion, default currency selection, and QR sharing.
+- Added stable expense IDs and local processed-state display for safe retries.
+- Added authenticated local WiFi upload from the Cardputer to the PC companion.
+- Added a PC companion that parses and validates expenses, uses Codex to
+  normalize titles and categories, and keeps duplicate/retry state in SQLite.
+- Added optional Notion page creation with locally generated, Git-ignored
+  configuration and an optional Account relation.
+- Added a `T` shortcut that shows the displayed day's currency-aware total.
+- Added automatic saved-network reconnection before expense upload, with WiFi
+  selection fallback and automatic upload resume after connection.
 
 ## Gallery
 
