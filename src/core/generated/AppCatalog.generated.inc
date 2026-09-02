@@ -41,3 +41,10 @@
         buildBluetoothKeyboardOptions, true, true,
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
+    {
+        HostApp::ThermalPrinter, "Thermal Printer", "PRINTER",
+        openThermalPrinterApp, drawThermalPrinterApp, handleThermalPrinterAppInput, tickThermalPrinterApp,
+        "PRINTER KEYS", THERMAL_PRINTER_HELP_ENTRIES, THERMAL_PRINTER_HELP_COUNT,
+        buildThermalPrinterOptions, true, true,
+        {0, nullptr, nullptr, nullptr, nullptr, nullptr}
+    },

@@ -109,7 +109,7 @@ and keyboard routing rules.
 - **Web radio**: Stream MP3/AAC stations over WiFi.
 - **Background audio**: Music or radio can keep playing while opening Settings, Notes, Help, WiFi, Debug, or Calculator.
 - **Notes**: Monthly note storage with quick note overlay, day/month filtering, and done-state dimming.
-- **Applications**: `Alt` opens a full application list for switching between Music Player, Web Radio, Notes, and Calculator.
+- **Applications**: `Alt` opens the generated application list, including the Thermal Printer client.
 - **Registry-driven quick access**: Apps can publish one overlay shortcut without changing every host app.
 - **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
 - **Context-aware Help**: `H` opens Help for the active full-screen application.
@@ -126,6 +126,8 @@ and keyboard routing rules.
   keys and disconnects the active typing session. Shared controller, security,
   bonding, and HID transport live in the Bluetooth service for reuse by future
   apps.
+- **Thermal printer**: Compose and queue text jobs through the ESP32-C3 printer's
+  versioned HTTP API, with label/continuous media settings and paper actions.
 
 ## UI Architecture
 
@@ -326,6 +328,31 @@ Expense Options include moving an entry, editing/deleting it, syncing all
 unmarked entries for the displayed day to the PC, sharing the day's entries as QR pages, and changing
 the default currency. Upload automatically opens the WiFi connection flow when
 the Cardputer is offline and resumes after a successful connection.
+
+### Thermal Printer
+
+Open Thermal Printer from Applications. The Cardputer and ESP32-C3 printer must
+be on the same WiFi network. The default server is
+`http://thermal-printer.local`; set `Printer URL` in Options to an explicit
+`http://<ip-address>` if mDNS is unavailable. Layout and server settings are
+saved to `/Printer/settings.cfg` on the SD card. Draft print text remains only
+in memory.
+
+| Key | Action |
+| --- | ------ |
+| `Ok` | Edit print text |
+| `P` | Queue the text job |
+| `S` | Read busy/queue/completed status |
+| `F` | Feed the configured number of lines |
+| `G` | Advance label media to the next gap |
+| `T` | Queue the printer test page |
+| `Fn` + `Ok` | Insert a newline while editing |
+| `Opt` | Open layout, server, and printer actions |
+
+The app uses API version 1 from the ESP32-C3 Thermal Printer Interface. A
+successful print response means the job was accepted into the printer queue;
+use `S` to check whether it has completed. Text jobs are limited to 2048 bytes.
+Image and PDF raster printing remains available from the printer's browser UI.
 
 ### WiFi
 

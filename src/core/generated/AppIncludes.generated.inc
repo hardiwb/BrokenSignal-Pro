@@ -15,4 +15,7 @@
 #include "apps/radio/Radio.h"
 #include "apps/radio/RadioApp.h"
 #include "apps/radio/RadioMetadata.h"
+#include "apps/thermalprinter/ThermalPrinter.h"
+#include "apps/thermalprinter/ThermalPrinterApp.h"
+#include "apps/thermalprinter/ThermalPrinterMetadata.h"
 #include "core/System.h"

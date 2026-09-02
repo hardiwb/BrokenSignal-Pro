@@ -1,0 +1,29 @@
+{
+  "id": "ThermalPrinter",
+  "persistent_id": 6,
+  "order": 6,
+  "name": "Thermal Printer",
+  "header_tag": "PRINTER",
+  "includes": [
+    "apps/thermalprinter/ThermalPrinter.h",
+    "apps/thermalprinter/ThermalPrinterApp.h",
+    "apps/thermalprinter/ThermalPrinterMetadata.h"
+  ],
+  "callbacks": {
+    "open": "openThermalPrinterApp",
+    "draw": "drawThermalPrinterApp",
+    "input": "handleThermalPrinterAppInput",
+    "tick": "tickThermalPrinterApp"
+  },
+  "help": {
+    "title": "PRINTER KEYS",
+    "entries": "THERMAL_PRINTER_HELP_ENTRIES",
+    "count": "THERMAL_PRINTER_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildThermalPrinterOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": null
+}

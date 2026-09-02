@@ -7,6 +7,7 @@
 #include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
+#include "apps/thermalprinter/ThermalPrinter.h"
 #include "module/service/WiFi.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Debug.h"
@@ -30,7 +31,8 @@ ActiveSurface resolveActiveSurface()
     if (wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
         removeConfirmVisible || settingsInputOverlayActive() ||
         notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
-        appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive())
+        appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive() ||
+        thermalPrinterModalActive())
     {
         return {SurfaceKind::OverlayModal, owner};
     }
@@ -91,6 +93,12 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         if (expensesModalActive())
         {
             cancelExpensesModal();
+            return true;
+        }
+
+        if (thermalPrinterModalActive())
+        {
+            cancelThermalPrinterModal();
             return true;
         }
 
@@ -168,6 +176,7 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         if (wifiMenuVisible || wifiPassOverlayVisible)
         {
             expensesCancelPendingUpload();
+            thermalPrinterCancelPendingOperation();
             closeWifiInput();
             if (webRadioMode)
                 drawRadioAll();

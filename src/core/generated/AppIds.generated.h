@@ -11,4 +11,5 @@ enum class HostApp : uint8_t
     Calculator = 3,
     Expenses = 4,
     BluetoothKeyboard = 5,
+    ThermalPrinter = 6,
 };

@@ -18,6 +18,7 @@
 #include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
+#include "apps/thermalprinter/ThermalPrinter.h"
 #include "module/service/WiFi.h"
 
 bool keyboardBackPressed(Keyboard_Class::KeysState &ks)
@@ -185,6 +186,8 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 
     if (result == WifiInputResult::Connected)
     {
+        if (thermalPrinterResumePendingOperation())
+            return;
         if (expensesResumePendingUpload())
             return;
         if (webRadioMode)
@@ -206,6 +209,7 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
     if (result == WifiInputResult::ExitRequested)
     {
         expensesCancelPendingUpload();
+        thermalPrinterCancelPendingOperation();
         if (webRadioMode)
             appRuntimeOpen(HostApp::Music);
         else
@@ -244,6 +248,7 @@ void closeActiveShellMenu()
     if (wifiMenuVisible)
     {
         expensesCancelPendingUpload();
+        thermalPrinterCancelPendingOperation();
         closeWifiInput();
         if (webRadioMode)
             drawRadioAll();
@@ -318,6 +323,12 @@ void handleModalSurfaceInput(Keyboard_Class::KeysState &ks)
     if (expensesModalActive())
     {
         handleExpensesInput(ks);
+        return;
+    }
+
+    if (thermalPrinterModalActive())
+    {
+        handleThermalPrinterInput(ks);
         return;
     }
 

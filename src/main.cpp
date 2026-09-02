@@ -27,6 +27,7 @@
 #include "module/service/Bluetooth.h"
 #include "apps/notes/Notes.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
+#include "apps/thermalprinter/ThermalPrinter.h"
 
 namespace
 {
@@ -195,6 +196,7 @@ void loop()
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       !expensesModalActive() &&
+      !thermalPrinterModalActive() &&
       !bluetoothKeyboardModalActive() &&
       millis() - lastDraw >= 500)
   {
@@ -240,6 +242,7 @@ void loop()
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       !expensesModalActive() &&
+      !thermalPrinterModalActive() &&
       !bluetoothKeyboardModalActive() &&
       !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
       !removeConfirmVisible)
@@ -262,6 +265,7 @@ void loop()
         !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
         !expensesModalActive() &&
+        !thermalPrinterModalActive() &&
         !bluetoothKeyboardModalActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
@@ -290,6 +294,7 @@ void loop()
         !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
         !expensesModalActive() &&
+        !thermalPrinterModalActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
     {
