@@ -65,15 +65,23 @@ bool loadExpenseSyncConfig(ExpenseSyncConfig &config, String &error)
     return true;
 }
 
-bool uploadExpensePreview(
+bool uploadExpenseBatch(
     const ExpenseSyncConfig &config,
-    const String &id,
-    const String &name,
-    const String &value,
-    const String &currency,
-    const String &date,
+    const std::vector<ExpenseSyncEntry> &entries,
+    std::vector<String> &acceptedIds,
     String &message)
 {
+    acceptedIds.clear();
+    if (entries.empty())
+    {
+        message = "No pending expenses";
+        return true;
+    }
+    if (entries.size() > 50)
+    {
+        message = "Maximum 50 expenses per sync";
+        return false;
+    }
     if (WiFi.status() != WL_CONNECTED)
     {
         message = "Connect WiFi first";
@@ -82,12 +90,16 @@ bool uploadExpensePreview(
 
     JsonDocument request;
     request["device"] = "cardputer";
-    JsonObject entry = request["entries"].to<JsonArray>().add<JsonObject>();
-    entry["id"] = id;
-    entry["name"] = name;
-    entry["value"] = value;
-    entry["currency"] = currency;
-    entry["date"] = date;
+    JsonArray requestEntries = request["entries"].to<JsonArray>();
+    for (const auto &source : entries)
+    {
+        JsonObject entry = requestEntries.add<JsonObject>();
+        entry["id"] = source.id;
+        entry["name"] = source.name;
+        entry["value"] = source.value;
+        entry["currency"] = source.currency;
+        entry["date"] = source.date;
+    }
     String body;
     serializeJson(request, body);
 
@@ -124,20 +136,29 @@ bool uploadExpensePreview(
         message = String(detail);
         return false;
     }
-    if (responseContainsId(result["processed"], id))
+    for (const auto &entry : entries)
     {
-        if (responseContainsId(result["synced"], id))
-            message = "Synced to Notion";
+        if (responseContainsId(result["processed"], entry.id) ||
+            responseContainsId(result["already_processed"], entry.id))
+            acceptedIds.push_back(entry.id);
+    }
+
+    const int acceptedCount = acceptedIds.size();
+    const int requestedCount = entries.size();
+    if (acceptedCount == requestedCount)
+    {
+        if (result["notion_enabled"] | false)
+            message = "Synced " + String(acceptedCount) + " to Notion";
         else
-            message = "Processed by PC (dry run)";
+            message = "Processed " + String(acceptedCount) + " by PC (dry run)";
         return true;
     }
-    if (responseContainsId(result["already_processed"], id))
+    if (acceptedCount > 0)
     {
-        message = "Already processed by PC";
-        return true;
+        message = "Processed " + String(acceptedCount) + "/" + String(requestedCount) + "; retry pending";
+        return false;
     }
-    if (responseContainsId(result["fallback_previewed"], id))
+    if (result["fallback_previewed"].as<JsonArrayConst>().size())
     {
         message = "Codex fallback; retry later";
         return false;

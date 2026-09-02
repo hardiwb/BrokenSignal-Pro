@@ -12,7 +12,7 @@ void moveTomorrow(int) { expensesMoveTomorrow(); }
 void moveDate(int) { expensesPromptMoveDate(); }
 void editEntry(int) { expensesEdit(); }
 void deleteEntry(int) { expensesDelete(); }
-void uploadEntry(int) { expensesUploadSelected(); }
+void uploadPending(int) { expensesUploadPending(); }
 void shareQr(int) { expensesShareQr(); }
 void editCurrency(int) { expensesEditDefaultCurrency(); }
 }
@@ -22,7 +22,7 @@ void buildExpensesOptions(std::vector<AppOption> &options) {
     options.push_back({"Move to Date", "", selected, false, true, moveDate});
     options.push_back({"Edit Entry", "", selected, false, true, editEntry});
     options.push_back({"Delete Entry", "", selected, false, true, deleteEntry});
-    options.push_back({"Upload Entry", "", selected, false, true, uploadEntry});
+    options.push_back({"Sync Pending", "", selected, false, true, uploadPending});
     options.push_back({"Share as QR", "", selected, false, true, shareQr});
     options.push_back({"Default currency", expensesDefaultCurrency(), true, false, true, editCurrency});
 }

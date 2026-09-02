@@ -300,8 +300,8 @@ upload to the PC companion.
 | `,` / `/` | Previous / next date |
 | `Opt` | Open expense actions |
 
-Expense Options include moving an entry, editing/deleting it, uploading the
-selected entry to the PC, sharing the day's entries as QR pages, and changing
+Expense Options include moving an entry, editing/deleting it, syncing all
+unmarked entries for the displayed day to the PC, sharing the day's entries as QR pages, and changing
 the default currency. Upload automatically opens the WiFi connection flow when
 the Cardputer is offline and resumes after a successful connection.
 

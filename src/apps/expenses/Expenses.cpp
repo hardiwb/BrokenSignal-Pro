@@ -315,8 +315,18 @@ void expensesPromptMoveDate() {
 void expensesEditDefaultCurrency() {
     currencyInput = defaultCurrency; invalidInput = false; modal = Modal::Currency; drawExpenses();
 }
-void expensesUploadSelected() {
+void expensesUploadPending() {
     if (visible.empty()) return;
+    std::vector<ExpenseSyncEntry> pending;
+    for (int actual : visible) {
+        const ExpenseEntry &entry = entries[actual];
+        if (!entry.shared)
+            pending.push_back({entry.id, entry.name, entry.value, entry.currency, entry.date});
+    }
+    if (pending.empty()) {
+        uploadResult = "All expenses already processed";
+        modal = Modal::UploadResult; drawExpenses(); return;
+    }
     ExpenseSyncConfig config; String error;
     if (!loadExpenseSyncConfig(config, error)) {
         uploadResult = error; modal = Modal::UploadResult; drawExpenses(); return;
@@ -327,16 +337,19 @@ void expensesUploadSelected() {
         uploadPending = false;
     }
     OverlayModel progress; progress.type = OverlayType::Message; progress.title = "PC PREVIEW";
-    progress.items.push_back("Uploading expense..."); progress.confirmText = "Please wait"; drawOverlay(progress);
-    ExpenseEntry &entry = entries[visible[selected]];
-    const bool accepted = uploadExpensePreview(config, entry.id, entry.name, entry.value, entry.currency, entry.date, uploadResult);
-    if (accepted) { entry.shared = true; saveEntries(); }
+    progress.items.push_back("Uploading " + String(pending.size()) + " expenses..."); progress.confirmText = "Please wait"; drawOverlay(progress);
+    std::vector<String> acceptedIds;
+    uploadExpenseBatch(config, pending, acceptedIds, uploadResult);
+    for (int actual : visible)
+        for (const auto &acceptedId : acceptedIds)
+            if (entries[actual].id == acceptedId) { entries[actual].shared = true; break; }
+    if (!acceptedIds.empty()) saveEntries();
     modal = Modal::UploadResult; drawExpenses();
 }
 bool expensesResumePendingUpload() {
     if (!uploadPending) return false;
     uploadPending = false;
-    expensesUploadSelected();
+    expensesUploadPending();
     return true;
 }
 void expensesCancelPendingUpload() { uploadPending = false; }

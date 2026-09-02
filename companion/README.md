@@ -169,7 +169,11 @@ On the Cardputer:
 
 1. Open Expenses and select an entry.
 2. Open Options.
-3. Choose `Upload Entry`.
+3. Choose `Sync Pending`.
+
+Every unmarked expense on the displayed date is sent in one batch. The
+Cardputer marks only entries explicitly accepted by the PC, leaving failures
+available for retry.
 
 If Wi-Fi is disconnected, the Cardputer shows its connection screen and first
 tries the saved network. If network selection or a password is needed, it opens

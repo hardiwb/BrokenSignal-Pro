@@ -14,7 +14,7 @@ void expensesPromptMoveDate();
 void expensesEdit();
 void expensesDelete();
 void expensesToggleSynced();
-void expensesUploadSelected();
+void expensesUploadPending();
 bool expensesResumePendingUpload();
 void expensesCancelPendingUpload();
 void expensesShareQr();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <vector>
 
 struct ExpenseSyncConfig
 {
@@ -8,13 +9,19 @@ struct ExpenseSyncConfig
     String token;
 };
 
+struct ExpenseSyncEntry
+{
+    String id;
+    String name;
+    String value;
+    String currency;
+    String date;
+};
+
 bool loadExpenseSyncConfig(ExpenseSyncConfig &config, String &error);
 
-bool uploadExpensePreview(
+bool uploadExpenseBatch(
     const ExpenseSyncConfig &config,
-    const String &id,
-    const String &name,
-    const String &value,
-    const String &currency,
-    const String &date,
+    const std::vector<ExpenseSyncEntry> &entries,
+    std::vector<String> &acceptedIds,
     String &message);
