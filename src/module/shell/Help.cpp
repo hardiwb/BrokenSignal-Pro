@@ -69,7 +69,12 @@ ListModel buildHelpListModel()
         ListItemModel item;
         item.type = ListItemType::Property;
         item.label = row.description;
-        item.value = row.key;
+        if (item.label == "Toggle Applications")
+            item.value = "[" + String(keyboardApplicationsShortcutLabel()) + "]";
+        else if (item.label == "Toggle Options")
+            item.value = "[" + String(keyboardOptionsShortcutLabel()) + "]";
+        else
+            item.value = row.key;
         item.isSelected = i == helpSelected;
         model.items.push_back(item);
     }

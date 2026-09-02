@@ -401,7 +401,8 @@ Available themes:
 | Miami Vice |
 | Ash |
 
-Theme selection is available from Control Panel and saved to `/Music/settings.cfg`.
+Theme selection and the optional Alt/Opt shell-function swap are available from
+Control Panel and saved to `/Music/settings.cfg`.
 
 ## RTC Module
 

@@ -23,7 +23,7 @@ static String manualClockDate = "";
 static int manualClockField = 0;
 static int manualClockTimeCursor = 0;
 static int manualClockDateCursor = 0;
-static const int SETTINGS_COUNT = 12;
+static const int SETTINGS_COUNT = 13;
 static int settingsScrollTop = 0;
 
 enum SettingRow
@@ -38,6 +38,7 @@ enum SettingRow
     SettingSyncClock,
     SettingManualClock,
     SettingWifiPowerSave,
+    SettingSwapAltOpt,
     SettingDebug,
     SettingWifi
 };
@@ -81,6 +82,7 @@ static const char *settingsLabel(int index)
         "Sync Clock",
         "Manual Clock",
         "WiFi power save",
+        "Swap Alt / Opt",
         "Debug",
         "WiFi"};
 
@@ -121,6 +123,8 @@ static String settingsValue(int index)
         return "Enter";
     case SettingWifiPowerSave:
         return wifiPowerSave ? "On" : "Off";
+    case SettingSwapAltOpt:
+        return swapAltOpt ? "On" : "Off";
     default:
         return "";
     }
@@ -490,6 +494,10 @@ static void adjustSetting(int sel, int dir)
         wifiPowerSave = !wifiPowerSave;
         applyWifiPowerSave();
     }
+    else if (sel == SettingSwapAltOpt)
+    {
+        swapAltOpt = !swapAltOpt;
+    }
     settingsDirty = true;
     settingsDirtyMs = millis();
 }
@@ -499,7 +507,8 @@ static bool settingSupportsAdjustment(int sel)
     return sel == SettingBrightness || sel == SettingVolume ||
            sel == SettingScreenOff || sel == SettingDeepSleep ||
            sel == SettingPlaybackTimer || sel == SettingTheme ||
-           sel == SettingTimezone || sel == SettingWifiPowerSave;
+           sel == SettingTimezone || sel == SettingWifiPowerSave ||
+           sel == SettingSwapAltOpt;
 }
 
 void drawSettingsMenu()

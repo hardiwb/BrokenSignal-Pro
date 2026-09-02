@@ -76,6 +76,7 @@ const Theme *T = &T_NEON;
 
 uint8_t seekSeconds = SEEK_SECONDS_DEFAULT;
 bool wifiPowerSave = false;
+bool swapAltOpt = false;
 uint8_t screenBrightness = SCREEN_BRIGHTNESS_DEFAULT;
 uint16_t autoScreenOffSec = AUTO_SCREEN_OFF_DEFAULT;
 uint32_t deepSleepSec = DEEP_SLEEP_DEFAULT;

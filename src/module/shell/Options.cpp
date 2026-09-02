@@ -94,7 +94,7 @@ void drawOptionsMenu()
     drawList(buildOptionsListModel());
 
     FooterModel footer;
-    footer.left = "[Opt]Close";
+    footer.left = "[" + String(keyboardOptionsShortcutLabel()) + "]Close";
     if (optionsApp().optionsShowRunHint)
         footer.left += " [Ok]Run";
     footer.left += " [,/]Change";
@@ -118,7 +118,7 @@ void exitOptionsMenu()
 
 void handleOptionsInput(Keyboard_Class::KeysState &ks)
 {
-    if ((ks.opt && ks.word.empty()) || keyboardBackPressed(ks))
+    if (keyboardOptionsShortcutPressed(ks) || keyboardBackPressed(ks))
     {
         exitOptionsMenu();
         return;

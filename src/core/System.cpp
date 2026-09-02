@@ -254,6 +254,9 @@ void loadSettings()
         if (key == "wifipowersave")
             wifiPowerSave = (val != 0);
 
+        if (key == "swapaltopt")
+            swapAltOpt = (val != 0);
+
         if (key == "brightness" && val >= 0 && val <= 255)
             screenBrightness = (uint8_t)val;
 
@@ -303,6 +306,7 @@ void saveSettings()
     f.printf("shuffle=%d\n", shuffleOn ? 1 : 0);
     f.printf("seek=%d\n", seekSeconds);
     f.printf("wifipowersave=%d\n", wifiPowerSave ? 1 : 0);
+    f.printf("swapaltopt=%d\n", swapAltOpt ? 1 : 0);
     f.printf("brightness=%d\n", screenBrightness);
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
     f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);

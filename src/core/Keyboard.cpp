@@ -50,6 +50,26 @@ bool keyboardTextInputChar(Keyboard_Class::KeysState &ks, char c)
     return true;
 }
 
+bool keyboardApplicationsShortcutPressed(Keyboard_Class::KeysState &ks)
+{
+    return ks.word.empty() && (swapAltOpt ? ks.opt : ks.alt);
+}
+
+bool keyboardOptionsShortcutPressed(Keyboard_Class::KeysState &ks)
+{
+    return ks.word.empty() && (swapAltOpt ? ks.alt : ks.opt);
+}
+
+const char *keyboardApplicationsShortcutLabel()
+{
+    return swapAltOpt ? "Opt" : "Alt";
+}
+
+const char *keyboardOptionsShortcutLabel()
+{
+    return swapAltOpt ? "Alt" : "Opt";
+}
+
 namespace
 {
 bool hostLikeGlobalHotkeysAllowed(const ActiveSurface &surface)
@@ -251,7 +271,7 @@ bool handleShellNavigationShortcut(
         return true;
     }
 
-    if (ks.alt)
+    if (keyboardApplicationsShortcutPressed(ks))
     {
         if (applicationsMenuVisible)
             exitApplicationsMenu();
@@ -263,7 +283,7 @@ bool handleShellNavigationShortcut(
         return true;
     }
 
-    if (ks.opt)
+    if (keyboardOptionsShortcutPressed(ks))
     {
         if (optionsMenuVisible)
             exitOptionsMenu();

@@ -50,7 +50,7 @@ void drawApplicationsMenu()
     drawList(buildApplicationsListModel());
 
     FooterModel footer;
-    footer.left = "[Alt]Close [Ok]Open";
+    footer.left = "[" + String(keyboardApplicationsShortcutLabel()) + "]Close [Ok]Open";
     footer.center = "";
     footer.battery = footerBatteryText();
     drawFooter(footer);
@@ -76,7 +76,7 @@ void exitApplicationsMenu()
 
 void handleApplicationsInput(Keyboard_Class::KeysState &ks)
 {
-    if ((ks.alt && ks.word.empty()) || keyboardBackPressed(ks))
+    if (keyboardApplicationsShortcutPressed(ks) || keyboardBackPressed(ks))
     {
         exitApplicationsMenu();
         return;
