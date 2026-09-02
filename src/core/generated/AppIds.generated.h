@@ -10,4 +10,5 @@ enum class HostApp : uint8_t
     Notes = 2,
     Calculator = 3,
     Expenses = 4,
+    BluetoothKeyboard = 5,
 };

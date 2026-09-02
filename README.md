@@ -121,6 +121,11 @@ and keyboard routing rules.
 - **Themes**: Five visual themes with persistent settings.
 - **Toast primitive**: Small transient popups, currently used for theme name feedback.
 - **Power saving**: Brightness setting, screen-off control, and auto screen-off timer.
+- **Bluetooth keyboard**: Pair and retain up to three encrypted host bonds, then
+  use the Cardputer keyboard as a BLE HID keyboard. `BtnG0` safely releases all
+  keys and disconnects the active typing session. Shared controller, security,
+  bonding, and HID transport live in the Bluetooth service for reuse by future
+  apps.
 
 ## UI Architecture
 
@@ -144,7 +149,7 @@ BrokenSignal Pro is structured as an embedded shell/app runtime:
                         |
 +----------v----------+     +----------v----------+
 | UI primitives       |     | Shared services     |
-| Header/List/Footer  |     | FileBrowser/WiFi    |
+| Header/List/Footer  |     | FileBrowser/WiFi/BLE|
 | Overlay/Toast       |     | Clock/Audio         |
 +----------+----------+     +----------+----------+
            |                           |
@@ -194,7 +199,7 @@ src/core/       App registry/runtime, surface routing, state, and system flow
 src/UI/         Header, List, Footer, Overlay, Toast, and Themes
 src/module/
 |-- shell/      Applications, Options, Control Panel, Help, and Debug
-`-- service/    Clock, WiFi, and File Browser
+`-- service/    Bluetooth, Clock, WiFi, and File Browser
 ```
 
 See [Architecture](docs/ARCHITECTURE.md) for the firmware layer map and input
@@ -207,6 +212,23 @@ step. A third-party host app can be installed as one self-contained folder
 without editing core, shell, keyboard, or existing app sources.
 
 ## Controls
+
+### Bluetooth Keyboard
+
+Open Bluetooth Keyboard from Applications. Select a stored device or `Pair New
+PC`, then press `Ok`. Paired PCs can be given persistent friendly names from
+the Options menu. While the connection overlay is open, all matrix keys
+belong to the remote host and global firmware shortcuts are blocked.
+
+| Key | Action |
+| --- | ------ |
+| `;` / `.` | Select paired device |
+| `Ok` | Connect or start pairing |
+| `Opt` | Rename or forget selected/all pairings |
+| `BtnG0` | Release all keys, disconnect, and close typing mode |
+| `Fn` + `` ` `` | Send Escape |
+| `Fn` + `;` / `.` | Send Up / Down |
+| `Fn` + `,` / `/` | Send Left / Right |
 
 ### Global Host Shortcuts
 

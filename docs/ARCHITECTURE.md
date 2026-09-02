@@ -36,7 +36,7 @@ input, how apps are registered, and how shared system behavior is redrawn.
               +---------------v-----------------+
 +-------------+-------------+     +-------------+-------------+
 | UI Primitives             |     | Shared Services           |
-| Header / List / Footer    |     | File Browser              |
+| Header / List / Footer    |     | File Browser / Bluetooth  |
 | Overlay / Toast / Themes  |     | WiFi / Clock / Audio      |
 +-------------+-------------+     +-------------+-------------+
               |                                 |
@@ -79,7 +79,7 @@ Shell surfaces                 Host apps
         |
 Shared UI primitives and services
   Header, List, Footer, Overlay, Toast, Themes
-  File Browser, WiFi, Clock, audio helpers
+  File Browser, WiFi, Bluetooth, Clock, audio helpers
         |
 Storage
   /Music/settings.cfg
@@ -97,7 +97,7 @@ Storage
 | `src/core/Keyboard.*` | Reads physical keys, handles shell navigation priority, then dispatches to the active surface. |
 | `src/core/System.*` | Shared drawing, settings persistence, power/screen behavior, and boot flow. |
 | `src/module/shell/` | Shell-owned surfaces: Applications, Options, Control Panel, Help, Debug. |
-| `src/module/service/` | Shared services such as WiFi, Clock, and File Browser. |
+| `src/module/service/` | Shared services such as WiFi, Bluetooth, Clock, and File Browser. |
 | `src/apps/` | App-owned lifecycle, input, metadata, views, and storage. |
 | `src/UI/` | Reusable drawing primitives and themes. |
 

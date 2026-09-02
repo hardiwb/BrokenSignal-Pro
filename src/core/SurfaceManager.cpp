@@ -6,6 +6,7 @@
 #include "apps/notes/Notes.h"
 #include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
+#include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "module/service/WiFi.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Debug.h"
@@ -29,7 +30,7 @@ ActiveSurface resolveActiveSurface()
     if (wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
         removeConfirmVisible || settingsInputOverlayActive() ||
         notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
-        appRuntimeQuickAccessActive())
+        appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive())
     {
         return {SurfaceKind::OverlayModal, owner};
     }

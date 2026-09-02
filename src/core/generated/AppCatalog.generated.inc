@@ -34,3 +34,10 @@
         buildExpensesOptions, true, true,
         {'e', expensesQuickOpen, expensesQuickAccessAvailable, expensesQuickActive, cancelExpensesModal, handleExpensesAppInput}
     },
+    {
+        HostApp::BluetoothKeyboard, "Bluetooth Keyboard", "BT KEYBOARD",
+        openBluetoothKeyboardApp, drawBluetoothKeyboardApp, handleBluetoothKeyboardAppInput, tickBluetoothKeyboardApp,
+        "BT KEYBOARD KEYS", BLUETOOTH_KEYBOARD_HELP_ENTRIES, BLUETOOTH_KEYBOARD_HELP_COUNT,
+        buildBluetoothKeyboardOptions, true, true,
+        {0, nullptr, nullptr, nullptr, nullptr, nullptr}
+    },

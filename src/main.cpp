@@ -24,7 +24,9 @@
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
 #include "module/service/EspNowNotes.h"
+#include "module/service/Bluetooth.h"
 #include "apps/notes/Notes.h"
+#include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 
 namespace
 {
@@ -170,6 +172,7 @@ void loop()
     pumpAudio();
 
   tickEspNowNotes();
+  BluetoothService::tick();
 
   bool anyPlaying = isPlaying || radioIsPlaying;
   delay(anyPlaying ? 1 : 10);
@@ -192,6 +195,7 @@ void loop()
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       !expensesModalActive() &&
+      !bluetoothKeyboardModalActive() &&
       millis() - lastDraw >= 500)
   {
     lastDraw = millis();
@@ -236,6 +240,7 @@ void loop()
       !settingsMenuVisible && !notesInputActive() &&
       !calculatorInputActive() &&
       !expensesModalActive() &&
+      !bluetoothKeyboardModalActive() &&
       !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
       !removeConfirmVisible)
   {
@@ -257,6 +262,7 @@ void loop()
         !settingsMenuVisible && !notesInputActive() &&
         !calculatorInputActive() &&
         !expensesModalActive() &&
+        !bluetoothKeyboardModalActive() &&
         !wifiPassOverlayVisible && !addUrlOverlayVisible && !addNameOverlayVisible &&
         !removeConfirmVisible)
       drawAll();
@@ -300,6 +306,7 @@ void loop()
   }
 
   if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying && !espNowNotesBusy() &&
+      !bluetoothKeyboardModalActive() &&
       millis() - lastActivityMs >= (unsigned long)deepSleepSec * 1000UL)
   {
     saveSettings();

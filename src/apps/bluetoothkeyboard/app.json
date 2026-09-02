@@ -1,0 +1,28 @@
+{
+  "id": "BluetoothKeyboard",
+  "persistent_id": 5,
+  "order": 5,
+  "name": "Bluetooth Keyboard",
+  "header_tag": "BT KEYBOARD",
+  "includes": [
+    "apps/bluetoothkeyboard/BluetoothKeyboard.h",
+    "apps/bluetoothkeyboard/BluetoothKeyboardMetadata.h"
+  ],
+  "callbacks": {
+    "open": "openBluetoothKeyboardApp",
+    "draw": "drawBluetoothKeyboardApp",
+    "input": "handleBluetoothKeyboardAppInput",
+    "tick": "tickBluetoothKeyboardApp"
+  },
+  "help": {
+    "title": "BT KEYBOARD KEYS",
+    "entries": "BLUETOOTH_KEYBOARD_HELP_ENTRIES",
+    "count": "BLUETOOTH_KEYBOARD_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildBluetoothKeyboardOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": null
+}

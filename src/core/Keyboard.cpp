@@ -17,6 +17,7 @@
 #include "apps/notes/Notes.h"
 #include "apps/expenses/Expenses.h"
 #include "apps/radio/Radio.h"
+#include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "module/service/WiFi.h"
 
 bool keyboardBackPressed(Keyboard_Class::KeysState &ks)
@@ -380,11 +381,20 @@ void keyboardLoop()
     if (!M5Cardputer.Keyboard.isChange())
         return;
 
-    if (!M5Cardputer.Keyboard.isPressed())
-        return;
-
     Keyboard_Class::KeysState ks =
         M5Cardputer.Keyboard.keysState();
+
+    // Bluetooth typing owns the complete matrix, including Esc and shell
+    // modifiers. BtnG0 is intentionally the only local disconnect control.
+    if (bluetoothKeyboardModalActive())
+    {
+        lastActivityMs = millis();
+        handleBluetoothKeyboardAppInput(ks);
+        return;
+    }
+
+    if (!M5Cardputer.Keyboard.isPressed())
+        return;
 
     lastActivityMs = millis();
 
