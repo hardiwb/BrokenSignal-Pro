@@ -49,6 +49,8 @@ ThermalPrintLayout layout;
 ThermalPrinterStatus lastStatus;
 PrinterModal modal = PrinterModal::None;
 PendingOperation pendingOperation = PendingOperation::None;
+int selectedRow = 0;
+int scrollTop = 0;
 
 String onOff(bool value)
 {
@@ -135,35 +137,115 @@ String draftSummary()
 
 String styleSummary()
 {
-    String value = layout.center ? "Center" : "Left";
+    if (layout.bold && layout.doubleSize)
+        return "Bold 2x";
     if (layout.bold)
-        value += " Bold";
+        return "Bold";
     if (layout.doubleSize)
-        value += " 2x";
-    return value;
+        return "Double";
+    return "Normal";
 }
 
 ListModel printerListModel()
 {
     ListModel model;
-    const struct Row { const char *label; String value; } rows[] = {
-        {"Text", draftSummary()},
-        {"Printer", printerState},
-        {"Media", layout.label ? "Label" : "Continuous"},
-        {"Style", styleSummary()},
-        {"Bottom feed", String(layout.bottomLines) + " lines"},
-        {"Label height", String(layout.labelLines) + " lines"},
-        {"Server", serverUrl},
+    model.selected = selectedRow;
+    model.scrollTop = scrollTop;
+    const struct Row { const char *label; String value; ListItemType type; } rows[] = {
+        {"Text", draftSummary(), ListItemType::Property},
+        {"Print text", "", ListItemType::Normal},
+        {"Printer status", printerState, ListItemType::Property},
+        {"Media", layout.label ? "Label" : "Continuous", ListItemType::Property},
+        {"Text align", layout.center ? "Center" : "Left", ListItemType::Property},
+        {"Style", styleSummary(), ListItemType::Property},
+        {"Feed paper", String(layout.bottomLines) + " lines", ListItemType::Property},
+        {"Next label", "", ListItemType::Normal},
+        {"Test page", "", ListItemType::Normal},
+        {"Server", serverUrl, ListItemType::Property},
     };
-    for (const Row &row : rows)
+    for (int i = 0; i < static_cast<int>(sizeof(rows) / sizeof(rows[0])); ++i)
     {
         ListItemModel item;
-        item.label = row.label;
-        item.value = row.value;
-        item.type = ListItemType::Property;
+        item.label = rows[i].label;
+        item.value = rows[i].value;
+        item.type = rows[i].type;
+        item.isSelected = i == selectedRow;
         model.items.push_back(item);
     }
     return model;
+}
+
+constexpr int PRINTER_ROW_COUNT = 10;
+
+void ensureSelectionVisible()
+{
+    if (selectedRow < scrollTop)
+        scrollTop = selectedRow;
+    if (selectedRow >= scrollTop + LIST_VISIBLE_ITEM)
+        scrollTop = selectedRow - LIST_VISIBLE_ITEM + 1;
+    scrollTop = constrain(scrollTop, 0, max(0, PRINTER_ROW_COUNT - LIST_VISIBLE_ITEM));
+}
+
+void moveSelection(int direction)
+{
+    const int oldSelected = selectedRow;
+    const int oldScrollTop = scrollTop;
+    selectedRow = (selectedRow + direction + PRINTER_ROW_COUNT) % PRINTER_ROW_COUNT;
+    ensureSelectionVisible();
+    if (oldScrollTop != scrollTop)
+        drawList(printerListModel());
+    else
+        drawListSelection(printerListModel(), oldSelected, selectedRow);
+}
+
+void cycleStyle(int direction)
+{
+    int style = (layout.bold ? 1 : 0) | (layout.doubleSize ? 2 : 0);
+    style = (style + direction + 4) % 4;
+    layout.bold = (style & 1) != 0;
+    layout.doubleSize = (style & 2) != 0;
+    savePrinterSettings();
+    drawListRow(printerListModel(), selectedRow);
+}
+
+void adjustSelectedRow(int direction)
+{
+    switch (selectedRow)
+    {
+    case 3:
+        layout.label = !layout.label;
+        break;
+    case 4:
+        layout.center = !layout.center;
+        break;
+    case 5:
+        cycleStyle(direction);
+        return;
+    case 6:
+        layout.bottomLines = constrain(static_cast<int>(layout.bottomLines) + direction, 0, 40);
+        break;
+    default:
+        return;
+    }
+    savePrinterSettings();
+    drawListRow(printerListModel(), selectedRow);
+}
+
+void activateSelectedRow()
+{
+    switch (selectedRow)
+    {
+    case 0: thermalPrinterEditText(); break;
+    case 1: thermalPrinterPrint(); break;
+    case 2: thermalPrinterRefreshStatus(); break;
+    case 3:
+    case 4:
+    case 5: adjustSelectedRow(+1); break;
+    case 6: thermalPrinterFeed(); break;
+    case 7: thermalPrinterNextLabel(); break;
+    case 8: thermalPrinterTestPage(); break;
+    case 9: thermalPrinterEditServer(); break;
+    }
 }
 
 void drawTextEditor()
@@ -370,6 +452,8 @@ void thermalPrinterOpen()
     loadPrinterSettings();
     modal = PrinterModal::None;
     pendingOperation = PendingOperation::None;
+    selectedRow = 0;
+    scrollTop = 0;
     printerState = WiFi.status() == WL_CONNECTED ? "PRESS S" : "WIFI OFF";
     drawThermalPrinter();
 }
@@ -387,8 +471,8 @@ void drawThermalPrinter()
     drawHeader(header);
     drawList(printerListModel());
     FooterModel footer;
-    footer.left = "[Ok]Edit [P]Print";
-    footer.center = "[S]Status";
+    footer.left = "[Ok]Run [,/]Set";
+    footer.center = "[;/.]Move";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }
@@ -408,7 +492,7 @@ void handleThermalPrinterInput(Keyboard_Class::KeysState &keys)
     }
     if (keys.enter)
     {
-        thermalPrinterEditText();
+        activateSelectedRow();
         return;
     }
     for (char c : keys.word)
@@ -419,6 +503,10 @@ void handleThermalPrinterInput(Keyboard_Class::KeysState &keys)
         if (c == 'g' || c == 'G') return thermalPrinterNextLabel();
         if (c == 't' || c == 'T') return thermalPrinterTestPage();
         if (c == 'h' || c == 'H') { toggleHelp(); return; }
+        if (c == ';') { moveSelection(-1); return; }
+        if (c == '.') { moveSelection(+1); return; }
+        if (c == ',') { adjustSelectedRow(-1); return; }
+        if (c == '/') { adjustSelectedRow(+1); return; }
     }
 }
 

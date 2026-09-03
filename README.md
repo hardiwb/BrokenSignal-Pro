@@ -341,6 +341,8 @@ in memory.
 | Key | Action |
 | --- | ------ |
 | `Ok` | Edit print text |
+| `;` / `.` | Move through the printer rows |
+| `,` / `/` | Change the selected media, alignment, style, or feed value |
 | `P` | Queue the text job |
 | `S` | Read busy/queue/completed status |
 | `F` | Feed the configured number of lines |

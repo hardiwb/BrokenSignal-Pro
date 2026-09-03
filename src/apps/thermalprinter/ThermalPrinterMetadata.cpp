@@ -4,6 +4,8 @@
 
 const HelpEntry THERMAL_PRINTER_HELP_ENTRIES[] = {
     {"[Ok]", "Edit print text"},
+    {"[;/.]", "Move through app rows"},
+    {"[,/]", "Change selected setting"},
     {"[P]", "Queue text job"},
     {"[S]", "Refresh printer status"},
     {"[F]", "Feed paper"},

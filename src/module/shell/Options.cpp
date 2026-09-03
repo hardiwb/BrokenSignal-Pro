@@ -15,6 +15,7 @@ namespace
 HostApp optionsOwner = HostApp::Music;
 std::vector<AppOption> optionEntries;
 int optionSelected = 0;
+int optionScrollTop = 0;
 
 const AppDescriptor &optionsApp()
 {
@@ -31,12 +32,22 @@ void rebuildOptionEntries()
         optionSelected = 0;
     else
         optionSelected = constrain(optionSelected, 0, (int)optionEntries.size() - 1);
+
+    if (optionSelected < optionScrollTop)
+        optionScrollTop = optionSelected;
+    if (optionSelected >= optionScrollTop + LIST_VISIBLE_ITEM)
+        optionScrollTop = optionSelected - LIST_VISIBLE_ITEM + 1;
+    optionScrollTop = constrain(
+        optionScrollTop,
+        0,
+        max(0, (int)optionEntries.size() - LIST_VISIBLE_ITEM));
 }
 
 ListModel buildOptionsListModel()
 {
     ListModel model;
     model.selected = optionSelected;
+    model.scrollTop = optionScrollTop;
 
     for (int i = 0; i < (int)optionEntries.size(); ++i)
     {
@@ -107,6 +118,7 @@ void enterOptionsMenu()
     optionsOwner = foregroundApp;
     optionsMenuVisible = true;
     optionSelected = 0;
+    optionScrollTop = 0;
     drawOptionsMenu();
 }
 
@@ -140,16 +152,26 @@ void handleOptionsInput(Keyboard_Class::KeysState &ks)
         if (c == ';')
         {
             const int oldSelected = optionSelected;
+            const int oldScrollTop = optionScrollTop;
             optionSelected = (optionSelected - 1 + optionCount) % optionCount;
-            drawListSelection(buildOptionsListModel(), oldSelected, optionSelected);
+            rebuildOptionEntries();
+            if (oldScrollTop != optionScrollTop)
+                drawOptionsMenu();
+            else
+                drawListSelection(buildOptionsListModel(), oldSelected, optionSelected);
             return;
         }
 
         if (c == '.')
         {
             const int oldSelected = optionSelected;
+            const int oldScrollTop = optionScrollTop;
             optionSelected = (optionSelected + 1) % optionCount;
-            drawListSelection(buildOptionsListModel(), oldSelected, optionSelected);
+            rebuildOptionEntries();
+            if (oldScrollTop != optionScrollTop)
+                drawOptionsMenu();
+            else
+                drawListSelection(buildOptionsListModel(), oldSelected, optionSelected);
             return;
         }
 
