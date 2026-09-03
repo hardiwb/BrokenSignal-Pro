@@ -1,12 +1,14 @@
 #include "module/service/Bluetooth.h"
 
 #include <BLEAdvertising.h>
+#include <BLE2902.h>
 #include <BLEDevice.h>
 #include <BLEHIDDevice.h>
 #include <BLESecurity.h>
 #include <Preferences.h>
 #include <esp_gap_ble_api.h>
 #include <esp_system.h>
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -53,7 +55,7 @@ volatile uint8_t authenticationFailureReason = 0;
 bool initialized = false;
 bool preferencesOpen = false;
 bool selectedTarget = false;
-int selectedBondIndex = -1;
+esp_ble_bond_dev_t selectedBond = {};
 esp_bd_addr_t targetAddress = {};
 esp_bd_addr_t peerAddress = {};
 
@@ -62,13 +64,66 @@ bool addressesEqual(const uint8_t *a, const uint8_t *b)
     return memcmp(a, b, sizeof(esp_bd_addr_t)) == 0;
 }
 
-bool addressMatchesSelectedBond(const uint8_t *address)
+void setInputNotifications(bool enabled)
 {
-    if (!selectedTarget || selectedBondIndex < 0 ||
-        selectedBondIndex >= storedBondCount)
+    if (!inputReport)
+        return;
+
+    BLE2902 *configuration = static_cast<BLE2902 *>(
+        inputReport->getDescriptorByUUID(BLEUUID((uint16_t)0x2902)));
+    if (configuration)
+        configuration->setNotifications(enabled);
+}
+
+bool addWhitelistAddress(const uint8_t *address)
+{
+    esp_bd_addr_t copiedAddress;
+    memcpy(copiedAddress, address, sizeof(copiedAddress));
+
+    // esp_ble_get_bond_device_list() does not expose the address type of
+    // bd_addr. Queue both forms so public-identity and random-identity hosts
+    // can use the same stable Easy-Switch selection.
+    const bool publicQueued = esp_ble_gap_update_whitelist(
+        true, copiedAddress, BLE_WL_ADDR_TYPE_PUBLIC) == ESP_OK;
+    const bool randomQueued = esp_ble_gap_update_whitelist(
+        true, copiedAddress, BLE_WL_ADDR_TYPE_RANDOM) == ESP_OK;
+    return publicQueued || randomQueued;
+}
+
+bool configureAdvertisingTarget(int bondIndex)
+{
+    if (!advertising)
+        return false;
+
+    advertising->setScanFilter(false, false);
+    if (esp_ble_gap_clear_whitelist() != ESP_OK)
+        return false;
+
+    if (bondIndex < 0)
         return true;
 
-    const esp_ble_bond_dev_t &bond = bonds[selectedBondIndex];
+    const esp_ble_bond_dev_t &bond = bonds[bondIndex];
+    bool addressQueued = addWhitelistAddress(bond.bd_addr);
+    if ((bond.bond_key.key_mask & ESP_LE_KEY_PID) &&
+        !addressesEqual(bond.bd_addr, bond.bond_key.pid_key.static_addr))
+    {
+        addressQueued = addWhitelistAddress(
+                            bond.bond_key.pid_key.static_addr) ||
+                        addressQueued;
+    }
+
+    if (!addressQueued)
+        return false;
+
+    // A saved-device session is an Easy-Switch slot. Restrict connection
+    // requests at the controller so another bonded host cannot steal it.
+    advertising->setScanFilter(false, true);
+    return true;
+}
+
+bool addressMatchesBond(const esp_ble_bond_dev_t &bond,
+                        const uint8_t *address)
+{
     if (addressesEqual(address, bond.bd_addr))
         return true;
 
@@ -76,6 +131,20 @@ bool addressMatchesSelectedBond(const uint8_t *address)
     // authentication result can then contain its stable identity address.
     return (bond.bond_key.key_mask & ESP_LE_KEY_PID) &&
            addressesEqual(address, bond.bond_key.pid_key.static_addr);
+}
+
+bool addressAllowedForSession(const uint8_t *address)
+{
+    if (selectedTarget)
+        return addressMatchesBond(selectedBond, address);
+
+    // "Pair New PC" must not silently reopen an existing Easy-Switch slot.
+    for (int i = 0; i < storedBondCount; ++i)
+    {
+        if (addressMatchesBond(bonds[i], address))
+            return false;
+    }
+    return true;
 }
 
 String formatAddress(const uint8_t *address)
@@ -105,6 +174,10 @@ public:
         memcpy(peerAddress, param->connect.remote_bda, sizeof(peerAddress));
         linkConnected = true;
         authenticated = false;
+        // Bluedroid does not reliably restore a bonded host's CCCD value.
+        // Some hosts consequently reconnect without writing it again, which
+        // makes BLECharacteristic::notify() silently discard HID reports.
+        setInputNotifications(true);
         linkState = KeyboardLinkState::Connected;
         uiDirty = true;
 
@@ -121,6 +194,7 @@ public:
     {
         linkConnected = false;
         authenticated = false;
+        setInputNotifications(false);
         displayedPasskey = 0;
         remoteDisconnected = true;
         uiDirty = true;
@@ -162,10 +236,19 @@ public:
     void onAuthenticationComplete(esp_ble_auth_cmpl_t result) override
     {
         const bool mismatch = result.success &&
-                              !addressMatchesSelectedBond(result.bd_addr);
+                              !addressAllowedForSession(result.bd_addr);
         if (!result.success || mismatch)
         {
             authenticated = false;
+            if (mismatch && !selectedTarget)
+            {
+                // An already bonded host answered while pairing a new one.
+                // Drop it, then continue pairing instead of occupying the slot.
+                linkState = KeyboardLinkState::Advertising;
+                pendingDisconnect = true;
+                uiDirty = true;
+                return;
+            }
             authenticationFailed = !result.success;
             authenticationFailureReason = result.fail_reason;
             targetMismatch = mismatch;
@@ -298,6 +381,16 @@ void refreshBonds()
         return;
     }
 
+    // The controller does not promise bond-list ordering. A deterministic
+    // order keeps the default PC 1/PC 2 slots attached to the same hosts.
+    std::sort(allBonds.begin(), allBonds.begin() + fetched,
+              [](const esp_ble_bond_dev_t &a,
+                 const esp_ble_bond_dev_t &b)
+              {
+                  return memcmp(a.bd_addr, b.bd_addr,
+                                sizeof(esp_bd_addr_t)) < 0;
+              });
+
     storedBondCount = min(fetched, MAX_BONDS);
     for (int i = 0; i < storedBondCount; ++i)
         bonds[i] = allBonds[i];
@@ -374,13 +467,20 @@ bool startKeyboardSession(int bondIndex)
         return false;
     if (bondIndex >= storedBondCount || (bondIndex < 0 && !canPairNew()))
         return false;
+    if (!configureAdvertisingTarget(bondIndex))
+        return false;
 
     selectedTarget = bondIndex >= 0;
-    selectedBondIndex = selectedTarget ? bondIndex : -1;
     if (selectedTarget)
+    {
+        selectedBond = bonds[bondIndex];
         memcpy(targetAddress, bonds[bondIndex].bd_addr, sizeof(targetAddress));
+    }
     else
+    {
+        memset(&selectedBond, 0, sizeof(selectedBond));
         memset(targetAddress, 0, sizeof(targetAddress));
+    }
 
     displayedPasskey = 0;
     authenticated = false;
@@ -403,6 +503,8 @@ void stopKeyboardSession()
         return;
 
     advertising->stop();
+    advertising->setScanFilter(false, false);
+    esp_ble_gap_clear_whitelist();
     sendReleaseReport();
     sessionActive = false;
     authenticated = false;

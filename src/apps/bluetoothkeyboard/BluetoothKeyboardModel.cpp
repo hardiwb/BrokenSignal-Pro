@@ -16,6 +16,7 @@ namespace BluetoothKeyboardInternal
 namespace
 {
 uint8_t lastReport[8] = {};
+bool lastReportValid = false;
 bool renaming = false;
 String renameValue;
 
@@ -222,6 +223,7 @@ void openSelected()
 {
     const int bondIndex = selectedIsBond() ? selected : -1;
     memset(lastReport, 0, sizeof(lastReport));
+    lastReportValid = false;
     if (BluetoothService::startKeyboardSession(bondIndex))
         drawSessionOverlay();
 }
@@ -277,6 +279,7 @@ void disconnectSession()
 {
     BluetoothService::stopKeyboardSession();
     memset(lastReport, 0, sizeof(lastReport));
+    lastReportValid = false;
     drawListScreen();
 }
 
@@ -321,14 +324,22 @@ void tick()
     {
         uint8_t report[8];
         buildKeyboardReport(M5Cardputer.Keyboard.keysState(), report);
-        if (memcmp(report, lastReport, sizeof(report)) != 0)
+        if (!lastReportValid ||
+            memcmp(report, lastReport, sizeof(report)) != 0)
         {
             BluetoothService::sendKeyboardReport(report);
             memcpy(lastReport, report, sizeof(lastReport));
+            lastReportValid = true;
             lastActivityMs = millis();
             if (!screenOn)
                 wakeScreen();
         }
+    }
+    else
+    {
+        // A new BLE connection has a new notification channel. Resend the
+        // complete matrix state when it becomes ready, even if no key changed.
+        lastReportValid = false;
     }
 
     if (BluetoothService::takeUiDirty())
