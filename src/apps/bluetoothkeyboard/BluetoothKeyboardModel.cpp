@@ -23,12 +23,16 @@ bool mouseToggleChordDown = false;
 bool suppressMouseExitKey = false;
 bool invertMouseY = true;
 uint8_t mouseSensitivity = 100;
+uint8_t configuredMouseScreens = 1;
+uint8_t activeMouseScreen = 0;
 uint8_t lastMouseButtons = 0;
 bool lastScrollUp = false;
 bool lastScrollDown = false;
 bool lastScrollLeft = false;
 bool lastScrollRight = false;
 bool lastCenterKey = false;
+bool lastScreenKey = false;
+uint8_t lastQuadrantKey = 0;
 float smoothMouseX = 0.0f;
 float smoothMouseY = 0.0f;
 float mouseRemainderX = 0.0f;
@@ -49,6 +53,7 @@ constexpr float FAST_GYRO_SPEED = 120.0f;
 constexpr float MOUSE_SMOOTHING_ALPHA = 0.25f;
 constexpr int32_t MOUSE_POSITION_CENTER = 16384;
 constexpr int32_t MOUSE_POSITION_MAX = 32767;
+constexpr int32_t MOUSE_POSITION_RANGE = 32768;
 constexpr int32_t ABSOLUTE_UNITS_PER_PIXEL = 16;
 constexpr uint8_t MOUSE_SENSITIVITY_LEVELS[] = {50, 75, 100, 150, 200};
 
@@ -60,6 +65,30 @@ bool hidKeyDown(const Keyboard_Class::KeysState &keys, uint8_t usage)
             return true;
     }
     return false;
+}
+
+int32_t activeScreenWidth()
+{
+    return MOUSE_POSITION_RANGE / configuredMouseScreens;
+}
+
+int32_t activeScreenLeft()
+{
+    return activeMouseScreen * activeScreenWidth();
+}
+
+int32_t activeScreenCenterX()
+{
+    return activeScreenLeft() + activeScreenWidth() / 2;
+}
+
+void moveToQuadrant(uint8_t key)
+{
+    const bool right = key == 0x13 || key == 0x0F; // P or L
+    const bool bottom = key == 0x0E || key == 0x0F; // K or L
+    mousePositionX = activeScreenLeft() +
+        activeScreenWidth() * (right ? 3 : 1) / 4;
+    mousePositionY = MOUSE_POSITION_RANGE * (bottom ? 3 : 1) / 4;
 }
 
 int16_t mouseAxisDelta(float &remainder, float movement)
@@ -79,6 +108,8 @@ void resetMouseTracking()
     lastScrollLeft = false;
     lastScrollRight = false;
     lastCenterKey = false;
+    lastScreenKey = false;
+    lastQuadrantKey = 0;
     smoothMouseX = 0.0f;
     smoothMouseY = 0.0f;
     mouseRemainderX = 0.0f;
@@ -111,6 +142,16 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
         (scrollLeft && !lastScrollLeft ? 1 : 0));
     const bool centerKey = keys.ctrl;
     const bool recenter = centerKey && !lastCenterKey;
+    const bool screenKey = keys.tab;
+    const bool switchScreen = configuredMouseScreens > 1 &&
+        screenKey && !lastScreenKey;
+    uint8_t quadrantKey = 0;
+    if (hidKeyDown(keys, 0x12)) quadrantKey = 0x12;      // O: top-left
+    else if (hidKeyDown(keys, 0x13)) quadrantKey = 0x13; // P: top-right
+    else if (hidKeyDown(keys, 0x0E)) quadrantKey = 0x0E; // K: bottom-left
+    else if (hidKeyDown(keys, 0x0F)) quadrantKey = 0x0F; // L: bottom-right
+    const bool moveQuadrant = quadrantKey != 0 &&
+        quadrantKey != lastQuadrantKey;
 
     if (buttons != lastMouseButtons)
         mouseFreezeUntilMs = now + CLICK_FREEZE_MS;
@@ -157,23 +198,40 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
         }
     }
 
-    if (recenter)
+    if (switchScreen)
     {
-        mousePositionX = MOUSE_POSITION_CENTER;
+        activeMouseScreen = (activeMouseScreen + 1) % configuredMouseScreens;
+        mousePositionX = activeScreenCenterX();
         mousePositionY = MOUSE_POSITION_CENTER;
     }
-    else
+    if (moveQuadrant)
+        moveToQuadrant(quadrantKey);
+    else if (recenter)
+    {
+        mousePositionX = activeScreenCenterX();
+        mousePositionY = MOUSE_POSITION_CENTER;
+    }
+    else if (!switchScreen)
     {
         mousePositionX = constrain(
             mousePositionX + moveX * ABSOLUTE_UNITS_PER_PIXEL,
-            0L, static_cast<long>(MOUSE_POSITION_MAX));
+            static_cast<long>(activeScreenLeft()),
+            static_cast<long>(activeScreenLeft() + activeScreenWidth() - 1));
         mousePositionY = constrain(
             mousePositionY + moveY * ABSOLUTE_UNITS_PER_PIXEL,
             0L, static_cast<long>(MOUSE_POSITION_MAX));
     }
 
+    if (recenter || switchScreen || moveQuadrant)
+    {
+        smoothMouseX = 0.0f;
+        smoothMouseY = 0.0f;
+        mouseRemainderX = 0.0f;
+        mouseRemainderY = 0.0f;
+    }
+
     if (moveX != 0 || moveY != 0 || wheel != 0 || horizontalWheel != 0 ||
-        buttons != lastMouseButtons || recenter)
+        buttons != lastMouseButtons || recenter || switchScreen || moveQuadrant)
     {
         BluetoothService::sendMouseReport(
             buttons,
@@ -190,6 +248,8 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
     lastScrollLeft = scrollLeft;
     lastScrollRight = scrollRight;
     lastCenterKey = centerKey;
+    lastScreenKey = screenKey;
+    lastQuadrantKey = quadrantKey;
 }
 
 uint8_t fnMappedKey(uint8_t key)
@@ -271,6 +331,12 @@ void initialize()
         validSensitivity = validSensitivity || mouseSensitivity == level;
     if (!validSensitivity)
         mouseSensitivity = 100;
+    configuredMouseScreens = BluetoothService::mouseScreenCount();
+    if (configuredMouseScreens < 1 || configuredMouseScreens > 2)
+        configuredMouseScreens = 1;
+    activeMouseScreen = 0;
+    mousePositionX = activeScreenCenterX();
+    mousePositionY = MOUSE_POSITION_CENTER;
 }
 
 void refreshBonds()
@@ -333,6 +399,20 @@ void adjustMouseSensitivity(int direction)
     mouseSensitivity = MOUSE_SENSITIVITY_LEVELS[
         (index + direction + count) % count];
     BluetoothService::setMouseSensitivityPercent(mouseSensitivity);
+}
+
+uint8_t mouseScreenCount()
+{
+    return configuredMouseScreens;
+}
+
+void adjustMouseScreenCount(int)
+{
+    configuredMouseScreens = configuredMouseScreens == 1 ? 2 : 1;
+    activeMouseScreen = 0;
+    mousePositionX = activeScreenCenterX();
+    mousePositionY = MOUSE_POSITION_CENTER;
+    BluetoothService::setMouseScreenCount(configuredMouseScreens);
 }
 
 void drawListScreen()

@@ -509,6 +509,17 @@ void setMouseSensitivityPercent(uint8_t percent)
         preferences.putUChar("mouse-sens", percent);
 }
 
+uint8_t mouseScreenCount()
+{
+    return preferencesOpen ? preferences.getUChar("mouse-screens", 1) : 1;
+}
+
+void setMouseScreenCount(uint8_t count)
+{
+    if (preferencesOpen)
+        preferences.putUChar("mouse-screens", count);
+}
+
 bool startKeyboardSession(int bondIndex)
 {
     if (!initialized || sessionActive || !advertising)

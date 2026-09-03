@@ -16,6 +16,9 @@ const HelpEntry BLUETOOTH_KEYBOARD_HELP_ENTRIES[] = {
     {"[,//]", "Mouse: scroll left/right"},
     {"[Ctrl]", "Mouse: center cursor"},
     {"[Space]", "Mouse: hold gyro clutch"},
+    {"[O/P]", "Mouse: upper quadrants"},
+    {"[K/L]", "Mouse: lower quadrants"},
+    {"[Tab]", "Mouse: switch screen"},
 };
 
 const uint8_t BLUETOOTH_KEYBOARD_HELP_COUNT =
@@ -48,6 +51,11 @@ void adjustMouseSensitivity(int direction)
 {
     BluetoothKeyboardInternal::adjustMouseSensitivity(direction);
 }
+
+void adjustMouseScreenCount(int direction)
+{
+    BluetoothKeyboardInternal::adjustMouseScreenCount(direction);
+}
 } // namespace
 
 void buildBluetoothKeyboardOptions(std::vector<AppOption> &options)
@@ -69,4 +77,8 @@ void buildBluetoothKeyboardOptions(std::vector<AppOption> &options)
         "Mouse Sensitivity",
         String(BluetoothKeyboardInternal::mouseSensitivityPercent()) + "%",
         true, true, false, adjustMouseSensitivity});
+    options.push_back({
+        "Mouse Screens",
+        String(BluetoothKeyboardInternal::mouseScreenCount()),
+        true, true, false, adjustMouseScreenCount});
 }

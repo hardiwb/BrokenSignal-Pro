@@ -240,10 +240,14 @@ belong to the remote host and global firmware shortcuts are blocked.
 | `,` / `/` (mouse mode) | Scroll left / right |
 | `Ctrl` (mouse mode) | Reset the cursor to screen center |
 | Hold `Space` (mouse mode) | Pause gyro movement to reposition your hand |
+| `O` / `P` (mouse mode) | Move to the top-left / top-right quadrant center |
+| `K` / `L` (mouse mode) | Move to the bottom-left / bottom-right quadrant center |
+| `Tab` (mouse mode) | Switch to the center of the other configured screen |
 
 The Bluetooth Keyboard Options menu includes a persistent `Invert Mouse Y`
-setting and mouse sensitivity levels from 50% to 200%. Invert Y defaults to
-`On` for natural tilt direction.
+setting, mouse sensitivity levels from 50% to 200%, and a `Mouse Screens`
+setting for one or two displays. Invert Y defaults to `On` for natural tilt
+direction. Two-screen mode assumes equal-sized displays arranged side by side.
 
 ### Global Host Shortcuts
 

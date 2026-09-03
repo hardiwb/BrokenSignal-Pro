@@ -29,6 +29,8 @@ bool mouseYInverted();
 void toggleMouseYInverted();
 uint8_t mouseSensitivityPercent();
 void adjustMouseSensitivity(int direction);
+uint8_t mouseScreenCount();
+void adjustMouseScreenCount(int direction);
 void tick();
 void consumeModalMatrixInput(Keyboard_Class::KeysState &keys);
 } // namespace BluetoothKeyboardInternal

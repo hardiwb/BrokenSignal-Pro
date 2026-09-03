@@ -34,6 +34,8 @@ bool mouseInvertY();
 void setMouseInvertY(bool inverted);
 uint8_t mouseSensitivityPercent();
 void setMouseSensitivityPercent(uint8_t percent);
+uint8_t mouseScreenCount();
+void setMouseScreenCount(uint8_t count);
 
 // Pass -1 to accept a new bond, or a bond-list index to restrict the session
 // to that saved peer.
