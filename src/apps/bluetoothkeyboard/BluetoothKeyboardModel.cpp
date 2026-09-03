@@ -1,5 +1,6 @@
 #include "apps/bluetoothkeyboard/BluetoothKeyboardInternal.h"
 
+#include <cmath>
 #include <cstring>
 
 #include "core/Keyboard.h"
@@ -17,8 +18,179 @@ namespace
 {
 uint8_t lastReport[8] = {};
 bool lastReportValid = false;
+bool mouseModeActive = false;
+bool mouseToggleChordDown = false;
+bool suppressMouseExitKey = false;
+bool invertMouseY = true;
+uint8_t mouseSensitivity = 100;
+uint8_t lastMouseButtons = 0;
+bool lastScrollUp = false;
+bool lastScrollDown = false;
+bool lastScrollLeft = false;
+bool lastScrollRight = false;
+bool lastCenterKey = false;
+float smoothMouseX = 0.0f;
+float smoothMouseY = 0.0f;
+float mouseRemainderX = 0.0f;
+float mouseRemainderY = 0.0f;
+int32_t mousePositionX = 16384;
+int32_t mousePositionY = 16384;
+unsigned long lastMouseUpdateMs = 0;
+unsigned long mouseFreezeUntilMs = 0;
 bool renaming = false;
 String renameValue;
+
+constexpr unsigned long MOUSE_UPDATE_INTERVAL_MS = 10;
+constexpr unsigned long CLICK_FREEZE_MS = 120;
+constexpr float GYRO_DEADZONE = 1.5f;
+constexpr float MIN_MOUSE_SENSITIVITY = 0.05f;
+constexpr float MAX_MOUSE_SENSITIVITY = 0.25f;
+constexpr float FAST_GYRO_SPEED = 120.0f;
+constexpr float MOUSE_SMOOTHING_ALPHA = 0.25f;
+constexpr int32_t MOUSE_POSITION_CENTER = 16384;
+constexpr int32_t MOUSE_POSITION_MAX = 32767;
+constexpr int32_t ABSOLUTE_UNITS_PER_PIXEL = 16;
+constexpr uint8_t MOUSE_SENSITIVITY_LEVELS[] = {50, 75, 100, 150, 200};
+
+bool hidKeyDown(const Keyboard_Class::KeysState &keys, uint8_t usage)
+{
+    for (uint8_t key : keys.hid_keys)
+    {
+        if (key == usage)
+            return true;
+    }
+    return false;
+}
+
+int16_t mouseAxisDelta(float &remainder, float movement)
+{
+    remainder += movement;
+    const int wholePixels = constrain(
+        static_cast<int>(remainder), -127, 127);
+    remainder -= wholePixels;
+    return static_cast<int16_t>(wholePixels);
+}
+
+void resetMouseTracking()
+{
+    lastMouseButtons = 0;
+    lastScrollUp = false;
+    lastScrollDown = false;
+    lastScrollLeft = false;
+    lastScrollRight = false;
+    lastCenterKey = false;
+    smoothMouseX = 0.0f;
+    smoothMouseY = 0.0f;
+    mouseRemainderX = 0.0f;
+    mouseRemainderY = 0.0f;
+    lastMouseUpdateMs = 0;
+    mouseFreezeUntilMs = 0;
+}
+
+void tickGyroMouse(const Keyboard_Class::KeysState &keys)
+{
+    const unsigned long now = millis();
+    if (lastMouseUpdateMs != 0 &&
+        now - lastMouseUpdateMs < MOUSE_UPDATE_INTERVAL_MS)
+        return;
+    lastMouseUpdateMs = now;
+
+    const uint8_t buttons =
+        (keys.enter ? 0x01 : 0x00) |
+        (keys.opt ? 0x02 : 0x00) |
+        (keys.alt ? 0x04 : 0x00);
+    const bool scrollUp = hidKeyDown(keys, 0x33);    // ;
+    const bool scrollDown = hidKeyDown(keys, 0x37);  // .
+    const bool scrollLeft = hidKeyDown(keys, 0x36);  // ,
+    const bool scrollRight = hidKeyDown(keys, 0x38); // /
+    const int8_t wheel = static_cast<int8_t>(
+        (scrollUp && !lastScrollUp ? 1 : 0) -
+        (scrollDown && !lastScrollDown ? 1 : 0));
+    const int8_t horizontalWheel = static_cast<int8_t>(
+        (scrollRight && !lastScrollRight ? 1 : 0) -
+        (scrollLeft && !lastScrollLeft ? 1 : 0));
+    const bool centerKey = keys.ctrl;
+    const bool recenter = centerKey && !lastCenterKey;
+
+    if (buttons != lastMouseButtons)
+        mouseFreezeUntilMs = now + CLICK_FREEZE_MS;
+
+    int16_t moveX = 0;
+    int16_t moveY = 0;
+    float gyroX = 0.0f;
+    float gyroY = 0.0f;
+    float gyroZ = 0.0f;
+    if (keys.space)
+    {
+        // Space acts as a gyro clutch: discard filtered and fractional
+        // movement while the user readjusts their hand position.
+        smoothMouseX = 0.0f;
+        smoothMouseY = 0.0f;
+        mouseRemainderX = 0.0f;
+        mouseRemainderY = 0.0f;
+    }
+    else if (M5.Imu.isEnabled() && M5.Imu.getGyro(&gyroX, &gyroY, &gyroZ))
+    {
+        // With the Cardputer held in landscape, pitch controls vertical
+        // movement and yaw controls horizontal movement.
+        float activeX = -gyroZ;
+        float activeY = invertMouseY ? -gyroX : gyroX;
+        if (fabsf(activeX) < GYRO_DEADZONE)
+            activeX = 0.0f;
+        if (fabsf(activeY) < GYRO_DEADZONE)
+            activeY = 0.0f;
+
+        const float speed = sqrtf(activeX * activeX + activeY * activeY);
+        const float speedRatio = min(1.0f, speed / FAST_GYRO_SPEED);
+        const float sensitivity = MIN_MOUSE_SENSITIVITY +
+            (MAX_MOUSE_SENSITIVITY - MIN_MOUSE_SENSITIVITY) * speedRatio;
+        const float sensitivityScale = mouseSensitivity / 100.0f;
+        const float targetX = activeX * sensitivity * sensitivityScale;
+        const float targetY = activeY * sensitivity * sensitivityScale;
+        smoothMouseX += MOUSE_SMOOTHING_ALPHA * (targetX - smoothMouseX);
+        smoothMouseY += MOUSE_SMOOTHING_ALPHA * (targetY - smoothMouseY);
+
+        if (now >= mouseFreezeUntilMs)
+        {
+            moveX = mouseAxisDelta(mouseRemainderX, smoothMouseX);
+            moveY = mouseAxisDelta(mouseRemainderY, smoothMouseY);
+        }
+    }
+
+    if (recenter)
+    {
+        mousePositionX = MOUSE_POSITION_CENTER;
+        mousePositionY = MOUSE_POSITION_CENTER;
+    }
+    else
+    {
+        mousePositionX = constrain(
+            mousePositionX + moveX * ABSOLUTE_UNITS_PER_PIXEL,
+            0L, static_cast<long>(MOUSE_POSITION_MAX));
+        mousePositionY = constrain(
+            mousePositionY + moveY * ABSOLUTE_UNITS_PER_PIXEL,
+            0L, static_cast<long>(MOUSE_POSITION_MAX));
+    }
+
+    if (moveX != 0 || moveY != 0 || wheel != 0 || horizontalWheel != 0 ||
+        buttons != lastMouseButtons || recenter)
+    {
+        BluetoothService::sendMouseReport(
+            buttons,
+            static_cast<uint16_t>(mousePositionX),
+            static_cast<uint16_t>(mousePositionY), wheel, horizontalWheel);
+        lastActivityMs = now;
+        if (!screenOn)
+            wakeScreen();
+    }
+
+    lastMouseButtons = buttons;
+    lastScrollUp = scrollUp;
+    lastScrollDown = scrollDown;
+    lastScrollLeft = scrollLeft;
+    lastScrollRight = scrollRight;
+    lastCenterKey = centerKey;
+}
 
 uint8_t fnMappedKey(uint8_t key)
 {
@@ -92,6 +264,13 @@ int scrollTop = 0;
 void initialize()
 {
     BluetoothService::begin();
+    invertMouseY = BluetoothService::mouseInvertY();
+    mouseSensitivity = BluetoothService::mouseSensitivityPercent();
+    bool validSensitivity = false;
+    for (uint8_t level : MOUSE_SENSITIVITY_LEVELS)
+        validSensitivity = validSensitivity || mouseSensitivity == level;
+    if (!validSensitivity)
+        mouseSensitivity = 100;
 }
 
 void refreshBonds()
@@ -119,6 +298,41 @@ String bondAddressText(int index)
 bool renameModalActive()
 {
     return renaming;
+}
+
+bool mouseYInverted()
+{
+    return invertMouseY;
+}
+
+void toggleMouseYInverted()
+{
+    invertMouseY = !invertMouseY;
+    BluetoothService::setMouseInvertY(invertMouseY);
+}
+
+uint8_t mouseSensitivityPercent()
+{
+    return mouseSensitivity;
+}
+
+void adjustMouseSensitivity(int direction)
+{
+    constexpr int count =
+        sizeof(MOUSE_SENSITIVITY_LEVELS) /
+        sizeof(MOUSE_SENSITIVITY_LEVELS[0]);
+    int index = 2;
+    for (int i = 0; i < count; ++i)
+    {
+        if (MOUSE_SENSITIVITY_LEVELS[i] == mouseSensitivity)
+        {
+            index = i;
+            break;
+        }
+    }
+    mouseSensitivity = MOUSE_SENSITIVITY_LEVELS[
+        (index + direction + count) % count];
+    BluetoothService::setMouseSensitivityPercent(mouseSensitivity);
 }
 
 void drawListScreen()
@@ -174,7 +388,7 @@ void drawSessionOverlay()
     case BluetoothService::KeyboardLinkState::Ready:
         model.items.push_back("CONNECTED + ENCRYPTED");
         model.items.push_back(BluetoothService::peerAddressText());
-        model.items.push_back("Typing enabled");
+        model.items.push_back("Fn+M starts gyro mouse");
         break;
     case BluetoothService::KeyboardLinkState::Failed:
         model.items.push_back("CONNECTION REJECTED");
@@ -224,6 +438,10 @@ void openSelected()
     const int bondIndex = selectedIsBond() ? selected : -1;
     memset(lastReport, 0, sizeof(lastReport));
     lastReportValid = false;
+    mouseModeActive = false;
+    mouseToggleChordDown = false;
+    suppressMouseExitKey = false;
+    resetMouseTracking();
     if (BluetoothService::startKeyboardSession(bondIndex))
         drawSessionOverlay();
 }
@@ -280,6 +498,10 @@ void disconnectSession()
     BluetoothService::stopKeyboardSession();
     memset(lastReport, 0, sizeof(lastReport));
     lastReportValid = false;
+    mouseModeActive = false;
+    mouseToggleChordDown = false;
+    suppressMouseExitKey = false;
+    resetMouseTracking();
     drawListScreen();
 }
 
@@ -322,17 +544,54 @@ void tick()
 
     if (BluetoothService::keyboardReady())
     {
-        uint8_t report[8];
-        buildKeyboardReport(M5Cardputer.Keyboard.keysState(), report);
-        if (!lastReportValid ||
-            memcmp(report, lastReport, sizeof(report)) != 0)
+        const Keyboard_Class::KeysState &keys =
+            M5Cardputer.Keyboard.keysState();
+        const bool toggleChord = keys.fn && hidKeyDown(keys, 0x10); // Fn+M
+        const bool togglePressed = toggleChord && !mouseToggleChordDown;
+        mouseToggleChordDown = toggleChord;
+        const bool exitKey = hidKeyDown(keys, 0x35); // `
+
+        if (togglePressed && !mouseModeActive)
         {
-            BluetoothService::sendKeyboardReport(report);
-            memcpy(lastReport, report, sizeof(lastReport));
+            const uint8_t emptyKeyboard[8] = {};
+            BluetoothService::sendKeyboardReport(emptyKeyboard);
+            memcpy(lastReport, emptyKeyboard, sizeof(lastReport));
             lastReportValid = true;
-            lastActivityMs = millis();
-            if (!screenOn)
-                wakeScreen();
+            resetMouseTracking();
+            mouseModeActive = true;
+        }
+
+        if (mouseModeActive && exitKey)
+        {
+            BluetoothService::sendMouseReport(
+                0, static_cast<uint16_t>(mousePositionX),
+                static_cast<uint16_t>(mousePositionY), 0);
+            mouseModeActive = false;
+            suppressMouseExitKey = true;
+            resetMouseTracking();
+            lastReportValid = false;
+        }
+        else if (suppressMouseExitKey && !exitKey)
+            suppressMouseExitKey = false;
+
+        if (mouseModeActive)
+        {
+            tickGyroMouse(keys);
+        }
+        else if (!toggleChord && !suppressMouseExitKey)
+        {
+            uint8_t report[8];
+            buildKeyboardReport(keys, report);
+            if (!lastReportValid ||
+                memcmp(report, lastReport, sizeof(report)) != 0)
+            {
+                BluetoothService::sendKeyboardReport(report);
+                memcpy(lastReport, report, sizeof(lastReport));
+                lastReportValid = true;
+                lastActivityMs = millis();
+                if (!screenOn)
+                    wakeScreen();
+            }
         }
     }
     else
@@ -340,6 +599,10 @@ void tick()
         // A new BLE connection has a new notification channel. Resend the
         // complete matrix state when it becomes ready, even if no key changed.
         lastReportValid = false;
+        mouseModeActive = false;
+        mouseToggleChordDown = false;
+        suppressMouseExitKey = false;
+        resetMouseTracking();
     }
 
     if (BluetoothService::takeUiDirty())

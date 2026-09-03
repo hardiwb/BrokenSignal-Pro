@@ -231,6 +231,19 @@ belong to the remote host and global firmware shortcuts are blocked.
 | `Fn` + `` ` `` | Send Escape |
 | `Fn` + `;` / `.` | Send Up / Down |
 | `Fn` + `,` / `/` | Send Left / Right |
+| `Fn` + `M` | Enter gyroscope mouse mode |
+| `` ` `` (mouse mode) | Return to keyboard mode |
+| `Ok` (mouse mode) | Hold left mouse button |
+| `Opt` (mouse mode) | Hold right mouse button |
+| `Alt` (mouse mode) | Hold middle mouse button |
+| `;` / `.` (mouse mode) | Scroll up / down |
+| `,` / `/` (mouse mode) | Scroll left / right |
+| `Ctrl` (mouse mode) | Reset the cursor to screen center |
+| Hold `Space` (mouse mode) | Pause gyro movement to reposition your hand |
+
+The Bluetooth Keyboard Options menu includes a persistent `Invert Mouse Y`
+setting and mouse sensitivity levels from 50% to 200%. Invert Y defaults to
+`On` for natural tilt direction.
 
 ### Global Host Shortcuts
 
@@ -568,6 +581,7 @@ uses that relation; leave the setup prompt blank otherwise.
 - Original codebase: [MarcoRR / BrokenSignal](https://github.com/MarcoRR/BrokenSignal)
 - BrokenSignal-Next fork by Rythlan (https://github.com/Rythlan/BrokenSignal-Next)
 - Audio engine: [earlephilhower / ESP8266Audio](https://github.com/earlephilhower/ESP8266Audio)
+- Gyroscope mouse filtering and control inspiration: [younes-makhchan / Gyro-Mouse-Controller](https://github.com/younes-makhchan/Gyro-Mouse-Controller)
 
 ## License
 

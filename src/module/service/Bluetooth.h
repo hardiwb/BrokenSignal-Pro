@@ -30,6 +30,10 @@ String bondName(int index);
 bool setBondName(int index, const String &name);
 bool forgetBond(int index);
 void forgetAllBonds();
+bool mouseInvertY();
+void setMouseInvertY(bool inverted);
+uint8_t mouseSensitivityPercent();
+void setMouseSensitivityPercent(uint8_t percent);
 
 // Pass -1 to accept a new bond, or a bond-list index to restrict the session
 // to that saved peer.
@@ -44,6 +48,9 @@ bool targetBondSelected();
 String keyboardFailureText();
 bool keyboardReady();
 void sendKeyboardReport(const uint8_t report[8]);
+void sendMouseReport(
+    uint8_t buttons, uint16_t x, uint16_t y,
+    int8_t wheel, int8_t horizontalWheel = 0);
 
 // Returns and clears the service-to-UI notification flag.
 bool takeUiDirty();

@@ -7,9 +7,15 @@ const HelpEntry BLUETOOTH_KEYBOARD_HELP_ENTRIES[] = {
     {"[;/.]", "Cursor up / down"},
     {"[Opt]", "Manage pairings"},
     {"[BtnG0]", "Disconnect typing mode"},
-    {"[Fn+`]", "Send Escape"},
-    {"[Fn+;/.]", "Send Up / Down"},
-    {"[Fn+,//]", "Send Left / Right"},
+    {"[Fn+M]", "Enter gyroscope mouse"},
+    {"[`]", "Mouse: return to keyboard"},
+    {"[Ok]", "Mouse: left button"},
+    {"[Opt]", "Mouse: right button"},
+    {"[Alt]", "Mouse: middle button"},
+    {"[;/.]", "Mouse: scroll up/down"},
+    {"[,//]", "Mouse: scroll left/right"},
+    {"[Ctrl]", "Mouse: center cursor"},
+    {"[Space]", "Mouse: hold gyro clutch"},
 };
 
 const uint8_t BLUETOOTH_KEYBOARD_HELP_COUNT =
@@ -32,6 +38,16 @@ void forgetAll(int)
 {
     BluetoothKeyboardInternal::forgetAllBonds();
 }
+
+void adjustInvertMouseY(int)
+{
+    BluetoothKeyboardInternal::toggleMouseYInverted();
+}
+
+void adjustMouseSensitivity(int direction)
+{
+    BluetoothKeyboardInternal::adjustMouseSensitivity(direction);
+}
 } // namespace
 
 void buildBluetoothKeyboardOptions(std::vector<AppOption> &options)
@@ -45,4 +61,12 @@ void buildBluetoothKeyboardOptions(std::vector<AppOption> &options)
         false, true, forgetSelected});
     options.push_back({
         "Forget All", "", count > 0, false, true, forgetAll});
+    options.push_back({
+        "Invert Mouse Y",
+        BluetoothKeyboardInternal::mouseYInverted() ? "On" : "Off",
+        true, true, false, adjustInvertMouseY});
+    options.push_back({
+        "Mouse Sensitivity",
+        String(BluetoothKeyboardInternal::mouseSensitivityPercent()) + "%",
+        true, true, false, adjustMouseSensitivity});
 }

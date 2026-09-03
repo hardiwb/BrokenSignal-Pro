@@ -25,12 +25,26 @@ const uint8_t HID_REPORT_MAP[] = {
     0x91, 0x02, 0x95, 0x01, 0x75, 0x03, 0x91, 0x01,
     0x95, 0x06, 0x75, 0x08, 0x15, 0x00, 0x25, 0x65,
     0x05, 0x07, 0x19, 0x00, 0x29, 0x65, 0x81, 0x00,
-    0xC0
+    0xC0,
+
+    // Report 2: three-button absolute mouse with a relative vertical wheel.
+    // Absolute X/Y coordinates allow mouse mode to recenter the host cursor.
+    0x05, 0x01, 0x09, 0x02, 0xA1, 0x01, 0x85, 0x02,
+    0x09, 0x01, 0xA1, 0x00, 0x05, 0x09, 0x19, 0x01,
+    0x29, 0x03, 0x15, 0x00, 0x25, 0x01, 0x95, 0x03,
+    0x75, 0x01, 0x81, 0x02, 0x95, 0x01, 0x75, 0x05,
+    0x81, 0x01, 0x05, 0x01, 0x09, 0x30, 0x09, 0x31,
+    0x15, 0x00, 0x26, 0xFF, 0x7F, 0x75, 0x10, 0x95, 0x02,
+    0x81, 0x02, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7F,
+    0x75, 0x08, 0x95, 0x01, 0x81, 0x06,
+    0x05, 0x0C, 0x0A, 0x38, 0x02, 0x15, 0x81, 0x25, 0x7F,
+    0x75, 0x08, 0x95, 0x01, 0x81, 0x06, 0xC0, 0xC0
 };
 
 BLEServer *server = nullptr;
 BLEHIDDevice *hid = nullptr;
 BLECharacteristic *inputReport = nullptr;
+BLECharacteristic *mouseInputReport = nullptr;
 BLEAdvertising *advertising = nullptr;
 BLESecurity *security = nullptr;
 Preferences preferences;
@@ -54,6 +68,8 @@ volatile uint8_t authenticationFailureReason = 0;
 
 bool initialized = false;
 bool preferencesOpen = false;
+uint16_t lastMouseX = 16384;
+uint16_t lastMouseY = 16384;
 bool selectedTarget = false;
 esp_ble_bond_dev_t selectedBond = {};
 esp_bd_addr_t targetAddress = {};
@@ -64,15 +80,21 @@ bool addressesEqual(const uint8_t *a, const uint8_t *b)
     return memcmp(a, b, sizeof(esp_bd_addr_t)) == 0;
 }
 
-void setInputNotifications(bool enabled)
+void setReportNotifications(BLECharacteristic *report, bool enabled)
 {
-    if (!inputReport)
+    if (!report)
         return;
 
     BLE2902 *configuration = static_cast<BLE2902 *>(
-        inputReport->getDescriptorByUUID(BLEUUID((uint16_t)0x2902)));
+        report->getDescriptorByUUID(BLEUUID((uint16_t)0x2902)));
     if (configuration)
         configuration->setNotifications(enabled);
+}
+
+void setInputNotifications(bool enabled)
+{
+    setReportNotifications(inputReport, enabled);
+    setReportNotifications(mouseInputReport, enabled);
 }
 
 bool addWhitelistAddress(const uint8_t *address)
@@ -279,6 +301,7 @@ void sendReleaseReport()
 {
     const uint8_t empty[8] = {};
     sendKeyboardReport(empty);
+    sendMouseReport(0, lastMouseX, lastMouseY, 0);
 }
 } // namespace
 
@@ -298,6 +321,7 @@ void begin()
 
     hid = new BLEHIDDevice(server);
     inputReport = hid->inputReport(1);
+    mouseInputReport = hid->inputReport(2);
     hid->outputReport(1);
     hid->manufacturer()->setValue("BrokenSignal Pro");
     hid->pnp(0x02, 0x303A, 0x4001, 0x0100);
@@ -461,6 +485,30 @@ void forgetAllBonds()
     uiDirty = true;
 }
 
+bool mouseInvertY()
+{
+    return preferencesOpen ? preferences.getBool("mouse-inv-y", true) : true;
+}
+
+void setMouseInvertY(bool inverted)
+{
+    if (preferencesOpen)
+        preferences.putBool("mouse-inv-y", inverted);
+}
+
+uint8_t mouseSensitivityPercent()
+{
+    return preferencesOpen
+        ? preferences.getUChar("mouse-sens", 100)
+        : 100;
+}
+
+void setMouseSensitivityPercent(uint8_t percent)
+{
+    if (preferencesOpen)
+        preferences.putUChar("mouse-sens", percent);
+}
+
 bool startKeyboardSession(int bondIndex)
 {
     if (!initialized || sessionActive || !advertising)
@@ -576,6 +624,28 @@ void sendKeyboardReport(const uint8_t report[8])
         return;
     inputReport->setValue(const_cast<uint8_t *>(report), 8);
     inputReport->notify();
+}
+
+void sendMouseReport(
+    uint8_t buttons, uint16_t x, uint16_t y,
+    int8_t wheel, int8_t horizontalWheel)
+{
+    if (!mouseInputReport || !keyboardReady())
+        return;
+
+    lastMouseX = x > 32767 ? 32767 : x;
+    lastMouseY = y > 32767 ? 32767 : y;
+    const uint8_t report[7] = {
+        buttons,
+        static_cast<uint8_t>(lastMouseX & 0xFF),
+        static_cast<uint8_t>(lastMouseX >> 8),
+        static_cast<uint8_t>(lastMouseY & 0xFF),
+        static_cast<uint8_t>(lastMouseY >> 8),
+        static_cast<uint8_t>(wheel),
+        static_cast<uint8_t>(horizontalWheel)
+    };
+    mouseInputReport->setValue(const_cast<uint8_t *>(report), sizeof(report));
+    mouseInputReport->notify();
 }
 
 bool takeUiDirty()

@@ -25,6 +25,10 @@ void handleRenameInput(Keyboard_Class::KeysState &keys);
 void disconnectSession();
 void forgetSelectedBond();
 void forgetAllBonds();
+bool mouseYInverted();
+void toggleMouseYInverted();
+uint8_t mouseSensitivityPercent();
+void adjustMouseSensitivity(int direction);
 void tick();
 void consumeModalMatrixInput(Keyboard_Class::KeysState &keys);
 } // namespace BluetoothKeyboardInternal
