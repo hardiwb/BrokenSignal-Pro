@@ -32,7 +32,7 @@ bool lastScrollLeft = false;
 bool lastScrollRight = false;
 bool lastCenterKey = false;
 bool lastScreenKey = false;
-uint8_t lastQuadrantKey = 0;
+uint8_t lastSegmentKey = 0;
 float smoothMouseX = 0.0f;
 float smoothMouseY = 0.0f;
 float mouseRemainderX = 0.0f;
@@ -82,12 +82,22 @@ int32_t activeScreenCenterX()
     return activeScreenLeft() + activeScreenWidth() / 2;
 }
 
-void moveToQuadrant(uint8_t key)
+void moveToSegment(uint8_t key)
 {
-    const bool right = key == 0x13 || key == 0x0F; // P or L
-    const bool bottom = key == 0x0E || key == 0x0F; // K or L
+    uint8_t column = 0;
+    bool bottom = false;
+    switch (key)
+    {
+    case 0x2D: column = 0; break;                // -: top-left
+    case 0x2E: column = 1; break;                // =: top-middle
+    case 0x2A: column = 2; break;                // Backspace: top-right
+    case 0x2F: column = 0; bottom = true; break; // [: bottom-left
+    case 0x30: column = 1; bottom = true; break; // ]: bottom-middle
+    case 0x31: column = 2; bottom = true; break; // \: bottom-right
+    default: return;
+    }
     mousePositionX = activeScreenLeft() +
-        activeScreenWidth() * (right ? 3 : 1) / 4;
+        activeScreenWidth() * (column * 2 + 1) / 6;
     mousePositionY = MOUSE_POSITION_RANGE * (bottom ? 3 : 1) / 4;
 }
 
@@ -109,7 +119,7 @@ void resetMouseTracking()
     lastScrollRight = false;
     lastCenterKey = false;
     lastScreenKey = false;
-    lastQuadrantKey = 0;
+    lastSegmentKey = 0;
     smoothMouseX = 0.0f;
     smoothMouseY = 0.0f;
     mouseRemainderX = 0.0f;
@@ -145,13 +155,15 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
     const bool screenKey = keys.tab;
     const bool switchScreen = configuredMouseScreens > 1 &&
         screenKey && !lastScreenKey;
-    uint8_t quadrantKey = 0;
-    if (hidKeyDown(keys, 0x12)) quadrantKey = 0x12;      // O: top-left
-    else if (hidKeyDown(keys, 0x13)) quadrantKey = 0x13; // P: top-right
-    else if (hidKeyDown(keys, 0x0E)) quadrantKey = 0x0E; // K: bottom-left
-    else if (hidKeyDown(keys, 0x0F)) quadrantKey = 0x0F; // L: bottom-right
-    const bool moveQuadrant = quadrantKey != 0 &&
-        quadrantKey != lastQuadrantKey;
+    uint8_t segmentKey = 0;
+    if (hidKeyDown(keys, 0x2D)) segmentKey = 0x2D;      // -: top-left
+    else if (hidKeyDown(keys, 0x2E)) segmentKey = 0x2E; // =: top-middle
+    else if (keys.del) segmentKey = 0x2A;               // Backspace: top-right
+    else if (hidKeyDown(keys, 0x2F)) segmentKey = 0x2F; // [: bottom-left
+    else if (hidKeyDown(keys, 0x30)) segmentKey = 0x30; // ]: bottom-middle
+    else if (hidKeyDown(keys, 0x31)) segmentKey = 0x31; // \: bottom-right
+    const bool moveSegment = segmentKey != 0 &&
+        segmentKey != lastSegmentKey;
 
     if (buttons != lastMouseButtons)
         mouseFreezeUntilMs = now + CLICK_FREEZE_MS;
@@ -204,8 +216,8 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
         mousePositionX = activeScreenCenterX();
         mousePositionY = MOUSE_POSITION_CENTER;
     }
-    if (moveQuadrant)
-        moveToQuadrant(quadrantKey);
+    if (moveSegment)
+        moveToSegment(segmentKey);
     else if (recenter)
     {
         mousePositionX = activeScreenCenterX();
@@ -222,7 +234,7 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
             0L, static_cast<long>(MOUSE_POSITION_MAX));
     }
 
-    if (recenter || switchScreen || moveQuadrant)
+    if (recenter || switchScreen || moveSegment)
     {
         smoothMouseX = 0.0f;
         smoothMouseY = 0.0f;
@@ -231,7 +243,7 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
     }
 
     if (moveX != 0 || moveY != 0 || wheel != 0 || horizontalWheel != 0 ||
-        buttons != lastMouseButtons || recenter || switchScreen || moveQuadrant)
+        buttons != lastMouseButtons || recenter || switchScreen || moveSegment)
     {
         BluetoothService::sendMouseReport(
             buttons,
@@ -249,7 +261,7 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
     lastScrollRight = scrollRight;
     lastCenterKey = centerKey;
     lastScreenKey = screenKey;
-    lastQuadrantKey = quadrantKey;
+    lastSegmentKey = segmentKey;
 }
 
 uint8_t fnMappedKey(uint8_t key)

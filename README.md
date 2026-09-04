@@ -240,8 +240,8 @@ belong to the remote host and global firmware shortcuts are blocked.
 | `,` / `/` (mouse mode) | Scroll left / right |
 | `Ctrl` (mouse mode) | Reset the cursor to screen center |
 | Hold `Space` (mouse mode) | Pause gyro movement to reposition your hand |
-| `O` / `P` (mouse mode) | Move to the top-left / top-right quadrant center |
-| `K` / `L` (mouse mode) | Move to the bottom-left / bottom-right quadrant center |
+| `-` / `=` / `Backspace` (mouse mode) | Move to the top-left / top-middle / top-right segment center |
+| `[` / `]` / `\\` (mouse mode) | Move to the bottom-left / bottom-middle / bottom-right segment center |
 | `Tab` (mouse mode) | Switch to the center of the other configured screen |
 
 The Bluetooth Keyboard Options menu includes a persistent `Invert Mouse Y`

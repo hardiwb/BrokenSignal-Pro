@@ -16,8 +16,8 @@ const HelpEntry BLUETOOTH_KEYBOARD_HELP_ENTRIES[] = {
     {"[,//]", "Mouse: scroll left/right"},
     {"[Ctrl]", "Mouse: center cursor"},
     {"[Space]", "Mouse: hold gyro clutch"},
-    {"[O/P]", "Mouse: upper quadrants"},
-    {"[K/L]", "Mouse: lower quadrants"},
+    {"[-/=/<-]", "Mouse: top segments"},
+    {"[[/]/\\]", "Mouse: bottom segments"},
     {"[Tab]", "Mouse: switch screen"},
 };
 
