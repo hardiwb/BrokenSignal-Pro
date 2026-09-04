@@ -134,21 +134,19 @@ ComposeResult composeDay(const String &dateKey, size_t &messageLength)
         bool done = false;
         if (!parseStoredLine(line, stamp, done, text) || stamp.substring(0, 10) != dateKey)
             continue;
+        if (done)
+            continue;
 
         const char *separator = messageLength == 0 ? "" : "\n";
-        const char *status = done ? "[x] " : "[ ] ";
         const size_t separatorLength = strlen(separator);
-        const size_t statusLength = strlen(status);
         const size_t textLength = text.length();
-        if (messageLength + separatorLength + statusLength + textLength > sticky_note::MAX_MESSAGE_BYTES)
+        if (messageLength + separatorLength + textLength > sticky_note::MAX_MESSAGE_BYTES)
         {
             file.close();
             return ComposeResult::TooLong;
         }
         memcpy(syncMessage + messageLength, separator, separatorLength);
         messageLength += separatorLength;
-        memcpy(syncMessage + messageLength, status, statusLength);
-        messageLength += statusLength;
         for (size_t i = 0; i < textLength; ++i)
         {
             const char value = text.charAt(i);

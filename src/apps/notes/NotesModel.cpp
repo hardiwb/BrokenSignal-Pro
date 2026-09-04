@@ -215,11 +215,10 @@ bool noteMatchesView(const NoteEntry &entry)
 
 String formatEntryLabel(const NoteEntry &entry)
 {
-    const String status = entry.done ? "[x] " : "[ ] ";
     if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
-        return status + entry.stamp.substring(5, 10) + " " + entry.text;
+        return entry.stamp.substring(5, 10) + " " + entry.text;
 
-    return status + entry.text;
+    return entry.text;
 }
 
 void rebuildVisibleNoteIndices()
