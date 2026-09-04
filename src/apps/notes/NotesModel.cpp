@@ -215,10 +215,11 @@ bool noteMatchesView(const NoteEntry &entry)
 
 String formatEntryLabel(const NoteEntry &entry)
 {
+    const String status = entry.done ? "[x] " : "[ ] ";
     if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
-        return entry.stamp.substring(5, 10) + " " + entry.text;
+        return status + entry.stamp.substring(5, 10) + " " + entry.text;
 
-    return entry.text;
+    return status + entry.text;
 }
 
 void rebuildVisibleNoteIndices()
@@ -533,6 +534,7 @@ void notesNew()
 
 void notesClose()
 {
+    cancelNotesCalendarSync();
     rememberLastOpenedApp(webRadioMode ? HostApp::Radio : HostApp::Music);
     notesMode = false;
     noteEditorVisible = false;
@@ -788,7 +790,12 @@ void notesLoop()
             drawNotes();
     }
 
-    switch (takeEspNowNotesResult())
+    const EspNowNotesResult sendResult = takeEspNowNotesResult();
+    if (notesCalendarSyncActive())
+    {
+        tickNotesCalendarSync(sendResult);
+    }
+    else switch (sendResult)
     {
     case EspNowNotesResult::Sent:
         showHdrMsg("SENT");

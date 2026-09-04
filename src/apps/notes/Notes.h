@@ -3,6 +3,8 @@
 #include <Arduino.h>
 #include <M5Cardputer.h>
 
+#include "module/service/EspNowNotes.h"
+
 void notesBegin();
 void notesLoop();
 void notesOpen();
@@ -26,4 +28,8 @@ void notesEditSelected();
 void notesDeleteSelected();
 // Day view: viewed day. Month view: selected note's day.
 void notesSendViewedDayToXteink(bool includeCompleted = false);
+void notesSyncCalendarToXteink();
+bool notesCalendarSyncActive();
+void cancelNotesCalendarSync();
+void tickNotesCalendarSync(EspNowNotesResult result);
 void handleNotesInput(Keyboard_Class::KeysState &keys);

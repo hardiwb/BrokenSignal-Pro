@@ -59,6 +59,11 @@ void newNote(int)
 {
     notesNew();
 }
+
+void syncCalendar(int)
+{
+    notesSyncCalendarToXteink();
+}
 } // namespace
 
 void buildNotesOptions(std::vector<AppOption> &options)
@@ -70,4 +75,5 @@ void buildNotesOptions(std::vector<AppOption> &options)
     options.push_back({"Edit Note", "", hasNote, false, true, editNote});
     options.push_back({"Delete Note", "", hasNote, false, true, deleteNote});
     options.push_back({"New Note", "", true, false, true, newNote});
+    options.push_back({"Sync Calendar", "", true, false, true, syncCalendar});
 }
