@@ -354,9 +354,9 @@ bool expensesResumePendingUpload() {
 }
 void expensesCancelPendingUpload() { uploadPending = false; }
 void expensesShareQr() {
-    if (visible.empty()) return;
     qrPages.clear(); String page; constexpr int maxPayload = 220;
-    for (int actual : visible) {
+    for (int actual = 0; actual < (int)entries.size(); ++actual) {
+        if (entries[actual].shared || entries[actual].date.substring(0, 7) != currentMonth) continue;
         String line = payloadLine(entries[actual]);
         if (page.length() && page.length() + 1 + line.length() > maxPayload) { qrPages.push_back(page); page = ""; }
         if (page.length()) page += '\n'; page += line; entries[actual].shared = true;
