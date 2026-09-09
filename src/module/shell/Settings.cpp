@@ -6,8 +6,11 @@
 #include "core/System.h"
 #include "module/shell/Debug.h"
 #include "module/shell/Help.h"
+#include "apps/music/MusicPlayer.h"
 #include "apps/radio/Radio.h"
 #include "module/service/Clock.h"
+#include "module/service/OtaUpdate.h"
+#include "module/service/NotesNotion.h"
 #include "module/service/WiFi.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -23,8 +26,18 @@ static String manualClockDate = "";
 static int manualClockField = 0;
 static int manualClockTimeCursor = 0;
 static int manualClockDateCursor = 0;
-static const int SETTINGS_COUNT = 13;
+static const int SETTINGS_COUNT = 15;
 static int settingsScrollTop = 0;
+
+enum class PendingSettingsWifiAction : uint8_t
+{
+    None,
+    SyncClock,
+    NotesNotion,
+    OtaUpdate
+};
+
+static PendingSettingsWifiAction pendingWifiAction = PendingSettingsWifiAction::None;
 
 enum SettingRow
 {
@@ -40,6 +53,8 @@ enum SettingRow
     SettingWifiPowerSave,
     SettingSwapAltOpt,
     SettingDebug,
+    SettingNotesNotion,
+    SettingOtaUpdate,
     SettingWifi
 };
 
@@ -84,6 +99,8 @@ static const char *settingsLabel(int index)
         "WiFi power save",
         "Swap Alt / Opt",
         "Debug",
+        "Notes & Notion",
+        "OTA Update",
         "WiFi"};
 
     if (index < 0 || index >= SETTINGS_COUNT)
@@ -119,6 +136,8 @@ static String settingsValue(int index)
     case SettingSyncClock:
     case SettingManualClock:
     case SettingDebug:
+    case SettingNotesNotion:
+    case SettingOtaUpdate:
     case SettingWifi:
         return "Enter";
     case SettingWifiPowerSave:
@@ -513,6 +532,18 @@ static bool settingSupportsAdjustment(int sel)
 
 void drawSettingsMenu()
 {
+    if (notesNotionSetupActive())
+    {
+        drawNotesNotionSetupScreen();
+        return;
+    }
+
+    if (otaUpdateActive())
+    {
+        drawOtaUpdateScreen();
+        return;
+    }
+
     if (manualClockVisible)
     {
         drawManualClockEditor();
@@ -526,11 +557,15 @@ void drawSettingsMenu()
 
 bool settingsInputOverlayActive()
 {
-    return manualClockVisible;
+    return manualClockVisible || otaUpdateActive() || notesNotionSetupActive();
 }
 
 void cancelSettingsInputOverlay()
 {
+    if (notesNotionSetupActive())
+        stopNotesNotionSetup();
+    if (otaUpdateActive())
+        stopOtaUpdate();
     manualClockVisible = false;
     drawSettingsMenu();
 }
@@ -544,11 +579,15 @@ void enterSettingsMenu()
     settingsSel = 0;
     settingsScrollTop = 0;
     manualClockVisible = false;
+    pendingWifiAction = PendingSettingsWifiAction::None;
     drawSettingsMenu();
 }
 
 void exitSettingsMenu()
 {
+    pendingWifiAction = PendingSettingsWifiAction::None;
+    stopNotesNotionSetup();
+    stopOtaUpdate();
     settingsMenuVisible = false;
     manualClockVisible = false;
     saveSettings();
@@ -559,8 +598,80 @@ void exitSettingsMenu()
         drawAll();
 }
 
+static void performSettingsWifiAction(PendingSettingsWifiAction action)
+{
+    pendingWifiAction = PendingSettingsWifiAction::None;
+    settingsMenuVisible = true;
+    if (action == PendingSettingsWifiAction::SyncClock)
+    {
+        drawSettingsMenu();
+        showHdrMsg(syncClockFromNTP() ? "CLOCK SYNCED" : "NTP FAIL");
+        return;
+    }
+
+    stopAudio();
+    stopRadioStream();
+    const bool started = action == PendingSettingsWifiAction::NotesNotion
+                             ? beginNotesNotionSetup()
+                             : beginOtaUpdate();
+    if (!started)
+    {
+        drawSettingsMenu();
+        showHdrMsg(action == PendingSettingsWifiAction::NotesNotion
+                       ? "SETUP START FAIL"
+                       : "OTA START FAIL");
+    }
+}
+
+static void requestSettingsWifiAction(PendingSettingsWifiAction action)
+{
+    pendingWifiAction = action;
+    // The WiFi picker must own the context surface while connection input is
+    // active. Restore Control Panel before running or cancelling the action.
+    settingsMenuVisible = false;
+    if (ensureWifiConnected() == WifiStartupResult::Connected)
+        performSettingsWifiAction(action);
+}
+
+bool settingsResumePendingWifiAction()
+{
+    if (pendingWifiAction == PendingSettingsWifiAction::None)
+        return false;
+    performSettingsWifiAction(pendingWifiAction);
+    return true;
+}
+
+bool settingsCancelPendingWifiAction()
+{
+    if (pendingWifiAction == PendingSettingsWifiAction::None)
+        return false;
+    pendingWifiAction = PendingSettingsWifiAction::None;
+    settingsMenuVisible = true;
+    return true;
+}
+
 void handleSettingsInput(Keyboard_Class::KeysState &ks)
 {
+    if (notesNotionSetupActive())
+    {
+        if (keyboardBackPressed(ks))
+        {
+            stopNotesNotionSetup();
+            drawSettingsMenu();
+        }
+        return;
+    }
+
+    if (otaUpdateActive())
+    {
+        if (keyboardBackPressed(ks) && !otaUpdateInProgress())
+        {
+            stopOtaUpdate();
+            drawSettingsMenu();
+        }
+        return;
+    }
+
     if (manualClockVisible)
     {
         handleManualClockInput(ks);
@@ -632,37 +743,8 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
     {
         if (settingsSel == SettingSyncClock)
         {
-            if (!wifiConnected)
-            {
-                String ssid;
-                String pass;
-
-                if (!loadWifiConfig(ssid, pass) ||
-                    ssid.length() == 0)
-                {
-                    showHdrMsg("NO WIFI CONFIG");
-                }
-                else if (!connectWifi(ssid, pass))
-                {
-                    showHdrMsg("WIFI FAIL");
-                }
-                else if (syncClockFromNTP())
-                {
-                    showHdrMsg("CLOCK SYNCED");
-                }
-                else
-                {
-                    showHdrMsg("NTP FAIL");
-                }
-            }
-            else if (syncClockFromNTP())
-            {
-                showHdrMsg("CLOCK SYNCED");
-            }
-            else
-            {
-                showHdrMsg("NTP FAIL");
-            }
+            requestSettingsWifiAction(PendingSettingsWifiAction::SyncClock);
+            return;
         }
         else if (settingsSel == SettingManualClock)
         {
@@ -676,6 +758,13 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             saveSettings();
             settingsDirty = false;
             openWifiMenu();
+            return;
+        }
+        else if (settingsSel == SettingNotesNotion || settingsSel == SettingOtaUpdate)
+        {
+            requestSettingsWifiAction(settingsSel == SettingNotesNotion
+                                          ? PendingSettingsWifiAction::NotesNotion
+                                          : PendingSettingsWifiAction::OtaUpdate);
             return;
         }
         else if (settingsSel == SettingDebug)

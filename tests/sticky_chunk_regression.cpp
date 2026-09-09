@@ -134,7 +134,34 @@ int main() {
     Note empty; uint8_t packet[MAX_PACKET_BYTES];
     assert(encodePacket(empty, 0, 0, packet) == 0);
 
-    std::cout << "PASS: v1 compatibility, 2 KB roundtrip, loss/reorder/duplicates, CRC, UTF-8, "
-                 "sender isolation, timeouts, malformed packets, ACK validation\n";
+    std::array<uint8_t, SNAPSHOT_CONTROL_BYTES> controlPacket{};
+    assert(encodeSnapshotControl(TYPE_SNAPSHOT_BEGIN, 0x12345678U, 0x1357U,
+                                 0x89abcdefU, controlPacket.data()) == SNAPSHOT_CONTROL_BYTES);
+    const std::array<uint8_t, SNAPSHOT_CONTROL_BYTES> expectedControl = {
+        'C', 'I', 'N', 'T', 3, 3, 0, 0, 0x78, 0x56, 0x34, 0x12,
+        0x57, 0x13, 0, 0, 0xef, 0xcd, 0xab, 0x89};
+    assert(controlPacket == expectedControl);
+    SnapshotControl control;
+    assert(decodeSnapshotControl(controlPacket.data(), controlPacket.size(), control));
+    assert(control.type == TYPE_SNAPSHOT_BEGIN && control.sequence == 0x12345678U);
+    assert(control.entryCount == 0x1357U && control.digest == 0x89abcdefU);
+    controlPacket[14] = 1;
+    assert(!decodeSnapshotControl(controlPacket.data(), controlPacket.size(), control));
+    controlPacket[14] = 0;
+    writeU32Le(controlPacket.data() + 8, 0);
+    assert(!decodeSnapshotControl(controlPacket.data(), controlPacket.size(), control));
+
+    Note normalized = makeNote("first second third");
+    Note controls = makeNote("first\tsecond\rthird");
+    Note nextDay = normalized;
+    nextDay.day++;
+    const uint32_t normalizedDigest = snapshotDigestFinish(snapshotDigestUpdate(0xffffffffU, normalized));
+    const uint32_t controlsDigest = snapshotDigestFinish(snapshotDigestUpdate(0xffffffffU, controls));
+    const uint32_t nextDayDigest = snapshotDigestFinish(snapshotDigestUpdate(0xffffffffU, nextDay));
+    assert(normalizedDigest == controlsDigest && normalizedDigest != nextDayDigest);
+    assert(snapshotDigestFinish(0xffffffffU) == 0U);
+
+    std::cout << "PASS: v1/v2 notes, v3 snapshot controls/digest, 2 KB roundtrip, "
+                 "loss/reorder/duplicates, CRC, UTF-8, sender isolation, timeouts, malformed packets, ACK validation\n";
     std::cout << "sizeof(Note)=" << sizeof(Note) << ", sizeof(Reassembler)=" << sizeof(Reassembler) << '\n';
 }

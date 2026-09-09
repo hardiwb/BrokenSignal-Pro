@@ -17,6 +17,9 @@ struct NoteEntry
 {
     String stamp;
     bool done = false;
+    String id;
+    String category = "Personal";
+    String syncHash;
     String text;
 };
 
@@ -49,12 +52,16 @@ void clampNotesSelection();
 
 void loadNote();
 void saveNote();
+bool parseNoteStorageLine(const String &line, NoteEntry &entry);
+String createNoteId();
+String noteContentHash(const NoteEntry &entry);
 void removeSelectedNote();
 bool parseDateKey(const String &dateKey, struct tm &date);
 String formatDateKey(const struct tm &date);
 bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey);
 bool moveSelectedNoteToDate(const String &dateKey);
 void toggleSelectedNoteDone();
+void toggleSelectedNoteCategory();
 void changeNotesMonth(int delta);
 void shiftQuickNoteDate(int delta);
 void selectTopNote();

@@ -14,6 +14,8 @@ void notesClose();
 void drawNotes();
 void drawNotesEditor(bool inputOnly = false);
 void drawNotesMoveDateEditor();
+
+
 bool notesInputActive();
 bool notesEditorVisible();
 bool notesMoveDateInputActive();
@@ -26,9 +28,14 @@ void notesMoveSelectedToTomorrow();
 void notesPromptMoveSelectedToDate();
 void notesEditSelected();
 void notesDeleteSelected();
+void notesToggleSelectedCategory();
+String notesSelectedCategoryLabel();
 // Day view: viewed day. Month view: selected note's day.
 void notesSendViewedDayToXteink(bool includeCompleted = false);
 void notesSyncCalendarToXteink();
+void notesSyncWithNotion();
+bool notesResumePendingWifiAction();
+bool notesCancelPendingWifiAction();
 bool notesCalendarSyncActive();
 void cancelNotesCalendarSync();
 void tickNotesCalendarSync(EspNowNotesResult result);

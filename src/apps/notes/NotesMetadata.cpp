@@ -14,6 +14,7 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[S]", "Send active to Xteink"},
     {"[Shift+S]", "Send all to Xteink"},
     {"[X]", "Toggle done"},
+    {"[W]", "Toggle Personal / Work"},
     {"[Ok]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
     {"[,/]", "Previous / next date"},
@@ -60,20 +61,33 @@ void newNote(int)
     notesNew();
 }
 
+void toggleCategory(int)
+{
+    notesToggleSelectedCategory();
+}
+
 void syncCalendar(int)
 {
     notesSyncCalendarToXteink();
+}
+
+void syncNotion(int)
+{
+    notesSyncWithNotion();
 }
 } // namespace
 
 void buildNotesOptions(std::vector<AppOption> &options)
 {
     const bool hasNote = notesHasSelection();
+    const bool mutationsAllowed = !notesCalendarSyncActive();
     options.push_back({"Filter", notesFilterLabel(), true, true, false, adjustFilter});
-    options.push_back({"Move to Tomorrow", "", hasNote, false, true, moveTomorrow});
-    options.push_back({"Move to Date", "", hasNote, false, true, moveToDate});
-    options.push_back({"Edit Note", "", hasNote, false, true, editNote});
-    options.push_back({"Delete Note", "", hasNote, false, true, deleteNote});
-    options.push_back({"New Note", "", true, false, true, newNote});
-    options.push_back({"Sync Calendar", "", true, false, true, syncCalendar});
+    options.push_back({"Move to Tomorrow", "", hasNote && mutationsAllowed, false, true, moveTomorrow});
+    options.push_back({"Move to Date", "", hasNote && mutationsAllowed, false, true, moveToDate});
+    options.push_back({"Edit Note", "", hasNote && mutationsAllowed, false, true, editNote});
+    options.push_back({"Delete Note", "", hasNote && mutationsAllowed, false, true, deleteNote});
+    options.push_back({"New Note", "", mutationsAllowed, false, true, newNote});
+    options.push_back({"Category", notesSelectedCategoryLabel(), hasNote && mutationsAllowed, false, true, toggleCategory});
+    options.push_back({"Sync Notion", "", mutationsAllowed, false, true, syncNotion});
+    options.push_back({"Sync Calendar", "", mutationsAllowed, false, true, syncCalendar});
 }

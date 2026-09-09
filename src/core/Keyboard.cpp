@@ -75,11 +75,14 @@ namespace
 {
 bool hostLikeGlobalHotkeysAllowed(const ActiveSurface &surface)
 {
-    // QuickPopup is visual-only feedback, not a text/input overlay, so it
-    // passes keys through to the host. OverlayModal owns text input and rejects
-    // global hotkeys by never reaching this path.
+    // Shell lists do not consume printable shortcut letters, so quick-entry
+    // apps remain reachable without first dismissing the current menu. WiFi
+    // and modal editors still own their complete input surface.
     return surface.kind == SurfaceKind::HostApp ||
-           surface.kind == SurfaceKind::QuickPopup;
+           surface.kind == SurfaceKind::QuickPopup ||
+           surface.kind == SurfaceKind::MainMenu ||
+           (surface.kind == SurfaceKind::ContextMenu &&
+            (optionsMenuVisible || settingsMenuVisible));
 }
 
 bool foregroundAllowsGlobalUtilityHotkeys()
@@ -186,6 +189,10 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 
     if (result == WifiInputResult::Connected)
     {
+        if (settingsResumePendingWifiAction())
+            return;
+        if (notesResumePendingWifiAction())
+            return;
         if (thermalPrinterResumePendingOperation())
             return;
         if (expensesResumePendingUpload())
@@ -199,6 +206,12 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 
     if (result == WifiInputResult::ReturnToHost)
     {
+        if (settingsCancelPendingWifiAction())
+        {
+            drawSettingsMenu();
+            return;
+        }
+        notesCancelPendingWifiAction();
         if (webRadioMode)
             drawRadioAll();
         else
@@ -208,6 +221,12 @@ void handleWifiModeInput(Keyboard_Class::KeysState &ks)
 
     if (result == WifiInputResult::ExitRequested)
     {
+        if (settingsCancelPendingWifiAction())
+        {
+            drawSettingsMenu();
+            return;
+        }
+        notesCancelPendingWifiAction();
         expensesCancelPendingUpload();
         thermalPrinterCancelPendingOperation();
         if (webRadioMode)
@@ -247,9 +266,16 @@ void closeActiveShellMenu()
 
     if (wifiMenuVisible)
     {
+        const bool returnToSettings = settingsCancelPendingWifiAction();
+        notesCancelPendingWifiAction();
         expensesCancelPendingUpload();
         thermalPrinterCancelPendingOperation();
         closeWifiInput();
+        if (returnToSettings)
+        {
+            drawSettingsMenu();
+            return;
+        }
         if (webRadioMode)
             drawRadioAll();
         else
@@ -443,6 +469,16 @@ void keyboardLoop()
 
     if (handleShellNavigationShortcut(surface, ks))
         return;
+
+    // Applications, Options, and Control Panel permit registered quick-access
+    // shortcuts (currently C, N, and E). The quick editor draws over the menu;
+    // drawCurrentScreen restores that menu when the editor closes.
+    if ((surface.kind == SurfaceKind::MainMenu ||
+         surface.kind == SurfaceKind::ContextMenu) &&
+        handleGlobalQuickAccessHotkey(surface, ks))
+    {
+        return;
+    }
 
     switch (surface.kind)
     {

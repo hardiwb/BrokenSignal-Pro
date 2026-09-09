@@ -5,7 +5,7 @@ day in Month view) to a CrossInk Xteink running the Sticky Notes receiver.
 
 ## Use
 
-1. On Xteink, open **Menu > Sticky Notes > Receive Note**.
+1. On Xteink, open **Menu > Calendar**. Its 60-second listening window starts immediately.
 2. On Cardputer ADV, open Notes and navigate to the required day.
 3. In **Day** view, use **`,`** / **`/`** (left/right) to browse to a past or future
    day. In **Month** view, select an entry on the date you want to send.
@@ -13,6 +13,13 @@ day in Month view) to a CrossInk Xteink running the Sticky Notes receiver.
    include crossed entries. Other dates in Month view are not included.
 4. Wait for **SENT**. A timeout means no matching acknowledgement
    arrived.
+
+To replace the Xteink's complete calendar, open Notes **Options** and run
+**Sync Calendar**. This sends a transactional v3 snapshot containing every
+non-empty date in chronological order, including completed entries. Dates
+removed from the Cardputer are removed from the Xteink only after Commit is
+validated. Syncing an empty Cardputer calendar intentionally clears every
+dated Xteink entry.
 
 Each included entry is sent on its own newline with a `[ ]` or `[x]` status
 marker. CrossInk renders those entries as checklist rows. The final UTF-8
@@ -92,6 +99,29 @@ replace the previous image. No per-chunk ACK is required.
 The final ACK has the same 16-byte layout as v1 but version `2`. Reserved bytes
 are zero. Only this final render/save ACK counts as success. Xteink repeats it
 every 350 ms during a two-second grace period before leaving the receiver.
+
+### Version 3: full-calendar snapshot
+
+**Sync Calendar** first preflights every stored date and calculates the
+snapshot entry count and CRC-32 digest. It then sends and acknowledges a v3
+Begin control, each dated note as v1/v2, and a matching v3 Commit control. The
+ESP-NOW radio stays on channel 1 for the complete transaction; WiFi is restored
+only after Commit or failure.
+
+The header shows the Begin and Commit phases plus compact dated-entry progress
+such as `3/12`. The transaction continues if a shell menu or another app is
+opened. Notes-changing actions are disabled until the snapshot finishes so the
+payload cannot diverge from its preflight digest.
+
+Begin and Commit are 20-byte controls carrying the same non-zero snapshot
+sequence, entry count, and digest. The digest covers each date, message length,
+and normalized message bytes in ascending date order. The receiver stages all
+files and images until Commit validates, so interruption leaves the previous
+calendar live. A successful empty snapshot has entry count zero and digest
+zero.
+
+This v3 behavior requires a CrossInk receiver with snapshot support. Standalone
+`S`/`Shift+S` day sends remain v1/v2 upserts for compatibility.
 
 ## Pairing and Privacy
 

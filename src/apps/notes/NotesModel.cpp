@@ -1,6 +1,7 @@
 #include "apps/notes/Notes.h"
 
 #include "apps/notes/NotesInternal.h"
+#include "apps/notes/NotesNotionSync.h"
 #include <SD.h>
 #include <time.h>
 #include <vector>
@@ -12,6 +13,10 @@
 #include "module/shell/Help.h"
 #include "module/service/Clock.h"
 #include "module/service/EspNowNotes.h"
+#include "module/service/NotesNotion.h"
+#include "module/service/WiFi.h"
+#include "apps/music/MusicPlayer.h"
+#include "apps/radio/Radio.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
 #include "UI/List.h"
@@ -50,6 +55,7 @@ int noteEditIndex = -1;
 NotesViewMode notesViewMode = NotesViewMode::Day;
 int notesDayOffset = 0;
 int notesMonthOffset = 0;
+bool notionSyncPendingWifi = false;
 
 bool getViewedTime(struct tm &viewed)
 {
@@ -215,10 +221,11 @@ bool noteMatchesView(const NoteEntry &entry)
 
 String formatEntryLabel(const NoteEntry &entry)
 {
+    const String categoryMarker = entry.category.equalsIgnoreCase("Work") ? "<w> " : "";
     if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
-        return entry.stamp.substring(5, 10) + " " + entry.text;
+        return entry.stamp.substring(5, 10) + " " + categoryMarker + entry.text;
 
-    return entry.text;
+    return categoryMarker + entry.text;
 }
 
 void rebuildVisibleNoteIndices()
@@ -405,6 +412,7 @@ void saveNoteEditor()
             NoteEntry entry;
             entry.stamp = noteEditDate + getEntryStamp().substring(10);
             entry.done = false;
+            entry.id = createNoteId();
             entry.text = noteEditText;
             saved = appendEntryToMonth(entry, noteEditDate);
             if (saved)
@@ -661,6 +669,19 @@ void notesDeleteSelected()
     removeSelectedNote();
 }
 
+void notesToggleSelectedCategory()
+{
+    toggleSelectedNoteCategory();
+}
+
+String notesSelectedCategoryLabel()
+{
+    const int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0 || noteIndex >= static_cast<int>(noteEntries.size()))
+        return "";
+    return noteEntries[noteIndex].category.equalsIgnoreCase("Work") ? "Work" : "Personal";
+}
+
 void notesSendViewedDayToXteink(const bool includeCompleted)
 {
     // Keep transient labels within the narrow header slot (eight characters).
@@ -762,6 +783,53 @@ void notesSendViewedDayToXteink(const bool includeCompleted)
     }
 }
 
+void notesSyncWithNotion()
+{
+    if (notesCalendarSyncActive() || espNowNotesBusy())
+    {
+        showHdrMsg("BUSY");
+        return;
+    }
+    NotesNotionConfig notionConfig;
+    if (!loadNotesNotionConfig(notionConfig))
+    {
+        showHdrMsg("NO CONFIG");
+        return;
+    }
+    notionSyncPendingWifi = true;
+    if (WiFi.status() != WL_CONNECTED &&
+        ensureWifiConnected() != WifiStartupResult::Connected)
+        return;
+    notionSyncPendingWifi = false;
+    stopAudio();
+    stopRadioStream();
+    showHdrMsg("SYNCING");
+    String message;
+    const bool synced = syncNotesWithNotion(message);
+    Serial.print("Notes Notion: ");
+    Serial.println(message);
+    NotesInternal::loadNote();
+    if (notesMode)
+        drawNotes();
+    showHdrMsg(synced ? "SYNCED" : "SYNC ERR");
+}
+
+bool notesResumePendingWifiAction()
+{
+    if (!notionSyncPendingWifi)
+        return false;
+    notesSyncWithNotion();
+    return true;
+}
+
+bool notesCancelPendingWifiAction()
+{
+    if (!notionSyncPendingWifi)
+        return false;
+    notionSyncPendingWifi = false;
+    return true;
+}
+
 
 void notesLoop()
 {
@@ -770,6 +838,26 @@ void notesLoop()
 
     if (!notesInputActive())
         return;
+
+    // Snapshot results are consumed by the main loop so the transaction can
+    // continue even if another app or shell menu is temporarily on screen.
+    if (!notesCalendarSyncActive())
+    {
+        switch (takeEspNowNotesResult())
+        {
+        case EspNowNotesResult::Sent:
+            showHdrMsg("SENT");
+            break;
+        case EspNowNotesResult::Timeout:
+            showHdrMsg("TIMEOUT");
+            break;
+        case EspNowNotesResult::RadioError:
+            showHdrMsg("ERROR");
+            break;
+        case EspNowNotesResult::None:
+            break;
+        }
+    }
 
     const bool notesScreenVisible =
         notesMode && !noteEditorVisible && !noteMoveDateVisible &&
@@ -787,26 +875,6 @@ void notesLoop()
         lastDateCheckMs = millis();
         if (refreshViewedDate())
             drawNotes();
-    }
-
-    const EspNowNotesResult sendResult = takeEspNowNotesResult();
-    if (notesCalendarSyncActive())
-    {
-        tickNotesCalendarSync(sendResult);
-    }
-    else switch (sendResult)
-    {
-    case EspNowNotesResult::Sent:
-        showHdrMsg("SENT");
-        break;
-    case EspNowNotesResult::Timeout:
-        showHdrMsg("TIMEOUT");
-        break;
-    case EspNowNotesResult::RadioError:
-        showHdrMsg("ERROR");
-        break;
-    case EspNowNotesResult::None:
-        break;
     }
 
     char clockBuf[6];

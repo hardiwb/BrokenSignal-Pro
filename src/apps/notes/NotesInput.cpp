@@ -177,6 +177,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         case 's': notesSendViewedDayToXteink(false); return;
         case 'S': notesSyncCalendarToXteink(); return;
         case 'x': case 'X': toggleSelectedNoteDone(); return;
+        case 'w': case 'W': toggleSelectedNoteCategory(); return;
         case ';':
         case '.':
             if (visibleNoteCount() > 0)

@@ -108,7 +108,8 @@ and keyboard routing rules.
 - **Music playback**: MP3 and M4A/AAC-LC playback from MicroSD.
 - **Web radio**: Stream MP3/AAC stations over WiFi.
 - **Background audio**: Music or radio can keep playing while opening Settings, Notes, Help, WiFi, Debug, or Calculator.
-- **Notes**: Monthly note storage with quick note overlay, day/month filtering, and done-state dimming.
+- **Notes**: Monthly note storage with quick note overlay, day/month filtering,
+  done-state dimming, and transactional full-calendar sync to CrossInk.
 - **Applications**: `Alt` opens the generated application list, including the Thermal Printer client.
 - **Registry-driven quick access**: Apps can publish one overlay shortcut without changing every host app.
 - **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
@@ -117,6 +118,7 @@ and keyboard routing rules.
 - **Expense Tracker**: `E` opens a quick expense entry overlay from any other full-screen app.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
+- **OTA firmware updates**: Start a five-minute, one-time-code-protected browser upload from Control Panel.
 - **Granular redraw**: Header, list rows, footer slots, progress bar, and overlay input can update independently.
 - **Themes**: Five visual themes with persistent settings.
 - **Toast primitive**: Small transient popups, currently used for theme name feedback.
@@ -264,6 +266,9 @@ direction. Two-screen mode assumes equal-sized displays arranged side by side.
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
 If a foreground app reserves the same letter, the app-specific meaning wins.
+Quick Calculator (`C`), Note (`N`), and Expense (`E`) entry also remain
+available while Applications, Options, or Control Panel is open. Closing the
+quick-entry overlay returns to the menu that was underneath it.
 
 List-style property rows use `,` / `/` as left / right adjustment keys. This
 keeps `-` and `+` available for playback volume muscle memory in host
@@ -310,6 +315,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `A` | Add note |
 | `R` | Remove note |
 | `X` | Toggle done |
+| `W` | Toggle category between Personal and Work |
 | `Ok` | Edit selected note |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
@@ -323,6 +329,16 @@ Notes use monthly files under `/Notes/`.
 
 In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
 changes the date, while `Fn+Left/Right` moves the active field cursor.
+Personal is the default category. Work notes are prefixed with `<w>` in the
+list; pressing `W` again removes the marker and restores Personal.
+
+Use **Options > Sync Notion** for two-way synchronization with an Agenda data
+source containing `Checkbox`, `Entry`, `Date`, `Category`, and `ID`. Configure
+the integration first under **Control Panel > Notes & Notion**. Remote rows
+whose `ID` is blank receive a stable ID automatically and are imported into the
+Cardputer. See [Notes Notion sync](docs/NOTION_NOTES_SYNC.md).
+If WiFi is disconnected, sync first tries the saved network and resumes
+automatically. The network picker opens only when that connection is unavailable.
 
 ### Expense Tracker
 
@@ -408,7 +424,27 @@ Settings include:
 | Manual Clock | Time and date editor |
 | WiFi power save | Toggle WiFi modem sleep |
 | Debug | Runtime diagnostics |
+| Notes & Notion | Authenticated local setup page for the Notes integration |
+| OTA Update | Authenticated local firmware upload and reboot |
 | WiFi menu | Opens WiFi service menu |
+
+### OTA firmware update
+
+Open **Control Panel > OTA Update**. On a
+computer on the same network, open `http://brokensignal.local/` and sign in as
+`admin` with the six-digit one-time code shown on the Cardputer. If the `.local`
+name is unavailable on your network, use the numeric IP address displayed by
+the Cardputer instead. Upload:
+
+```text
+.pio/build/cardputeradv/firmware.bin
+```
+
+The upload window closes after five minutes. Playback stops when the updater is
+opened, deep sleep is suspended during the session, and the device reboots only
+after the firmware image passes the ESP32 update validation.
+Opening OTA Update automatically reconnects the saved WiFi network, or opens
+the network picker and resumes the updater after a successful connection.
 
 ### Calculator
 
@@ -514,14 +550,16 @@ SD/
     `-- 2026-09.txt
 ```
 
-Notes are stored per month. Each note line is stored as:
+Notes are stored per month. Current rows include a stable ID, category, and
+last-synchronized fingerprint:
 
 ```text
-YYYY-MM-DD|-|note text
-YYYY-MM-DD|x|done note text
+YYYY-MM-DD HH:MM|-|v2|stable-id|Personal||note text
+YYYY-MM-DD HH:MM|x|v2|stable-id|Work|a1b2c3d4|done note text
 ```
 
-`-` means active, `x` means done.
+`-` means active and `x` means done. Legacy three-field rows are assigned an ID
+and migrated automatically when their month is opened or synchronized.
 
 Expenses are stored per month. Current rows include a stable entry ID:
 

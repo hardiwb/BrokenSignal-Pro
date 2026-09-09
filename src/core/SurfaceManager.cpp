@@ -175,9 +175,16 @@ bool closeTopmostSurface(const ActiveSurface &surface)
 
         if (wifiMenuVisible || wifiPassOverlayVisible)
         {
+            const bool returnToSettings = settingsCancelPendingWifiAction();
+            notesCancelPendingWifiAction();
             expensesCancelPendingUpload();
             thermalPrinterCancelPendingOperation();
             closeWifiInput();
+            if (returnToSettings)
+            {
+                drawSettingsMenu();
+                return true;
+            }
             if (webRadioMode)
                 drawRadioAll();
             else

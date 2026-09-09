@@ -1,6 +1,7 @@
 #include "apps/notes/NotesInternal.h"
 
 #include <SD.h>
+#include <esp_system.h>
 #include <time.h>
 
 #include "core/State.h"
@@ -9,6 +10,72 @@
 
 namespace NotesInternal
 {
+String createNoteId()
+{
+    char value[25];
+    snprintf(value, sizeof(value), "bs-%08lx-%08lx",
+             static_cast<unsigned long>(millis()),
+             static_cast<unsigned long>(esp_random()));
+    return String(value);
+}
+
+String noteContentHash(const NoteEntry &entry)
+{
+    uint32_t hash = 2166136261UL;
+    const auto update = [&](const String &value)
+    {
+        for (size_t i = 0; i < value.length(); ++i)
+        {
+            hash ^= static_cast<uint8_t>(value.charAt(i));
+            hash *= 16777619UL;
+        }
+        hash ^= 0xff;
+        hash *= 16777619UL;
+    };
+    update(entry.stamp.substring(0, min(10, static_cast<int>(entry.stamp.length()))));
+    update(entry.done ? "1" : "0");
+    update(entry.category);
+    update(entry.text);
+    char value[9];
+    snprintf(value, sizeof(value), "%08lx", static_cast<unsigned long>(hash));
+    return String(value);
+}
+
+bool parseNoteStorageLine(const String &line, NoteEntry &entry)
+{
+    entry = {};
+    const int firstSep = line.indexOf('|');
+    const int secondSep = firstSep >= 0 ? line.indexOf('|', firstSep + 1) : -1;
+    if (firstSep < 0 || secondSep < 0)
+        return false;
+
+    entry.stamp = line.substring(0, firstSep);
+    const String status = line.substring(firstSep + 1, secondSep);
+    entry.done = status.indexOf('x') >= 0 || status.indexOf('X') >= 0;
+
+    const int thirdSep = line.indexOf('|', secondSep + 1);
+    const int fourthSep = thirdSep >= 0 ? line.indexOf('|', thirdSep + 1) : -1;
+    const int fifthSep = fourthSep >= 0 ? line.indexOf('|', fourthSep + 1) : -1;
+    const int sixthSep = fifthSep >= 0 ? line.indexOf('|', fifthSep + 1) : -1;
+    if (thirdSep >= 0 && fourthSep >= 0 && fifthSep >= 0 && sixthSep >= 0 &&
+        line.substring(secondSep + 1, thirdSep) == "v2")
+    {
+        entry.id = line.substring(thirdSep + 1, fourthSep);
+        entry.category = line.substring(fourthSep + 1, fifthSep);
+        entry.syncHash = line.substring(fifthSep + 1, sixthSep);
+        entry.text = line.substring(sixthSep + 1);
+    }
+    else
+    {
+        entry.text = line.substring(secondSep + 1);
+    }
+    entry.text.trim();
+    entry.category.trim();
+    if (!entry.category.length())
+        entry.category = "Personal";
+    return entry.stamp.length() >= 10 && entry.text.length() > 0;
+}
+
 void loadNote()
 {
     noteEntries.clear();
@@ -26,6 +93,7 @@ void loadNote()
         return;
     }
 
+    bool migrated = false;
     while (f.available())
     {
         String line = f.readStringUntil('\n');
@@ -34,32 +102,27 @@ void loadNote()
             continue;
 
         NoteEntry entry;
-        const int firstSep = line.indexOf('|');
-        const int secondSep = firstSep >= 0 ? line.indexOf('|', firstSep + 1) : -1;
-        if (firstSep >= 0 && secondSep >= 0)
+        if (!parseNoteStorageLine(line, entry))
         {
-            entry.stamp = line.substring(0, firstSep);
-            const String status = line.substring(firstSep + 1, secondSep);
-            entry.done = status.indexOf('x') >= 0 || status.indexOf('X') >= 0;
-            entry.text = line.substring(secondSep + 1);
+            const int firstSep = line.indexOf('|');
+            entry.stamp = firstSep >= 0 ? line.substring(0, firstSep) : getEntryStamp();
+            entry.text = firstSep >= 0 ? line.substring(firstSep + 1) : line;
+            entry.text.trim();
         }
-        else if (firstSep >= 0)
-        {
-            entry.stamp = line.substring(0, firstSep);
-            entry.text = line.substring(firstSep + 1);
-        }
-        else
-        {
-            entry.stamp = getEntryStamp();
-            entry.text = line;
-        }
-
-        entry.text.trim();
         if (entry.text.length() > 0)
+        {
+            if (!entry.id.length())
+            {
+                entry.id = createNoteId();
+                migrated = true;
+            }
             noteEntries.push_back(entry);
+        }
     }
 
     f.close();
+    if (migrated)
+        saveNote();
     clampNotesSelection();
     Serial.print("Notes lines: ");
     Serial.println(noteEntries.size());
@@ -77,7 +140,8 @@ void saveNote()
     }
 
     for (const NoteEntry &entry : noteEntries)
-        f.printf("%s|%c|%s\n", entry.stamp.c_str(), entry.done ? 'x' : '-', entry.text.c_str());
+        f.printf("%s|%c|v2|%s|%s|%s|%s\n", entry.stamp.c_str(), entry.done ? 'x' : '-',
+                 entry.id.c_str(), entry.category.c_str(), entry.syncHash.c_str(), entry.text.c_str());
     f.close();
 }
 
@@ -139,7 +203,8 @@ bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey)
     File destination = SD.open(destinationPath, FILE_APPEND);
     if (!destination)
         return false;
-    destination.printf("%s|%c|%s\n", entry.stamp.c_str(), entry.done ? 'x' : '-', entry.text.c_str());
+    destination.printf("%s|%c|v2|%s|%s|%s|%s\n", entry.stamp.c_str(), entry.done ? 'x' : '-',
+                       entry.id.c_str(), entry.category.c_str(), entry.syncHash.c_str(), entry.text.c_str());
     destination.close();
     return true;
 }
@@ -171,7 +236,8 @@ bool moveSelectedNoteToDate(const String &dateKey)
         File destination = SD.open(destinationPath, FILE_APPEND);
         if (!destination)
             return false;
-        destination.printf("%s|%c|%s\n", moved.stamp.c_str(), moved.done ? 'x' : '-', moved.text.c_str());
+        destination.printf("%s|%c|v2|%s|%s|%s|%s\n", moved.stamp.c_str(), moved.done ? 'x' : '-',
+                           moved.id.c_str(), moved.category.c_str(), moved.syncHash.c_str(), moved.text.c_str());
         destination.close();
         noteEntries.erase(noteEntries.begin() + noteIndex);
         saveNote();
@@ -189,6 +255,17 @@ void toggleSelectedNoteDone()
     if (noteIndex < 0)
         return;
     noteEntries[noteIndex].done = !noteEntries[noteIndex].done;
+    saveNote();
+    drawNotes();
+}
+
+void toggleSelectedNoteCategory()
+{
+    const int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0)
+        return;
+    NoteEntry &entry = noteEntries[noteIndex];
+    entry.category = entry.category.equalsIgnoreCase("Work") ? "Personal" : "Work";
     saveNote();
     drawNotes();
 }

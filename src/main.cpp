@@ -24,6 +24,8 @@
 #include "module/service/Clock.h"
 #include "module/service/WiFi.h"
 #include "module/service/EspNowNotes.h"
+#include "module/service/OtaUpdate.h"
+#include "module/service/NotesNotion.h"
 #include "module/service/Bluetooth.h"
 #include "apps/notes/Notes.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
@@ -173,6 +175,10 @@ void loop()
     pumpAudio();
 
   tickEspNowNotes();
+  if (notesCalendarSyncActive())
+    tickNotesCalendarSync(takeEspNowNotesResult());
+  tickOtaUpdate();
+  tickNotesNotionSetup();
   BluetoothService::tick();
 
   bool anyPlaying = isPlaying || radioIsPlaying;
@@ -311,6 +317,7 @@ void loop()
   }
 
   if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying && !espNowNotesBusy() &&
+      !otaUpdateActive() && !notesNotionSetupActive() &&
       !bluetoothKeyboardModalActive() &&
       millis() - lastActivityMs >= (unsigned long)deepSleepSec * 1000UL)
   {

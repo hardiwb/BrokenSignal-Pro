@@ -11,15 +11,20 @@ namespace sticky_note {
 constexpr std::array<uint8_t, 4> MAGIC = {'C', 'I', 'N', 'T'};
 constexpr uint8_t LEGACY_VERSION = 1;
 constexpr uint8_t CHUNK_VERSION = 2;
+constexpr uint8_t SNAPSHOT_VERSION = 3;
 constexpr uint8_t TYPE_NOTE = 1;
 constexpr uint8_t TYPE_ACK = 2;
+constexpr uint8_t TYPE_SNAPSHOT_BEGIN = 3;
+constexpr uint8_t TYPE_SNAPSHOT_COMMIT = 4;
 constexpr size_t HEADER_BYTES = 16;
 constexpr size_t CHUNK_HEADER_BYTES = 24;
+constexpr size_t SNAPSHOT_CONTROL_BYTES = 20;
 constexpr size_t CHUNK_BYTES = 220;
 constexpr size_t MAX_MESSAGE_BYTES = 2048;
 constexpr size_t MAX_PACKET_BYTES = CHUNK_HEADER_BYTES + CHUNK_BYTES;
 constexpr uint32_t ASSEMBLY_TIMEOUT_MS = 5000;
 static_assert(MAX_PACKET_BYTES <= 250, "Must fit ESP-NOW v1 radios");
+static_assert(SNAPSHOT_CONTROL_BYTES <= 250, "Snapshot controls must fit ESP-NOW v1 radios");
 
 struct Note {
   uint32_t sequence = 0;
@@ -28,6 +33,13 @@ struct Note {
   uint8_t day = 0;
   std::array<char, MAX_MESSAGE_BYTES + 1> message{};
   uint16_t messageLength = 0;
+};
+
+struct SnapshotControl {
+  uint8_t type = 0;
+  uint32_t sequence = 0;
+  uint16_t entryCount = 0;
+  uint32_t digest = 0;
 };
 
 inline uint16_t readU16Le(const uint8_t* p) {
@@ -74,14 +86,55 @@ inline bool validUtf8(const uint8_t* data, size_t length) {
   }
   return true;
 }
-inline uint32_t crc32(const uint8_t* data, size_t length) {
-  uint32_t crc = 0xffffffffU;
+inline uint32_t crc32Update(uint32_t crc, const uint8_t* data, size_t length) {
   for (size_t i = 0; i < length; ++i) {
     crc ^= data[i];
     for (uint8_t bit = 0; bit < 8; ++bit)
       crc = (crc >> 1) ^ ((crc & 1) ? 0xedb88320U : 0);
   }
-  return ~crc;
+  return crc;
+}
+inline uint32_t crc32(const uint8_t* data, size_t length) {
+  return ~crc32Update(0xffffffffU, data, length);
+}
+inline uint32_t snapshotDigestUpdate(uint32_t crc, const Note& note) {
+  uint8_t metadata[6];
+  writeU16Le(metadata, note.year);
+  metadata[2] = note.month;
+  metadata[3] = note.day;
+  writeU16Le(metadata + 4, note.messageLength);
+  crc = crc32Update(crc, metadata, sizeof(metadata));
+  for (size_t i = 0; i < note.messageLength; ++i) {
+    uint8_t value = static_cast<uint8_t>(note.message[i]);
+    if (value == '\r' || value == '\t') value = ' ';
+    crc = crc32Update(crc, &value, 1);
+  }
+  return crc;
+}
+inline uint32_t snapshotDigestFinish(uint32_t crc) { return ~crc; }
+inline size_t encodeSnapshotControl(uint8_t type, uint32_t sequence, uint16_t entryCount, uint32_t digest,
+                                    uint8_t* packet) {
+  if (!packet || sequence == 0 || (type != TYPE_SNAPSHOT_BEGIN && type != TYPE_SNAPSHOT_COMMIT)) return 0;
+  memset(packet, 0, SNAPSHOT_CONTROL_BYTES);
+  std::copy(MAGIC.begin(), MAGIC.end(), packet);
+  packet[4] = SNAPSHOT_VERSION;
+  packet[5] = type;
+  writeU32Le(packet + 8, sequence);
+  writeU16Le(packet + 12, entryCount);
+  writeU32Le(packet + 16, digest);
+  return SNAPSHOT_CONTROL_BYTES;
+}
+inline bool decodeSnapshotControl(const uint8_t* data, size_t length, SnapshotControl& control) {
+  if (!data || length != SNAPSHOT_CONTROL_BYTES || !std::equal(MAGIC.begin(), MAGIC.end(), data) ||
+      data[4] != SNAPSHOT_VERSION || (data[5] != TYPE_SNAPSHOT_BEGIN && data[5] != TYPE_SNAPSHOT_COMMIT) ||
+      data[6] != 0 || data[7] != 0 || readU16Le(data + 14) != 0 || readU32Le(data + 8) == 0) {
+    return false;
+  }
+  control.type = data[5];
+  control.sequence = readU32Le(data + 8);
+  control.entryCount = readU16Le(data + 12);
+  control.digest = readU32Le(data + 16);
+  return true;
 }
 inline uint8_t chunkCount(size_t length) {
   return static_cast<uint8_t>((length + CHUNK_BYTES - 1) / CHUNK_BYTES);

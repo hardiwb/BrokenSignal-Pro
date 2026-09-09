@@ -1,4 +1,4 @@
-param([string]$Compiler = 'g++', [string]$ReceiverRoot = 'D:/ESP32-Projects/CrossInk-Sticky')
+param([string]$Compiler = 'g++', [string]$ReceiverRoot = 'D:/ESP32-Projects/CrossInk-Calendar')
 $ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $senderHeaders = Join-Path $projectRoot 'src/module/service'
@@ -11,7 +11,7 @@ if ($senderProtocol.Replace("`r`n", "`n") -ne $receiverProtocol.Replace("`r`n", 
 $buildDirectory = Join-Path $projectRoot '.pio/notes-date-tests'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
 foreach ($headers in @($senderHeaders, $receiverHeaders)) {
-    $testExecutable = Join-Path $buildDirectory 'sticky-chunk-regression.exe'
+$testExecutable = Join-Path $buildDirectory 'sticky-chunk-regression.exe'
     & $Compiler -std=c++17 -Wall -Wextra -Werror -I $headers (Join-Path $projectRoot 'tests/sticky_chunk_regression.cpp') -o $testExecutable
     if ($LASTEXITCODE -ne 0) { throw 'Chunk test compilation failed' }
     & $testExecutable
