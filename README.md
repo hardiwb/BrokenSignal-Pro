@@ -329,8 +329,8 @@ Notes use monthly files under `/Notes/`.
 
 In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
 changes the date, while `Fn+Left/Right` moves the active field cursor.
-Personal is the default category. Work notes are prefixed with `<w>` in the
-list; pressing `W` again removes the marker and restores Personal.
+Personal is the default category. Work notes show `<w>` in the right-hand
+property column; pressing `W` again removes it and restores Personal.
 
 Use **Options > Sync Notion** for two-way synchronization with an Agenda data
 source containing `Checkbox`, `Entry`, `Date`, `Category`, and `ID`. Configure

@@ -18,6 +18,7 @@ namespace
 constexpr const char *NOTION_HOST = "https://api.notion.com";
 constexpr const char *NOTION_VERSION = "2026-03-11";
 constexpr size_t MAX_SYNC_NOTES = 200;
+constexpr size_t NOTION_QUERY_PAGE_SIZE = 5;
 
 struct RemoteNote
 {
@@ -168,7 +169,9 @@ bool queryRemoteNotes(const NotesNotionConfig &config, std::vector<RemoteNote> &
     while (hasMore)
     {
         JsonDocument request;
-        request["page_size"] = 25;
+        // Notion page objects are verbose. Keep each response small enough that
+        // the response String and ArduinoJson document can coexist in ESP32 RAM.
+        request["page_size"] = NOTION_QUERY_PAGE_SIZE;
         if (cursor.length())
             request["start_cursor"] = cursor;
         String body;
@@ -178,9 +181,12 @@ bool queryRemoteNotes(const NotesNotionConfig &config, std::vector<RemoteNote> &
                            body, response, error))
             return false;
         JsonDocument result;
-        if (deserializeJson(result, response))
+        const DeserializationError jsonError = deserializeJson(result, response);
+        if (jsonError)
         {
-            error = "Invalid Notes response";
+            error = "Notion JSON ";
+            error += jsonError.c_str();
+            error += " (" + String(response.length()) + " bytes)";
             return false;
         }
         for (JsonVariantConst page : result["results"].as<JsonArrayConst>())

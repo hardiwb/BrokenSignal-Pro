@@ -602,7 +602,7 @@ void drawPropertyItem(
                 : T->textMid);
 
     const int LABEL_X = LIST_CONTENT_X;
-    const int VALUE_W = 76;
+    const int VALUE_W = max(18, item.propertyWidth);
     const int LABEL_W =
         LIST_RIGHT_CONTENT_X -
         LABEL_X -

@@ -221,7 +221,7 @@ bool noteMatchesView(const NoteEntry &entry)
 
 String formatEntryLabel(const NoteEntry &entry)
 {
-    const String categoryMarker = entry.category.equalsIgnoreCase("Work") ? "<w> " : "";
+    const String categoryMarker = entry.category.equalsIgnoreCase("Work") ? "#w " : "";
     if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
         return entry.stamp.substring(5, 10) + " " + categoryMarker + entry.text;
 

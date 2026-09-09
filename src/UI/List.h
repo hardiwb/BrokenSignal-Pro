@@ -34,6 +34,10 @@ struct ListItemModel
     bool isDimmed = false;
     bool propertyFirst = false;
 
+    // Width reserved for a right-aligned Property value. Settings use the
+    // default; compact app badges can request a narrower property column.
+    int propertyWidth = 76;
+
     // Optional duration for music/radio items
     unsigned long durationMs = 0;
 };

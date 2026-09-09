@@ -61,8 +61,8 @@ Open Notes and choose **Options > Sync Notion**. Playback stops to leave enough
 memory for HTTPS and JSON processing. The first sync:
 
 Press `W` on a selected Cardputer note to toggle its category between Personal
-and Work. Work notes display a `<w>` prefix; the next sync writes `Work` or
-`Personal` to Notion's `Category` property.
+and Work. Work notes display `<w>` in the right-hand property column; the next
+sync writes `Work` or `Personal` to Notion's `Category` property.
 
 - assigns stable IDs to legacy Cardputer notes;
 - assigns an ID to Notion rows whose `ID` property is blank;
