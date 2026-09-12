@@ -230,6 +230,15 @@ void handleRadioInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, radioScrollTop, radioCount);
+        if (shortcutTarget >= 0)
+        {
+            radioSelected = shortcutTarget;
+            toggleSelectedRadioPlayback();
+            return;
+        }
+
         switch (c)
         {
         case 'w':

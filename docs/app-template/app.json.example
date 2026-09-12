@@ -4,6 +4,7 @@
   "order": 20,
   "name": "Example",
   "header_tag": "EXAMPLE",
+  "full_app_key": "x",
   "includes": [
     "apps/example/ExampleApp.h",
     "apps/example/ExampleMetadata.h"

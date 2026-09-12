@@ -497,6 +497,15 @@ void handleThermalPrinterInput(Keyboard_Class::KeysState &keys)
     }
     for (char c : keys.word)
     {
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, scrollTop, PRINTER_ROW_COUNT);
+        if (shortcutTarget >= 0)
+        {
+            selectedRow = shortcutTarget;
+            activateSelectedRow();
+            return;
+        }
+
         if (c == 'p' || c == 'P') return thermalPrinterPrint();
         if (c == 's' || c == 'S') return thermalPrinterRefreshStatus();
         if (c == 'f' || c == 'F') return thermalPrinterFeed();

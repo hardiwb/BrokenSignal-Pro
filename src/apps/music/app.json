@@ -4,6 +4,7 @@
   "order": 0,
   "name": "Music Player",
   "header_tag": "MUSIC",
+  "full_app_key": "m",
   "includes": [
     "apps/music/MusicApp.h",
     "apps/music/MusicMetadata.h",

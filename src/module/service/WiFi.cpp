@@ -361,6 +361,15 @@ WifiInputResult handleWifiInput(Keyboard_Class::KeysState &ks)
     {
         for (auto c : ks.word)
         {
+            const int shortcutTarget =
+                listVisibleShortcutTarget(c, wifiNetScroll, wifiNetCount);
+            if (shortcutTarget >= 0)
+            {
+                wifiNetSel = shortcutTarget;
+                ks.enter = true;
+                break;
+            }
+
             if (c == ';' && wifiNetCount > 0)
             {
                 int oldSel = wifiNetSel;

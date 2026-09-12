@@ -4,6 +4,7 @@
   "order": 1,
   "name": "Web Radio",
   "header_tag": "RADIO",
+  "full_app_key": "r",
   "includes": [
     "apps/radio/RadioApp.h",
     "apps/radio/RadioMetadata.h",

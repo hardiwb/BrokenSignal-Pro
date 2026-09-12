@@ -4,6 +4,7 @@
   "order": 3,
   "name": "Calculator",
   "header_tag": "CALCULATOR",
+  "full_app_key": "c",
   "includes": [
     "apps/calculator/CalculatorApp.h",
     "apps/calculator/CalculatorMetadata.h",

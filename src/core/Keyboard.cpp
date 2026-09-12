@@ -3,6 +3,7 @@
 #include "State.h"
 
 #include "System.h"
+#include "core/AppRegistry.h"
 #include "core/AppRuntime.h"
 #include "core/SurfaceManager.h"
 
@@ -283,6 +284,61 @@ void closeActiveShellMenu()
     }
 }
 
+bool handleGlobalFullAppHotkey(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!ks.fn || !hostLikeGlobalHotkeysAllowed(surface))
+        return false;
+
+    for (auto c : ks.word)
+    {
+        const char pressed = (c >= 'A' && c <= 'Z') ? c - 'A' + 'a' : c;
+        for (size_t i = 0; i < appCount(); ++i)
+        {
+            const AppDescriptor &app = appDescriptorAt(i);
+            if (pressed != app.fullAppKey)
+                continue;
+
+            if (surface.kind == SurfaceKind::MainMenu ||
+                surface.kind == SurfaceKind::ContextMenu)
+            {
+                closeActiveShellMenu();
+            }
+            appRuntimeOpen(app.id);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool handleGlobalBluetoothQuickConnect(
+    const ActiveSurface &surface,
+    Keyboard_Class::KeysState &ks)
+{
+    if (!ks.fn || !hostLikeGlobalHotkeysAllowed(surface))
+        return false;
+
+    for (auto c : ks.word)
+    {
+        const int bondIndex = bluetoothKeyboardBondForShortcut(c);
+        if (bondIndex < 0)
+            continue;
+
+        if (surface.kind == SurfaceKind::MainMenu ||
+            surface.kind == SurfaceKind::ContextMenu)
+        {
+            closeActiveShellMenu();
+        }
+        appRuntimeOpen(HostApp::BluetoothKeyboard);
+        connectBluetoothKeyboardBond(bondIndex);
+        return true;
+    }
+
+    return false;
+}
+
 bool handleShellNavigationShortcut(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
@@ -468,6 +524,12 @@ void keyboardLoop()
         return;
 
     if (handleShellNavigationShortcut(surface, ks))
+        return;
+
+    if (handleGlobalFullAppHotkey(surface, ks))
+        return;
+
+    if (handleGlobalBluetoothQuickConnect(surface, ks))
         return;
 
     // Applications, Options, and Control Panel permit registered quick-access

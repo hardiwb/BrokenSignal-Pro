@@ -4,6 +4,7 @@
   "order": 5,
   "name": "Bluetooth Keyboard",
   "header_tag": "BT KEYBOARD",
+  "full_app_key": "b",
   "includes": [
     "apps/bluetoothkeyboard/BluetoothKeyboard.h",
     "apps/bluetoothkeyboard/BluetoothKeyboardMetadata.h"

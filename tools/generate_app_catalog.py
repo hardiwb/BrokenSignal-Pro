@@ -87,6 +87,11 @@ def load_manifests(apps_dir: Path) -> list[dict]:
             require_identifier(path, quick.get("close"), "quick_access.close")
             require_identifier(path, quick.get("input"), "quick_access.input")
 
+        full_app_key = data.get("full_app_key")
+        if (not isinstance(full_app_key, str) or len(full_app_key) != 1 or
+                not full_app_key.isascii() or not full_app_key.isalpha()):
+            fail(path, "full_app_key must be one ASCII letter")
+
         require_string(path, data, "name")
         require_string(path, data, "header_tag")
         data["_path"] = path
@@ -105,6 +110,9 @@ def load_manifests(apps_dir: Path) -> list[dict]:
     quick_keys = [item["quick_access"]["key"].lower() for item in manifests if item.get("quick_access")]
     if len(quick_keys) != len(set(quick_keys)):
         fail(apps_dir, "quick_access keys must be unique (case-insensitive)")
+    full_app_keys = [item["full_app_key"].lower() for item in manifests]
+    if len(full_app_keys) != len(set(full_app_keys)):
+        fail(apps_dir, "full_app_key values must be unique (case-insensitive)")
 
     return manifests
 
@@ -155,6 +163,7 @@ def generate(project_dir: Path) -> None:
                 f"        {callbacks['open']}, {callbacks['draw']}, {callbacks['input']}, {callbacks['tick']},",
                 f"        {json.dumps(help_data['title'])}, {help_data['entries']}, {help_data['count']},",
                 f"        {options['build']}, {str(options['enter_enabled']).lower()}, {str(options['show_run_hint']).lower()},",
+                f"        '{item['full_app_key']}',",
                 f"        {quick_value}",
                 "    },",
             ]

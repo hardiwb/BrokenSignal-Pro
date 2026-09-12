@@ -88,6 +88,15 @@ void drawTextOrMarquee(
 }
 } // namespace
 
+int listVisibleShortcutTarget(char key, int scrollTop, int itemCount)
+{
+    if (key < '1' || key >= '1' + LIST_VISIBLE_ITEM)
+        return -1;
+
+    const int target = scrollTop + (key - '1');
+    return target >= 0 && target < itemCount ? target : -1;
+}
+
 // ============================================================
 // LIST
 // Glitch Terminal layout

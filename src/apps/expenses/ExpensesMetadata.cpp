@@ -2,7 +2,7 @@
 #include "apps/expenses/Expenses.h"
 const HelpEntry EXPENSES_HELP_ENTRIES[] = {
     {"[Opt]", "Toggle Options"}, {"[Alt]", "Toggle Applications"},
-    {"[A]", "Add expense"}, {"[R]", "Remove expense"}, {"[T]", "Displayed day total"},
+    {"[E]", "Add expense"}, {"[R]", "Remove expense"}, {"[T]", "Displayed day total"},
     {"[X]", "Toggle expense hidden"}, {"[Ok]", "Edit expense"},
     {"[;/.]", "Cursor up / down"}, {"[,/]", "Previous / next date"},
     {"[Tab]", "Switch editor field"}, {"[Fn L/R]", "Move text cursor"}, {"[Esc]", "Applications"}};

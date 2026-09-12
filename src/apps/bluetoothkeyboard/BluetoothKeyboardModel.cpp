@@ -1,5 +1,7 @@
 #include "apps/bluetoothkeyboard/BluetoothKeyboardInternal.h"
 
+#include "core/AppRegistry.h"
+
 #include <cmath>
 #include <cstring>
 
@@ -361,6 +363,79 @@ void refreshBonds()
 int bondCount()
 {
     return BluetoothService::bondCount();
+}
+
+String selectedQuickKeyLabel()
+{
+    if (!selectedIsBond())
+        return "Off";
+    char key = BluetoothService::bondQuickKey(selected);
+    if (key == 0)
+        return "Off";
+    if (key >= 'a' && key <= 'z')
+        key = key - 'a' + 'A';
+    return "Fn+" + String(key);
+}
+
+void adjustSelectedQuickKey(int direction)
+{
+    if (!selectedIsBond())
+        return;
+
+    static const char candidates[] = {
+        0,
+        '1', '2', '3', '4', '5', '6', '7', '8', '9',
+        'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j',
+        'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+        'u', 'v', 'w', 'x', 'y', 'z'};
+    constexpr int candidateCount = sizeof(candidates) / sizeof(candidates[0]);
+
+    const char current = BluetoothService::bondQuickKey(selected);
+    int currentIndex = 0;
+    for (int i = 0; i < candidateCount; ++i)
+    {
+        if (candidates[i] == current)
+        {
+            currentIndex = i;
+            break;
+        }
+    }
+
+    const int step = direction < 0 ? -1 : 1;
+    for (int attempt = 1; attempt <= candidateCount; ++attempt)
+    {
+        const int index =
+            (currentIndex + step * attempt + candidateCount * 2) % candidateCount;
+        const char candidate = candidates[index];
+
+        bool reserved = false;
+        for (size_t appIndex = 0; appIndex < appCount(); ++appIndex)
+        {
+            if (appDescriptorAt(appIndex).fullAppKey == candidate)
+            {
+                reserved = true;
+                break;
+            }
+        }
+        if (reserved)
+            continue;
+
+        bool alreadyAssigned = false;
+        for (int bondIndex = 0; candidate != 0 && bondIndex < bondCount(); ++bondIndex)
+        {
+            if (bondIndex != selected &&
+                BluetoothService::bondQuickKey(bondIndex) == candidate)
+            {
+                alreadyAssigned = true;
+                break;
+            }
+        }
+        if (alreadyAssigned)
+            continue;
+
+        if (BluetoothService::setBondQuickKey(selected, candidate))
+            return;
+    }
 }
 
 bool selectedIsBond()

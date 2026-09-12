@@ -4,6 +4,7 @@
   "order": 6,
   "name": "Thermal Printer",
   "header_tag": "PRINTER",
+  "full_app_key": "t",
   "includes": [
     "apps/thermalprinter/ThermalPrinter.h",
     "apps/thermalprinter/ThermalPrinterApp.h",

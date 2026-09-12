@@ -149,6 +149,16 @@ void handleOptionsInput(Keyboard_Class::KeysState &ks)
         if (optionCount <= 0)
             return;
 
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, optionScrollTop, optionCount);
+        if (shortcutTarget >= 0)
+        {
+            optionSelected = shortcutTarget;
+            if (optionsApp().optionsEnterEnabled)
+                activateSelectedOption();
+            return;
+        }
+
         if (c == ';')
         {
             const int oldSelected = optionSelected;

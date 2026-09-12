@@ -11,14 +11,13 @@ const HelpEntry CALCULATOR_HELP_ENTRIES[] = {
     {"[X/*]", "Multiply"},
     {"[D//]", "Divide"},
     {"[Ok]", "Calculate"},
-    {"[F]", "Toggle full screen"},
+    {"[C]", "Toggle full screen"},
     {"[-/+]", "Volume in history"},
     {"[H]", "Toggle Help"},
     {"[N]", "Quick note"},
     {"[E]", "Quick expense"},
     {"[Del]", "Backspace"},
     {"[Esc]", "Close / Applications"},
-    {"[C]", "Close calculator"},
 };
 
 const uint8_t CALCULATOR_HELP_COUNT =

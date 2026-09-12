@@ -114,7 +114,7 @@ and keyboard routing rules.
 - **Registry-driven quick access**: Apps can publish one overlay shortcut without changing every host app.
 - **Contextual Options**: `Opt` opens settings and actions belonging to the active application.
 - **Context-aware Help**: `H` opens Help for the active full-screen application.
-- **Calculator**: `C` opens its quick overlay and `F` expands it to the full app.
+- **Calculator**: `C` opens its quick overlay and toggles the full-screen history.
 - **Expense Tracker**: `E` opens a quick expense entry overlay from any other full-screen app.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
@@ -229,6 +229,7 @@ belong to the remote host and global firmware shortcuts are blocked.
 | `;` / `.` | Select paired device |
 | `Ok` | Connect or start pairing |
 | `Opt` | Rename or forget selected/all pairings |
+| Assigned `Fn+key` | Connect directly to a saved device |
 | `BtnG0` | Release all keys, disconnect, and close typing mode |
 | `Fn` + `` ` `` | Send Escape |
 | `Fn` + `;` / `.` | Send Up / Down |
@@ -250,6 +251,10 @@ The Bluetooth Keyboard Options menu includes a persistent `Invert Mouse Y`
 setting, mouse sensitivity levels from 50% to 200%, and a `Mouse Screens`
 setting for one or two displays. Invert Y defaults to `On` for natural tilt
 direction. Two-screen mode assumes equal-sized displays arranged side by side.
+Each saved device also has a persistent **Quick Connect** key. The defaults are
+`Fn+1`, `Fn+2`, and `Fn+3`; select a device and use **Options > Quick Connect**
+to choose `Off`, another number, or an available letter. Letters already used
+by full-app shortcuts are skipped automatically.
 
 ### Global Host Shortcuts
 
@@ -261,11 +266,21 @@ direction. Two-screen mode assumes equal-sized displays arranged side by side.
 | `Ctrl` | Toggle Control Panel |
 | `C` | Calculator |
 | `N` | Quick note |
+| `E` | Quick expense |
 | `O` | Screen on / off |
 | `[` / `]` | Brightness down / up |
+| `Fn+M` | Music Player (full app) |
+| `Fn+R` | Web Radio (full app) |
+| `Fn+C` | Calculator (full app) |
+| `Fn+N` | Notes (full app) |
+| `Fn+E` | Expense Tracker (full app) |
+| `Fn+T` | Thermal Printer (full app) |
+| `Fn+B` | Bluetooth Keyboard (full app) |
+| Assigned `Fn+key` | Quick-connect a saved Bluetooth device |
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
 If a foreground app reserves the same letter, the app-specific meaning wins.
+`Fn` full-app shortcuts take precedence over the corresponding quick-access key.
 Quick Calculator (`C`), Note (`N`), and Expense (`E`) entry also remain
 available while Applications, Options, or Control Panel is open. Closing the
 quick-entry overlay returns to the menu that was underneath it.
@@ -273,6 +288,11 @@ quick-entry overlay returns to the menu that was underneath it.
 List-style property rows use `,` / `/` as left / right adjustment keys. This
 keeps `-` and `+` available for playback volume muscle memory in host
 apps where those keys do not have a stronger local meaning.
+
+On any seven-row list, number keys `1` through `7` choose and activate that
+visible row immediately. Displayed item numbers remain absolute. Informational
+lists only move the highlight, and numeric text-entry overlays keep the number
+keys for input.
 
 Music, Radio, full-screen Notes, and Calculator history support playback volume
 with `-` / `+`. Volume and brightness changes are shown as transient header
@@ -312,7 +332,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 
 | Key | Action |
 | --- | ------ |
-| `A` | Add note |
+| `N` | Add note |
 | `R` | Remove note |
 | `X` | Toggle done |
 | `W` | Toggle category between Personal and Work |
@@ -348,7 +368,7 @@ upload to the PC companion.
 
 | Key | Action |
 | --- | ------ |
-| `A` | Add expense |
+| `E` | Add expense |
 | `R` | Remove selected expense |
 | `T` | Show the displayed day's total as a toast |
 | `X` | Toggle the selected expense's shared/processed display state |
@@ -361,6 +381,8 @@ Expense Options include moving an entry, editing/deleting it, syncing all
 unmarked entries for the displayed day to the PC, sharing the day's entries as QR pages, and changing
 the default currency. Upload automatically opens the WiFi connection flow when
 the Cardputer is offline and resumes after a successful connection.
+New and existing expense editors put the amount first and the expense name
+second; `Tab` switches between them.
 
 ### Thermal Printer
 
@@ -458,11 +480,10 @@ the network picker and resumes the updater after a successful connection.
 | `Ok` | Calculate |
 | `DEL` | Backspace |
 | `Esc` | Close top surface / Applications |
-| `F` | Open full-screen calculation history |
+| `C` | Toggle full-screen calculation history / calculator input |
 | `H` | Toggle Calculator Help |
 | `Opt` | Toggle Calculator Options |
 | `[` / `]` | Brightness down / up |
-| `C` | Close |
 
 Calculator history uses `A`, `S`, `M`, and `D` to append addition,
 subtraction, multiplication, and division rows. `,` / `/` changes the selected

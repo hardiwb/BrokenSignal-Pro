@@ -49,5 +49,6 @@ struct AppDescriptor
     BuildAppOptions buildOptions;
     bool optionsEnterEnabled;
     bool optionsShowRunHint;
+    char fullAppKey; // Fn + key opens this full-screen app.
     QuickAccessDescriptor quickAccess;
 };

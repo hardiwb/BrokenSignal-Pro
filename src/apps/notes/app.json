@@ -4,6 +4,7 @@
   "order": 2,
   "name": "Notes",
   "header_tag": "NOTES",
+  "full_app_key": "n",
   "includes": [
     "apps/notes/NotesApp.h",
     "apps/notes/NotesMetadata.h",

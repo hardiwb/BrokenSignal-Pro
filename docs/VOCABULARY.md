@@ -31,6 +31,7 @@ or another architecture term and the boundary is not obvious.
 | Popup | A temporary or non-editing overlay such as Help or Debug. | `src/module/shell/Help.*`, `Debug.*` | Modal editor |
 | Quick popup | A transient visual message such as a toast or header message. It does not own text input, so host-safe global keys can pass through. | `src/UI/Toast.*`, `showHdrMsg()` | Quick access or modal input |
 | Quick access | A descriptor-owned shortcut that opens a small tool from another host app. | App `quick_access` manifest field, `AppRuntime.cpp` | Global hotkey |
+| Full-app shortcut | A descriptor-owned `Fn` chord that opens a host app directly. | App `full_app_key` manifest field, `Keyboard.cpp` | Quick access |
 | Help row | One static key/description pair for an app's Help screen. | `<App>Metadata.cpp` | Keyboard routing |
 | Option row | One dynamic app setting/action exposed through the shell Options menu. | `<App>Metadata.cpp` | Control Panel setting |
 
@@ -45,6 +46,7 @@ or another architecture term and the boundary is not obvious.
 | Global utility hotkey | A firmware-level action allowed only on host-like surfaces where it does not collide with app-local keys, such as Help or screen toggle. | `src/core/Keyboard.cpp` | Text/editor input |
 | Hardware hotkey | A firmware-level adjustment for device state, such as brightness or safe playback volume. | `src/core/Keyboard.cpp`, `src/core/System.cpp` | App-local text or arithmetic input |
 | Property adjustment | Left/right changes on a selected list property row. Uses `,` and `/`. | `Options.cpp`, `Settings.cpp`, app list views | Volume keys |
+| Visible-row shortcut | Number key `1`–`7` choosing that on-screen list row without changing absolute row labels. It performs the normal `Ok` action when one exists. | `UI/List.*`, list input handlers | Item ID |
 | Back/Esc | The close/back action. It closes the topmost surface before app input sees it. | `SurfaceManager.cpp`, `Keyboard.cpp` | App-local delete |
 
 ## App File Terms
@@ -93,5 +95,6 @@ Use these rules when adding docs or files:
 - Say `stream` only for live, ongoing data flow such as network audio.
 - Say `playback` for local audio file control.
 - Say `quick access` for descriptor-owned tools launched from another host app.
+- Say `full-app shortcut` for a descriptor-owned `Fn` chord that opens a host app.
 - Say `global hotkey` only for host-safe shell navigation, quick access, or
   utility keys; modal overlays should reject them unless they own that overlay.

@@ -32,8 +32,8 @@ OverlayModel calculatorOverlayModel()
     model.confirmText = calcEditingHistory
                             ? "[Esc]Cancel [Ok]Save"
                             : calculatorOverlayMode
-                                  ? "[Esc]Close [F]Full [Ok]="
-                                  : "[Esc]Apps [F]Full [H]Help [Ok]=";
+                                  ? "[Esc]Close [C]Full [Ok]="
+                                  : "[Esc]Apps [C]Full [H]Help [Ok]=";
     model.inputFont = OverlayFontSize::Large;
     return model;
 }
@@ -96,7 +96,7 @@ void drawCalculationHistory()
     drawList(calculationHistoryListModel());
 
     FooterModel footer;
-    footer.left = "[F]Calc [,/]Op [Ok]Edit";
+    footer.left = "[C]Calc [,/]Op [Ok]Edit";
     footer.battery = footerBatteryText();
     drawFooter(footer);
 }

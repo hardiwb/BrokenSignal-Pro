@@ -81,6 +81,10 @@ constexpr int LIST_HEIGHT =
 constexpr int LIST_VISIBLE_ITEM =
     LIST_HEIGHT / LIST_ITEM_H;
 
+// Maps number keys to the corresponding row currently on screen.
+// Returns the absolute item index, or -1 when that row is empty.
+int listVisibleShortcutTarget(char key, int scrollTop, int itemCount);
+
 // ============================================================
 // FULL LIST
 // ============================================================

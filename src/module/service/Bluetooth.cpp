@@ -187,6 +187,65 @@ String bondNameKey(const uint8_t *address)
     return String(key);
 }
 
+String bondQuickKeyPreference(const uint8_t *address)
+{
+    char key[14];
+    snprintf(key, sizeof(key), "q%02X%02X%02X%02X%02X%02X",
+             address[0], address[1], address[2],
+             address[3], address[4], address[5]);
+    return String(key);
+}
+
+char normalizeQuickKey(char key)
+{
+    if (key >= 'A' && key <= 'Z')
+        key = key - 'A' + 'a';
+    return ((key >= '1' && key <= '9') ||
+            (key >= 'a' && key <= 'z'))
+               ? key
+               : 0;
+}
+
+void assignDefaultQuickKeys()
+{
+    if (!preferencesOpen)
+        return;
+
+    bool used[128] = {};
+    for (int i = 0; i < storedBondCount; ++i)
+    {
+        const uint8_t saved = preferences.getUChar(
+            bondQuickKeyPreference(bonds[i].bd_addr).c_str(), 0xFF);
+        if (saved != 0xFF)
+        {
+            const char key = normalizeQuickKey((char)saved);
+            if (key != 0)
+                used[(int)key] = true;
+        }
+    }
+
+    for (int i = 0; i < storedBondCount; ++i)
+    {
+        const String preferenceKey =
+            bondQuickKeyPreference(bonds[i].bd_addr);
+        if (preferences.getUChar(preferenceKey.c_str(), 0xFF) != 0xFF)
+            continue;
+
+        char key = '1' + i;
+        if (key > '9' || used[(int)key])
+        {
+            key = '1';
+            while (key <= '9' && used[(int)key])
+                ++key;
+        }
+        if (key <= '9')
+        {
+            preferences.putUChar(preferenceKey.c_str(), key);
+            used[(int)key] = true;
+        }
+    }
+}
+
 class SharedServerCallbacks final : public BLEServerCallbacks
 {
 public:
@@ -419,6 +478,7 @@ void refreshBonds()
     for (int i = 0; i < storedBondCount; ++i)
         bonds[i] = allBonds[i];
     totalBondCount = fetched;
+    assignDefaultQuickKeys();
 }
 
 int bondCount()
@@ -459,13 +519,58 @@ bool setBondName(int index, const String &name)
                bondNameKey(bonds[index].bd_addr).c_str(), cleaned) > 0;
 }
 
+char bondQuickKey(int index)
+{
+    if (!preferencesOpen || index < 0 || index >= storedBondCount)
+        return 0;
+    const uint8_t saved = preferences.getUChar(
+        bondQuickKeyPreference(bonds[index].bd_addr).c_str(), 0);
+    return normalizeQuickKey((char)saved);
+}
+
+bool setBondQuickKey(int index, char key)
+{
+    if (!preferencesOpen || index < 0 || index >= storedBondCount)
+        return false;
+
+    key = normalizeQuickKey(key);
+    if (key != 0)
+    {
+        for (int i = 0; i < storedBondCount; ++i)
+        {
+            if (i != index && bondQuickKey(i) == key)
+                return false;
+        }
+    }
+
+    return preferences.putUChar(
+               bondQuickKeyPreference(bonds[index].bd_addr).c_str(),
+               (uint8_t)key) > 0;
+}
+
+int bondIndexForQuickKey(char key)
+{
+    key = normalizeQuickKey(key);
+    if (key == 0)
+        return -1;
+    for (int i = 0; i < storedBondCount; ++i)
+    {
+        if (bondQuickKey(i) == key)
+            return i;
+    }
+    return -1;
+}
+
 bool forgetBond(int index)
 {
     refreshBonds();
     if (index < 0 || index >= storedBondCount)
         return false;
     if (preferencesOpen)
+    {
         preferences.remove(bondNameKey(bonds[index].bd_addr).c_str());
+        preferences.remove(bondQuickKeyPreference(bonds[index].bd_addr).c_str());
+    }
     const bool removed = esp_ble_remove_bond_device(bonds[index].bd_addr) == ESP_OK;
     refreshBonds();
     uiDirty = true;
@@ -478,7 +583,10 @@ void forgetAllBonds()
     for (int i = 0; i < storedBondCount; ++i)
     {
         if (preferencesOpen)
+        {
             preferences.remove(bondNameKey(bonds[i].bd_addr).c_str());
+            preferences.remove(bondQuickKeyPreference(bonds[i].bd_addr).c_str());
+        }
         esp_ble_remove_bond_device(bonds[i].bd_addr);
     }
     refreshBonds();

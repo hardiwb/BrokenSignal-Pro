@@ -1,6 +1,7 @@
 #include "core/System.h"
 #include "module/service/FileBrowser.h"
 #include "UI/Header.h"
+#include "UI/List.h"
 #include <algorithm>
 
 namespace
@@ -724,6 +725,33 @@ void purgeAudioPlayerMemory()
 // KEYBOARD INPUT
 //==================================================
 
+void activateSelectedBrowserItem()
+{
+    if (selectedItem < 0 || selectedItem >= (int)items.size())
+        return;
+
+    BrowserItem &item = items[selectedItem];
+    if (item.isFolder)
+    {
+        enterItem(selectedItem);
+        return;
+    }
+
+    const bool hasActiveItem = activeBrowserConfig.isPlaybackActive &&
+                               activeBrowserConfig.isPlaybackActive();
+    const bool selectedIsActive = activeBrowserConfig.isItemActive &&
+                                  activeBrowserConfig.isItemActive(selectedItem, item);
+    if (hasActiveItem)
+    {
+        stopActiveBrowserItem();
+        if (selectedIsActive)
+            return;
+    }
+
+    if (activeBrowserConfig.onOpenFile)
+        activeBrowserConfig.onOpenFile(selectedItem, item);
+}
+
 bool handleBrowserInput(Keyboard_Class::KeysState &ks)
 {
     //==================================================
@@ -733,46 +761,7 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
 
     if (ks.enter)
     {
-        if (selectedItem >= 0 &&
-            selectedItem < (int)items.size())
-        {
-            BrowserItem &item = items[selectedItem];
-
-            // Folder / special item
-            if (item.isFolder)
-            {
-                enterItem(selectedItem);
-                return true;
-            }
-
-            // File
-            const bool hasActiveItem = activeBrowserConfig.isPlaybackActive &&
-                                       activeBrowserConfig.isPlaybackActive();
-            const bool selectedIsActive = activeBrowserConfig.isItemActive &&
-                                          activeBrowserConfig.isItemActive(selectedItem, item);
-            if (hasActiveItem)
-            {
-                if (selectedIsActive)
-                {
-                    stopActiveBrowserItem();
-                }
-                else
-                {
-                    stopActiveBrowserItem();
-                    if (activeBrowserConfig.onOpenFile)
-                        activeBrowserConfig.onOpenFile(selectedItem, item);
-                }
-            }
-            else
-            {
-                if (activeBrowserConfig.onOpenFile)
-                    activeBrowserConfig.onOpenFile(selectedItem, item);
-            }
-
-            return true;
-        }
-
-        // ENTER was pressed, even if there is no item.
+        activateSelectedBrowserItem();
         return true;
     }
 
@@ -792,6 +781,20 @@ bool handleBrowserInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
+        const int listTop = items.empty()
+                                ? 0
+                                : max(0, min(
+                                      selectedItem - LIST_VISIBLE_ITEM / 2,
+                                      (int)items.size() - LIST_VISIBLE_ITEM));
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, listTop, items.size());
+        if (shortcutTarget >= 0)
+        {
+            selectedItem = shortcutTarget;
+            activateSelectedBrowserItem();
+            return true;
+        }
+
         switch (c)
         {
         //==================================================

@@ -187,10 +187,10 @@ ListModel listModel() {
 }
 void drawEditor(bool inputOnly = false) {
     OverlayModel model; model.type = OverlayType::TwoFieldInput;
-    model.title = invalidInput ? "Invalid Entry" : (editVisibleIndex >= 0 ? "Edit Entry" : "New Entry");
-    model.value = editName; model.secondValue = editAmount; model.activeField = editorField;
-    model.cursorIndex = editorField == 0 ? nameCursor : amountCursor;
-    model.prompt = "Entry name"; model.secondPrompt = defaultCurrency;
+    model.title = invalidInput ? "Invalid Entry" : (editVisibleIndex >= 0 ? "Edit Entry" : "New Expense");
+    model.value = editAmount; model.secondValue = editName; model.activeField = editorField;
+    model.cursorIndex = editorField == 0 ? amountCursor : nameCursor;
+    model.prompt = defaultCurrency; model.secondPrompt = "Expense name";
     model.helperText = "[Tab]Switch [Fn L/R]Cursor"; model.confirmText = "[Esc]Close [Ok]Save";
     if (inputOnly) drawOverlayTwoFieldInputValues(model);
     else drawOverlay(model);
@@ -212,7 +212,8 @@ void beginEditor(int index) {
         const auto &e = entries[visible[index]]; editName = e.name; editAmount = e.value + " " + e.currency;
     }
     editorField = 0; nameCursor = editName.length();
-    amountCursor = index >= 0 ? editAmount.length() : 0;
+    amountCursor = editAmount.indexOf(' ');
+    if (amountCursor < 0) amountCursor = editAmount.length();
     invalidInput = false; modal = Modal::Editor; drawEditor();
 }
 void saveEditor() {
@@ -290,7 +291,7 @@ void drawExpenses() {
     if (modal == Modal::Qr) { drawQr(); return; }
     if (modal == Modal::UploadResult) { drawUploadResult(); return; }
     HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = displayDate(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[A]+ [R]- [T]Total"; footer.center = "[Ok]Edit";
+    drawList(listModel()); FooterModel footer; footer.left = "[E]+ [R]- [T]Total"; footer.center = "[Ok]Edit";
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
@@ -409,8 +410,8 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
         if (keyboardBackPressed(ks)) { cancelExpensesModal(); return; }
         if (ks.tab) { editorField = 1 - editorField; drawEditor(true); return; }
         if (ks.enter) { saveEditor(); return; }
-        String &value = editorField == 0 ? editName : editAmount;
-        int &cursor = editorField == 0 ? nameCursor : amountCursor;
+        String &value = editorField == 0 ? editAmount : editName;
+        int &cursor = editorField == 0 ? amountCursor : nameCursor;
         if (ks.fn) for (char c : ks.word) if (c == ',' || c == '/') {
             cursor = constrain(cursor + (c == ',' ? -1 : 1), 0, (int)value.length()); drawEditor(true); return;
         }
@@ -428,7 +429,12 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
     if (keyboardBackPressed(ks)) return;
     if (ks.enter) { expensesEdit(); return; }
     for (char c : ks.word) {
-        if (c == 'a' || c == 'A') { expensesNew(); return; }
+        int shortcutTarget = listVisibleShortcutTarget(c, scrollTop, visible.size());
+        if (shortcutTarget >= 0) {
+            selected = shortcutTarget; marqueeStart = millis();
+            expensesEdit(); return;
+        }
+        if (c == 'e' || c == 'E') { expensesNew(); return; }
         if (c == 'r' || c == 'R') { expensesDelete(); return; }
         if (c == 't' || c == 'T') { showDayTotal(); return; }
         if (c == 'x' || c == 'X') { expensesToggleSynced(); return; }

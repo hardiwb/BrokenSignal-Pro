@@ -32,6 +32,7 @@ struct AppDescriptor
     BuildAppOptions buildOptions;
     bool optionsEnterEnabled;
     bool optionsShowRunHint;
+    char fullAppKey;
     QuickAccessDescriptor quickAccess;
 };
 ```
@@ -149,8 +150,10 @@ handles shell navigation, host-safe global hotkeys, and finally app-local input.
 | `Ctrl` | Control Panel navigation. |
 | `C` | Global quick Calculator launch where supported. |
 | `N` | Global quick Note launch where supported. |
+| `Fn` + app key | Open the app's full-screen host surface. |
 | `H`, `O` | Global utility keys only on host screens where they do not collide. |
 | `[`, `]` | Global brightness down/up on host screens. |
+| `1`–`7` | Select and activate the corresponding currently visible list row. |
 | `,`, `/` | Left/right adjustment for list-style property rows. |
 
 `-` and `+` are reserved for playback volume only on foreground host/list
@@ -170,9 +173,15 @@ it must not open Notes, Calculator, or toggle the screen.
 feedback, so host-safe global keys can still repeat while `VOL` or `BRI` is
 visible.
 
+Every app manifest declares a unique `full_app_key`. On host-like surfaces,
+`Fn` plus that letter opens the app through `appRuntimeOpen()`. Modal inputs
+retain ownership, so these chords do not interrupt editing or confirmation.
+
 Do not reimplement shell menu or ESC behavior in a new app. App input should
 only handle local commands left after shell routing. Modal editors must expose
 their state to `SurfaceManager` if ESC needs to close them before the host app.
+List handlers should use `listVisibleShortcutTarget()` so number shortcuts map
+through the current `scrollTop` while displayed item numbers remain absolute.
 
 ## Quick Access
 
@@ -204,6 +213,9 @@ they will not steal text input from a modal editor. Menus, Help, Debug, editors,
 confirmations, and existing quick overlays therefore retain their input. A
 quick-access key takes precedence over an app-local key on eligible host screens,
 so keys must be unique and intentionally reserved.
+
+`full_app_key` is required for every host app and must be unique
+case-insensitively. The catalog generator rejects duplicates.
 
 ## Help Metadata
 

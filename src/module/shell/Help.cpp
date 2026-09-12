@@ -152,6 +152,16 @@ void handleHelpInput(Keyboard_Class::KeysState &ks)
         if (count <= 0)
             return;
 
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, helpScrollTop, count);
+        if (shortcutTarget >= 0)
+        {
+            const int oldSelected = helpSelected;
+            helpSelected = shortcutTarget;
+            redrawHelpSelection(oldSelected, helpScrollTop);
+            return;
+        }
+
         if (c == ';')
         {
             const int oldSelected = helpSelected;

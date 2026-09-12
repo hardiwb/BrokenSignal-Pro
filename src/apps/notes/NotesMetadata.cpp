@@ -6,7 +6,7 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[Opt]", "Toggle Options"},
     {"[Alt]", "Toggle Applications"},
     {"[Ctrl]", "Toggle Control Panel"},
-    {"[A]", "Add note"},
+    {"[N]", "Add note"},
     {"[C]", "Quick calculator"},
     {"[E]", "Quick expense"},
     {"[-/+]", "Volume"},

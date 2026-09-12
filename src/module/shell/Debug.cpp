@@ -171,6 +171,16 @@ void handleDebugInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
+        const int shortcutTarget = listVisibleShortcutTarget(
+            c, debugScrollTop, buildDebugListModel().items.size());
+        if (shortcutTarget >= 0)
+        {
+            const int oldSelected = debugSelected;
+            debugSelected = shortcutTarget;
+            redrawDebugSelection(oldSelected, debugScrollTop);
+            return;
+        }
+
         switch (c)
         {
         case 'd':

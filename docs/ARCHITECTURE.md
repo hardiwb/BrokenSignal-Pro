@@ -121,6 +121,9 @@ Shell modifiers route between shell menus
   Opt  -> active app Options
   Ctrl -> Control Panel
         |
+Fn full-app shortcuts open registered host apps
+  M/R/C/N/E/T/B -> app manifest full_app_key
+        |
 Host-like surfaces check global quick access
   C -> quick calculator
   N -> quick note
@@ -142,9 +145,12 @@ Input ownership rules:
 | --- | --- |
 | Shell navigation (`Alt`, `Opt`, `Ctrl`) | `Keyboard.cpp`, using `SurfaceManager` state. |
 | Back/Esc close behavior | `SurfaceManager.cpp`. |
+| Full-app launch (`Fn` + registered key) | App descriptors plus `Keyboard.cpp`, only on host-like surfaces. |
+| Bluetooth quick-connect (`Fn` + assigned key) | Per-bond preferences plus `Keyboard.cpp`, after full-app shortcut routing. |
 | Global quick access (`C`, `N`, `E`) | App descriptors through `AppRuntime.cpp`, only on host-like surfaces. |
 | Hardware hotkeys (`[`, `]`, safe `-`, `+`) | `Keyboard.cpp` calls shared system adjustment helpers. |
 | Global utility keys (`H`, `O`) | `Keyboard.cpp`, only where they do not collide with app-local keys. |
+| Visible-row shortcuts (`1`–`7`) | Each list input handler via the shared `listVisibleShortcutTarget()` helper. |
 | App-specific keys | The app's own input module. |
 | Modal editor keys | The modal owner, routed by active surface. |
 
@@ -198,6 +204,7 @@ Preferred patterns:
 | Need | Preferred path |
 | --- | --- |
 | Open a full app | `appRuntimeOpen(HostApp::...)`. |
+| Add a global full-app shortcut | App `full_app_key` descriptor field. |
 | Add a global quick tool | App `quick_access` descriptor. |
 | Add app-local command | The app's `handleInput()` path. |
 | Add contextual settings/actions | The app's `buildOptions()` callback. |

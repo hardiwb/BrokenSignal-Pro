@@ -4,6 +4,7 @@
 
 const HelpEntry BLUETOOTH_KEYBOARD_HELP_ENTRIES[] = {
     {"[Ok]", "Connect / pair"},
+    {"[Fn+key]", "Quick-connect saved PC"},
     {"[;/.]", "Cursor up / down"},
     {"[Opt]", "Manage pairings"},
     {"[BtnG0]", "Disconnect typing mode"},
@@ -42,6 +43,11 @@ void forgetAll(int)
     BluetoothKeyboardInternal::forgetAllBonds();
 }
 
+void adjustQuickConnectKey(int direction)
+{
+    BluetoothKeyboardInternal::adjustSelectedQuickKey(direction);
+}
+
 void adjustInvertMouseY(int)
 {
     BluetoothKeyboardInternal::toggleMouseYInverted();
@@ -64,6 +70,10 @@ void buildBluetoothKeyboardOptions(std::vector<AppOption> &options)
     options.push_back({
         "Rename Selected", "", BluetoothKeyboardInternal::selectedIsBond(),
         false, true, renameSelected});
+    options.push_back({
+        "Quick Connect", BluetoothKeyboardInternal::selectedQuickKeyLabel(),
+        BluetoothKeyboardInternal::selectedIsBond(), true, false,
+        adjustQuickConnectKey});
     options.push_back({
         "Forget Selected", "", BluetoothKeyboardInternal::selectedIsBond(),
         false, true, forgetSelected});

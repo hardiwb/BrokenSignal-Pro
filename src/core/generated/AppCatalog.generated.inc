@@ -4,6 +4,7 @@
         openMusicApp, drawMusicApp, handleMusicAppInput, tickMusicApp,
         "MUSIC KEYS", MUSIC_HELP_ENTRIES, MUSIC_HELP_COUNT,
         buildMusicOptions, false, false,
+        'm',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
     {
@@ -11,6 +12,7 @@
         openRadioApp, drawRadioAll, handleRadioAppInput, tickRadioApp,
         "RADIO KEYS", RADIO_HELP_ENTRIES, RADIO_HELP_COUNT,
         buildRadioOptions, true, true,
+        'r',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
     {
@@ -18,6 +20,7 @@
         openNotesApp, drawNotes, handleNotesAppInput, tickNotesApp,
         "NOTES KEYS", NOTES_HELP_ENTRIES, NOTES_HELP_COUNT,
         buildNotesOptions, true, true,
+        'n',
         {'n', notesQuickOpen, notesQuickAccessAvailable, notesEditorVisible, cancelNoteEditor, handleNotesAppInput}
     },
     {
@@ -25,6 +28,7 @@
         openCalculatorApp, drawCalculator, handleCalculatorAppInput, tickCalculatorApp,
         "CALC KEYS", CALCULATOR_HELP_ENTRIES, CALCULATOR_HELP_COUNT,
         buildCalculatorOptions, true, false,
+        'c',
         {'c', openCalculator, calculatorQuickAccessAvailable, calculatorOverlayActive, closeCalculator, handleCalculatorAppInput}
     },
     {
@@ -32,6 +36,7 @@
         openExpensesApp, drawExpenses, handleExpensesAppInput, tickExpensesApp,
         "EXPENSE KEYS", EXPENSES_HELP_ENTRIES, EXPENSES_HELP_COUNT,
         buildExpensesOptions, true, true,
+        'e',
         {'e', expensesQuickOpen, expensesQuickAccessAvailable, expensesQuickActive, cancelExpensesModal, handleExpensesAppInput}
     },
     {
@@ -39,6 +44,7 @@
         openBluetoothKeyboardApp, drawBluetoothKeyboardApp, handleBluetoothKeyboardAppInput, tickBluetoothKeyboardApp,
         "BT KEYBOARD KEYS", BLUETOOTH_KEYBOARD_HELP_ENTRIES, BLUETOOTH_KEYBOARD_HELP_COUNT,
         buildBluetoothKeyboardOptions, true, true,
+        'b',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
     {
@@ -46,5 +52,6 @@
         openThermalPrinterApp, drawThermalPrinterApp, handleThermalPrinterAppInput, tickThermalPrinterApp,
         "PRINTER KEYS", THERMAL_PRINTER_HELP_ENTRIES, THERMAL_PRINTER_HELP_COUNT,
         buildThermalPrinterOptions, true, true,
+        't',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },

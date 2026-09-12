@@ -686,6 +686,15 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
     bool changed = false;
     for (auto c : ks.word)
     {
+        const int shortcutTarget =
+            listVisibleShortcutTarget(c, settingsScrollTop, SETTINGS_COUNT);
+        if (shortcutTarget >= 0)
+        {
+            settingsSel = shortcutTarget;
+            ks.enter = true;
+            break;
+        }
+
         switch (c)
         {
         case ';':

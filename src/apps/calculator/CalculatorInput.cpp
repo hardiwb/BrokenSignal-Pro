@@ -31,7 +31,16 @@ void handleCalculationHistoryInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
-        if (c == 'f' || c == 'F')
+        const int shortcutTarget = listVisibleShortcutTarget(
+            c, calcHistoryScrollTop, historyDisplayCount());
+        if (shortcutTarget >= 0)
+        {
+            calcHistorySelected = shortcutTarget;
+            beginHistoryEdit();
+            return;
+        }
+
+        if (c == 'c' || c == 'C')
         {
             calculatorHistoryVisible = false;
             drawOverlay(calculatorOverlayModel());
@@ -188,7 +197,7 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
-        if (c == 'f' || c == 'F')
+        if (c == 'c' || c == 'C')
         {
             if (calculatorOverlayMode)
             {
@@ -248,10 +257,6 @@ void handleCalculatorInput(Keyboard_Class::KeysState &ks)
             setOperator('/');
             return;
 
-        case 'c':
-        case 'C':
-            closeCalculator();
-            return;
         }
     }
 }

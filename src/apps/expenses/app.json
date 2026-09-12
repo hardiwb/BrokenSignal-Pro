@@ -4,6 +4,7 @@
   "order": 3,
   "name": "Expense Tracker",
   "header_tag": "EXPENSE",
+  "full_app_key": "e",
   "includes": ["apps/expenses/Expenses.h", "apps/expenses/ExpensesApp.h", "apps/expenses/ExpensesMetadata.h"],
   "callbacks": {"open": "openExpensesApp", "draw": "drawExpenses", "input": "handleExpensesAppInput", "tick": "tickExpensesApp"},
   "help": {"title": "EXPENSE KEYS", "entries": "EXPENSES_HELP_ENTRIES", "count": "EXPENSES_HELP_COUNT"},

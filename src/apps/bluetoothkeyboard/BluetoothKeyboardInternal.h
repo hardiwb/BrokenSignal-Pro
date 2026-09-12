@@ -13,6 +13,8 @@ void refreshBonds();
 int bondCount();
 bool selectedIsBond();
 String bondAddressText(int index);
+String selectedQuickKeyLabel();
+void adjustSelectedQuickKey(int direction);
 bool renameModalActive();
 
 void drawListScreen();

@@ -166,10 +166,20 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
 
     for (auto c : ks.word)
     {
+        const int shortcutTarget = listVisibleShortcutTarget(
+            c, notesScrollTop, visibleNoteCount());
+        if (shortcutTarget >= 0)
+        {
+            notesSelected = shortcutTarget;
+            notesMarqueeStartMs = millis();
+            beginNoteEditor(notesSelected);
+            return;
+        }
+
         switch (c)
         {
         case 'h': case 'H': toggleHelp(); return;
-        case 'a': case 'A': beginNoteEditor(-1); return;
+        case 'n': case 'N': beginNoteEditor(-1); return;
         case 't': case 'T': jumpToToday(); return;
         case 'u': case 'U': selectTopNote(); return;
         case 'b': case 'B': selectBottomNote(); return;
