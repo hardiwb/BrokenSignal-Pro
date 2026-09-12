@@ -79,7 +79,7 @@ void redrawNotesSelection(int oldSelected, int oldScrollTop)
 void drawNotesFooter()
 {
     FooterModel model;
-    model.left = "[N]Add [W]Work";
+    model.left = "[N]+ [W]W [A]Art";
     model.center = "[Ok]Edit";
     model.battery = footerBatteryText();
     drawFooter(model);

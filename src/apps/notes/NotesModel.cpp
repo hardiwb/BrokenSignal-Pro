@@ -221,7 +221,9 @@ bool noteMatchesView(const NoteEntry &entry)
 
 String formatEntryLabel(const NoteEntry &entry)
 {
-    const String categoryMarker = entry.category.equalsIgnoreCase("Work") ? "#w " : "";
+    const String categoryMarker =
+        entry.category.equalsIgnoreCase("Work") ? "#w " :
+        entry.category.equalsIgnoreCase("Art") ? "#A " : "";
     if (notesViewMode == NotesViewMode::Month && entry.stamp.length() >= 10)
         return entry.stamp.substring(5, 10) + " " + categoryMarker + entry.text;
 
@@ -671,7 +673,7 @@ void notesDeleteSelected()
 
 void notesToggleSelectedCategory()
 {
-    toggleSelectedNoteCategory();
+    cycleSelectedNoteCategory();
 }
 
 String notesSelectedCategoryLabel()
@@ -679,7 +681,11 @@ String notesSelectedCategoryLabel()
     const int noteIndex = noteEntryIndexFromVisible(notesSelected);
     if (noteIndex < 0 || noteIndex >= static_cast<int>(noteEntries.size()))
         return "";
-    return noteEntries[noteIndex].category.equalsIgnoreCase("Work") ? "Work" : "Personal";
+    if (noteEntries[noteIndex].category.equalsIgnoreCase("Work"))
+        return "Work";
+    if (noteEntries[noteIndex].category.equalsIgnoreCase("Art"))
+        return "Art";
+    return "Personal";
 }
 
 void notesSendViewedDayToXteink(const bool includeCompleted)

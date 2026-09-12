@@ -180,6 +180,7 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         {
         case 'h': case 'H': toggleHelp(); return;
         case 'n': case 'N': beginNoteEditor(-1); return;
+        case 'a': case 'A': toggleSelectedNoteArtCategory(); return;
         case 't': case 'T': jumpToToday(); return;
         case 'u': case 'U': selectTopNote(); return;
         case 'b': case 'B': selectBottomNote(); return;

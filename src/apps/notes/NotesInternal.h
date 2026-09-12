@@ -62,6 +62,8 @@ bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey);
 bool moveSelectedNoteToDate(const String &dateKey);
 void toggleSelectedNoteDone();
 void toggleSelectedNoteCategory();
+void toggleSelectedNoteArtCategory();
+void cycleSelectedNoteCategory();
 void changeNotesMonth(int delta);
 void shiftQuickNoteDate(int delta);
 void selectTopNote();

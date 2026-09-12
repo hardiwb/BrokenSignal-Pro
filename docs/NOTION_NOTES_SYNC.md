@@ -60,9 +60,10 @@ the database ID is changed in the setup page, that cached ID is cleared.
 Open Notes and choose **Options > Sync Notion**. Playback stops to leave enough
 memory for HTTPS and JSON processing. The first sync:
 
-Press `W` on a selected Cardputer note to toggle its category between Personal
-and Work. Work notes display `<w>` in the right-hand property column; the next
-sync writes `Work` or `Personal` to Notion's `Category` property.
+Press `W` on a selected Cardputer note to toggle between Personal and Work, or
+press `A` to toggle between Personal and Art. Work notes display `#w` and Art
+notes display `#A`; the next sync writes `Personal`, `Work`, or `Art` to
+Notion's `Category` property.
 
 - assigns stable IDs to legacy Cardputer notes;
 - assigns an ID to Notion rows whose `ID` property is blank;

@@ -270,6 +270,33 @@ void toggleSelectedNoteCategory()
     drawNotes();
 }
 
+void toggleSelectedNoteArtCategory()
+{
+    const int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0)
+        return;
+    NoteEntry &entry = noteEntries[noteIndex];
+    entry.category = entry.category.equalsIgnoreCase("Art") ? "Personal" : "Art";
+    saveNote();
+    drawNotes();
+}
+
+void cycleSelectedNoteCategory()
+{
+    const int noteIndex = noteEntryIndexFromVisible(notesSelected);
+    if (noteIndex < 0)
+        return;
+    NoteEntry &entry = noteEntries[noteIndex];
+    if (entry.category.equalsIgnoreCase("Personal"))
+        entry.category = "Work";
+    else if (entry.category.equalsIgnoreCase("Work"))
+        entry.category = "Art";
+    else
+        entry.category = "Personal";
+    saveNote();
+    drawNotes();
+}
+
 void changeNotesMonth(int delta)
 {
     shiftNotesView(delta);

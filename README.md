@@ -336,6 +336,7 @@ Control Panel. Modal editors and confirmations keep input until closed.
 | `R` | Remove note |
 | `X` | Toggle done |
 | `W` | Toggle category between Personal and Work |
+| `A` | Toggle category between Personal and Art |
 | `Ok` | Edit selected note |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
@@ -349,8 +350,9 @@ Notes use monthly files under `/Notes/`.
 
 In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
 changes the date, while `Fn+Left/Right` moves the active field cursor.
-Personal is the default category. Work notes show `<w>` in the right-hand
-property column; pressing `W` again removes it and restores Personal.
+Personal is the default category. Work notes show `#w` and Art notes show `#A`;
+pressing their category key again restores Personal. The Category option cycles
+through Personal, Work, and Art.
 
 Use **Options > Sync Notion** for two-way synchronization with an Agenda data
 source containing `Checkbox`, `Entry`, `Date`, `Category`, and `ID`. Configure

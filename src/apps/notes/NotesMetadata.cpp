@@ -15,6 +15,7 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[Shift+S]", "Send all to Xteink"},
     {"[X]", "Toggle done"},
     {"[W]", "Toggle Personal / Work"},
+    {"[A]", "Toggle Personal / Art"},
     {"[Ok]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
     {"[,/]", "Previous / next date"},
