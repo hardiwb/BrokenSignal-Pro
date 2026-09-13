@@ -1,0 +1,13 @@
+{
+  "id": "Infrared",
+  "persistent_id": 7,
+  "order": 7,
+  "name": "Infrared",
+  "header_tag": "IR",
+  "full_app_key": "i",
+  "includes": ["apps/infrared/InfraredApp.h", "apps/infrared/InfraredMetadata.h", "apps/infrared/Infrared.h"],
+  "callbacks": {"open": "openInfraredApp", "draw": "drawInfraredApp", "input": "handleInfraredAppInput", "tick": "tickInfraredApp"},
+  "help": {"title": "IR KEYS", "entries": "INFRARED_HELP_ENTRIES", "count": "INFRARED_HELP_COUNT"},
+  "options": {"build": "buildInfraredOptions", "enter_enabled": true, "show_run_hint": false},
+  "quick_access": null
+}

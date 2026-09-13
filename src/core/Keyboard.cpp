@@ -20,6 +20,7 @@
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "apps/thermalprinter/ThermalPrinter.h"
+#include "apps/infrared/Infrared.h"
 #include "module/service/WiFi.h"
 
 bool keyboardBackPressed(Keyboard_Class::KeysState &ks)
@@ -411,6 +412,12 @@ void handleModalSurfaceInput(Keyboard_Class::KeysState &ks)
     if (thermalPrinterModalActive())
     {
         handleThermalPrinterInput(ks);
+        return;
+    }
+
+    if (infraredModalActive())
+    {
+        handleInfraredInput(ks);
         return;
     }
 

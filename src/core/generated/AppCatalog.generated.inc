@@ -55,3 +55,11 @@
         't',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
+    {
+        HostApp::Infrared, "Infrared", "IR",
+        openInfraredApp, drawInfraredApp, handleInfraredAppInput, tickInfraredApp,
+        "IR KEYS", INFRARED_HELP_ENTRIES, INFRARED_HELP_COUNT,
+        buildInfraredOptions, true, false,
+        'i',
+        {0, nullptr, nullptr, nullptr, nullptr, nullptr}
+    },

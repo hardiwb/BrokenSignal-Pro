@@ -14,12 +14,35 @@ bool applicationsMenuVisible = false;
 namespace
 {
 static int applicationSelected = 2;
+static int applicationScrollTop = 0;
+
+static void clampApplicationScroll()
+{
+    const int count = static_cast<int>(appCount());
+    if (count <= 0)
+    {
+        applicationSelected = 0;
+        applicationScrollTop = 0;
+        return;
+    }
+
+    applicationSelected = constrain(applicationSelected, 0, count - 1);
+    if (applicationSelected < applicationScrollTop)
+        applicationScrollTop = applicationSelected;
+    if (applicationSelected >= applicationScrollTop + LIST_VISIBLE_ITEM)
+        applicationScrollTop = applicationSelected - LIST_VISIBLE_ITEM + 1;
+    applicationScrollTop = constrain(
+        applicationScrollTop,
+        0,
+        max(0, count - LIST_VISIBLE_ITEM));
+}
 
 static ListModel buildApplicationsListModel()
 {
+    clampApplicationScroll();
     ListModel model;
     model.selected = applicationSelected;
-    model.scrollTop = 0;
+    model.scrollTop = applicationScrollTop;
 
     for (size_t i = 0; i < appCount(); ++i)
     {
@@ -65,6 +88,8 @@ void enterApplicationsMenu()
     applicationsMenuVisible = true;
     const int foregroundIndex = appIndex(foregroundApp);
     applicationSelected = foregroundIndex >= 0 ? foregroundIndex : 0;
+    applicationScrollTop = 0;
+    clampApplicationScroll();
     drawApplicationsMenu();
 }
 
@@ -95,7 +120,7 @@ void handleApplicationsInput(Keyboard_Class::KeysState &ks)
     for (auto c : ks.word)
     {
         const int shortcutTarget =
-            listVisibleShortcutTarget(c, 0, applicationCount);
+            listVisibleShortcutTarget(c, applicationScrollTop, applicationCount);
         if (shortcutTarget >= 0)
         {
             applicationSelected = shortcutTarget;
@@ -106,15 +131,25 @@ void handleApplicationsInput(Keyboard_Class::KeysState &ks)
         if (c == ';')
         {
             int oldSelected = applicationSelected;
+            int oldScrollTop = applicationScrollTop;
             applicationSelected = (applicationSelected - 1 + applicationCount) % applicationCount;
-            drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
+            clampApplicationScroll();
+            if (oldScrollTop != applicationScrollTop)
+                drawApplicationsMenu();
+            else
+                drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
             return;
         }
         if (c == '.')
         {
             int oldSelected = applicationSelected;
+            int oldScrollTop = applicationScrollTop;
             applicationSelected = (applicationSelected + 1) % applicationCount;
-            drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
+            clampApplicationScroll();
+            if (oldScrollTop != applicationScrollTop)
+                drawApplicationsMenu();
+            else
+                drawListSelection(buildApplicationsListModel(), oldSelected, applicationSelected);
             return;
         }
     }

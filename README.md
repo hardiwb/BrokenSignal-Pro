@@ -130,6 +130,8 @@ and keyboard routing rules.
   apps.
 - **Thermal printer**: Compose and queue text jobs through the ESP32-C3 printer's
   versioned HTTP API, with label/continuous media settings and paper actions.
+- **Infrared remote**: Browse Flipper-format `.ir` files from microSD and send
+  NEC, NECext, Samsung32, or raw commands through the Cardputer ADV emitter.
 
 ## UI Architecture
 
@@ -276,6 +278,7 @@ by full-app shortcuts are skipped automatically.
 | `Fn+E` | Expense Tracker (full app) |
 | `Fn+T` | Thermal Printer (full app) |
 | `Fn+B` | Bluetooth Keyboard (full app) |
+| `Fn+I` | Infrared (full app) |
 | Assigned `Fn+key` | Quick-connect a saved Bluetooth device |
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
@@ -412,6 +415,37 @@ The app uses API version 1 from the ESP32-C3 Thermal Printer Interface. A
 successful print response means the job was accepted into the printer queue;
 use `S` to check whether it has completed. Text jobs are limited to 2048 bytes.
 Image and PDF raster printing remains available from the printer's browser UI.
+
+### Infrared
+
+Open Infrared from Applications or press `Fn+I`. Put Flipper Infrared Remote
+files in `/Infrared/` on the microSD card. Files can be organized in subfolders.
+Open a file, select a command, and
+press `Ok` to transmit it through the Cardputer ADV emitter on GPIO 44.
+
+| Key | Action |
+| --- | ------ |
+| `Ok` | Open the selected folder/file or send the selected command |
+| `;` / `.` | Move through files or commands |
+| `Backspace` (`DEL`) | Return from a command list or move to the parent folder |
+| `R` | Reload `/Infrared/` from microSD |
+| `C` | Capture a raw command into the open IR file |
+| `Opt` | Configure hardware; capture; create, rename, or delete files |
+
+Files may use the Flipper `Filetype: IR signals file` header or the compatible
+Bruce `Filetype: Bruce IR File` header with `Version: 1`. Parsed `NEC`, `NECext`,
+and `Samsung32` commands are supported, along with raw commands of up to 1024
+timing values. Unsupported parsed protocols remain visible but dimmed.
+`New IR File` creates an empty, valid Flipper-format container in the current
+folder. Enable the external receiver, open that file, then press `C` (or choose
+`Capture IR Signal` in Options) and press one remote button. Captures are stored
+as raw timings so long stateful signals, including typical AC remotes, can be
+replayed without needing a matching decoded protocol. The capture buffer holds
+up to 1,024 timings; the configured raw frequency and duty cycle are stored with
+each capture.
+`Sent` confirms waveform transmission only; consumer IR has no acknowledgement.
+The built-in hardware transmits but does not receive. Capture needs an external
+receiver on GPIO 1 or GPIO 2.
 
 ### WiFi
 
@@ -635,7 +669,7 @@ uses that relation; leave the setup prompt blank otherwise.
 
 ## Roadmap
 
-- Add infrared module.
+- Add external IR learning and capture-session workflows.
 - Add Bluetooth functionality.
 - Prototype ESP-NOW daily note send to ESP32-C3 e-ink devices such as Xteink X3.
 - Continue removing legacy UI code.

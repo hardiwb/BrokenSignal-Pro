@@ -8,6 +8,7 @@
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "apps/thermalprinter/ThermalPrinter.h"
+#include "apps/infrared/Infrared.h"
 #include "module/service/WiFi.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Debug.h"
@@ -32,7 +33,7 @@ ActiveSurface resolveActiveSurface()
         removeConfirmVisible || settingsInputOverlayActive() ||
         notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
         appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive() ||
-        thermalPrinterModalActive())
+        thermalPrinterModalActive() || infraredModalActive())
     {
         return {SurfaceKind::OverlayModal, owner};
     }
@@ -99,6 +100,12 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         if (thermalPrinterModalActive())
         {
             cancelThermalPrinterModal();
+            return true;
+        }
+
+        if (infraredModalActive())
+        {
+            infraredCancelModal();
             return true;
         }
 

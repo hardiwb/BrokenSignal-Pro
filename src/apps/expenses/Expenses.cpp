@@ -295,7 +295,7 @@ void drawExpenses() {
     if (modal == Modal::Qr) { drawQr(); return; }
     if (modal == Modal::UploadResult) { drawUploadResult(); return; }
     HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = dayTotalText(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[E]+ [R]- [T]Total"; footer.center = footerDate();
+    drawList(listModel()); FooterModel footer; footer.left = "[E]Add [R]Rm"; footer.center = footerDate();
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
