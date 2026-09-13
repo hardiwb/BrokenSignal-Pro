@@ -158,6 +158,11 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
     }
     if (notesCalendarSyncActive())
         return;
+    if (ks.del)
+    {
+        removeSelectedNote();
+        return;
+    }
     if (ks.enter && visibleNoteCount() > 0)
     {
         beginNoteEditor(notesSelected);
@@ -184,7 +189,6 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         case 't': case 'T': jumpToToday(); return;
         case 'u': case 'U': selectTopNote(); return;
         case 'b': case 'B': selectBottomNote(); return;
-        case 'r': case 'R': removeSelectedNote(); return;
         case 's': notesSendViewedDayToXteink(false); return;
         case 'S': notesSyncCalendarToXteink(); return;
         case 'x': case 'X': toggleSelectedNoteDone(); return;

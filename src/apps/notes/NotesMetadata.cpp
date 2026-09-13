@@ -10,7 +10,7 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[C]", "Quick calculator"},
     {"[E]", "Quick expense"},
     {"[-/+]", "Volume"},
-    {"[R]", "Remove note"},
+    {"[Del]", "Delete note"},
     {"[S]", "Send active to Xteink"},
     {"[Shift+S]", "Send all to Xteink"},
     {"[X]", "Toggle done"},
@@ -47,21 +47,6 @@ void moveToDate(int)
     notesPromptMoveSelectedToDate();
 }
 
-void editNote(int)
-{
-    notesEditSelected();
-}
-
-void deleteNote(int)
-{
-    notesDeleteSelected();
-}
-
-void newNote(int)
-{
-    notesNew();
-}
-
 void toggleCategory(int)
 {
     notesToggleSelectedCategory();
@@ -85,9 +70,6 @@ void buildNotesOptions(std::vector<AppOption> &options)
     options.push_back({"Filter", notesFilterLabel(), true, true, false, adjustFilter});
     options.push_back({"Move to Tomorrow", "", hasNote && mutationsAllowed, false, true, moveTomorrow});
     options.push_back({"Move to Date", "", hasNote && mutationsAllowed, false, true, moveToDate});
-    options.push_back({"Edit Note", "", hasNote && mutationsAllowed, false, true, editNote});
-    options.push_back({"Delete Note", "", hasNote && mutationsAllowed, false, true, deleteNote});
-    options.push_back({"New Note", "", mutationsAllowed, false, true, newNote});
     options.push_back({"Category", notesSelectedCategoryLabel(), hasNote && mutationsAllowed, false, true, toggleCategory});
     options.push_back({"Sync Notion", "", mutationsAllowed, false, true, syncNotion});
     options.push_back({"Sync Calendar", "", mutationsAllowed, false, true, syncCalendar});
