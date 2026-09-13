@@ -71,11 +71,13 @@ void drawInfrared()
         model.title = nameModalError.length() ? nameModalError :
             (nameModal == NameModal::NewFolder ? "NEW IR FOLDER" :
              nameModal == NameModal::NewFile ? "NEW IR FILE" :
-             nameModal == NameModal::CaptureCommand ? "NAME CAPTURE" : "RENAME IR FILE");
+             nameModal == NameModal::CaptureCommand ? "NAME CAPTURE" :
+             nameModal == NameModal::RenameCommand ? "RENAME COMMAND" : "RENAME IR FILE");
         model.prompt = nameModal == NameModal::NewFolder ? "Folder name" :
-            nameModal == NameModal::CaptureCommand ? "Command name" : "File name (.ir added)";
+            (nameModal == NameModal::CaptureCommand || nameModal == NameModal::RenameCommand) ?
+                "Command name" : "File name (.ir added)";
         model.value = nameInput;
-        model.confirmText = nameModal == NameModal::RenameFile ? "[Esc]Cancel [Ok]Rename" :
+        model.confirmText = (nameModal == NameModal::RenameFile || nameModal == NameModal::RenameCommand) ? "[Esc]Cancel [Ok]Rename" :
             nameModal == NameModal::CaptureCommand ? "[Esc]Cancel [Ok]Save" : "[Esc]Cancel [Ok]Create";
         drawOverlay(model);
         return;
@@ -84,7 +86,7 @@ void drawInfrared()
     {
         OverlayModel model;
         model.type = OverlayType::Confirm;
-        model.title = "DELETE IR FILE";
+        model.title = deleteCommand ? "DELETE COMMAND" : "DELETE IR FILE";
         model.prompt = deleteName;
         model.confirmText = "[Esc]Cancel [Ok]Delete";
         drawOverlay(model);

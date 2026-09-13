@@ -43,6 +43,18 @@ void finishNameModal()
     }
     if (!validLeafName(leaf)) { nameModalError = "INVALID NAME"; drawInfrared(); return; }
 
+    if (nameModal == NameModal::RenameCommand)
+    {
+        String error;
+        const int renamedIndex = selected;
+        if (!renameRemoteCommand(openPath, renamedIndex, leaf, error))
+        { nameModalError = error; drawInfrared(); return; }
+        nameModal = NameModal::None; nameInput = nameModalError = renamePath = "";
+        if (!loadRemoteCommands(openPath, error)) { drawInfrared(); showHdrMsg(error.c_str()); return; }
+        view = View::Commands; selected = renamedIndex; clampSelection(); marqueeStartMs = millis(); drawInfrared();
+        return;
+    }
+
     if (nameModal == NameModal::CaptureCommand)
     {
         String error;
@@ -124,10 +136,22 @@ void handleInfraredInput(Keyboard_Class::KeysState &keys)
         if (keys.enter)
         {
             const String path = deletePath;
+            const bool deletingCommand = deleteCommand;
+            const int commandIndex = deleteCommandIndex;
             String lowerPath = path;
             lowerPath.toLowerCase();
             deleteConfirmVisible = false;
-            deletePath = deleteName = "";
+            deletePath = deleteName = ""; deleteCommand = false; deleteCommandIndex = -1;
+            if (deletingCommand)
+            {
+                String error;
+                if (!deleteRemoteCommand(path, commandIndex, error) || !loadRemoteCommands(path, error))
+                {
+                    drawInfrared(); showHdrMsg(error.c_str()); return;
+                }
+                view = View::Commands; selected = commandIndex; clampSelection(); marqueeStartMs = millis(); drawInfrared();
+                return;
+            }
             if (!path.startsWith("/Infrared/") || !lowerPath.endsWith(".ir") || !SD.remove(path.c_str()))
             {
                 drawInfrared();

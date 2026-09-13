@@ -27,16 +27,24 @@ void deleteFile(int) { infraredRequestDelete(); }
 
 void buildInfraredOptions(std::vector<AppOption> &options)
 {
+    if (infraredInCommandView())
+    {
+        options.push_back({"Capture IR Signal", "", infraredCanCapture(), false, true, captureSignal});
+        options.push_back({"Rename Command", "", infraredHasSelectedCommand(), false, true, renameFile});
+        options.push_back({"Delete Command", "", infraredHasSelectedCommand(), false, true, deleteFile});
+    }
+    else
+    {
+        options.push_back({"New IR File", "", true, false, true, newFile});
+        options.push_back({"New Folder", "", true, false, true, newFolder});
+        options.push_back({"Rename IR File", "", infraredHasSelectedFile(), false, true, renameFile});
+        options.push_back({"Delete IR File", "", infraredHasSelectedFile(), false, true, deleteFile});
+        options.push_back({"Reload IR Files", "", true, false, true, reloadFiles});
+    }
     options.push_back({"TX Source", infraredTxSettingLabel(), true, true, false, adjustTxSource});
     options.push_back({"External TX Pin", infraredTxPinLabel(), infraredExternalTxSelected(), true, false, adjustTxPin});
     options.push_back({"RX Module", infraredRxSettingLabel(), true, true, false, adjustRxEnabled});
     options.push_back({"RX Pin", infraredRxPinLabel(), infraredRxEnabled(), true, false, adjustRxPin});
     options.push_back({"Raw Frequency", infraredRawFrequencyLabel(), true, true, false, adjustFrequency});
     options.push_back({"Raw Duty Cycle", infraredRawDutyLabel(), true, true, false, adjustDuty});
-    options.push_back({"Reload IR Files", "", true, false, true, reloadFiles});
-    options.push_back({"New Folder", "", true, false, true, newFolder});
-    options.push_back({"New IR File", "", true, false, true, newFile});
-    options.push_back({"Capture IR Signal", "", infraredCanCapture(), false, true, captureSignal});
-    options.push_back({"Rename IR File", "", infraredHasSelectedFile(), false, true, renameFile});
-    options.push_back({"Delete IR File", "", infraredHasSelectedFile(), false, true, deleteFile});
 }

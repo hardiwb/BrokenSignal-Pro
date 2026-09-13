@@ -21,6 +21,8 @@ String currentDirectory = "/Infrared";
 bool deleteConfirmVisible = false;
 String deletePath;
 String deleteName;
+bool deleteCommand = false;
+int deleteCommandIndex = -1;
 NameModal nameModal = NameModal::None;
 String nameInput;
 String nameModalError;
@@ -130,7 +132,7 @@ void infraredOpen()
     stopInfraredCapture();
     loadInfraredSettings(settings); view = View::Files; selected = scrollTop = 0;
     currentDirectory = "/Infrared"; openPath = openName = "";
-    deleteConfirmVisible = false; deletePath = deleteName = "";
+    deleteConfirmVisible = false; deletePath = deleteName = ""; deleteCommand = false; deleteCommandIndex = -1;
     nameModal = NameModal::None; nameInput = nameModalError = renamePath = "";
     captureActive = false; capturedSignal = {}; infraredReload();
 }
@@ -165,8 +167,15 @@ void tickInfrared()
 
 bool infraredHasSelectedFile()
 {
-    return view == View::Commands ? openPath.length() > 0 :
-        !files.empty() && selected >= 0 && selected < static_cast<int>(files.size()) && !files[selected].directory;
+    return view == View::Files && !files.empty() && selected >= 0 &&
+        selected < static_cast<int>(files.size()) && !files[selected].directory;
+}
+
+bool infraredInCommandView() { return view == View::Commands; }
+
+bool infraredHasSelectedCommand()
+{
+    return view == View::Commands && selected >= 0 && selected < static_cast<int>(commands.size());
 }
 
 void infraredRequestNewFolder()
@@ -181,8 +190,15 @@ void infraredRequestNewFile()
 
 void infraredRequestRename()
 {
+    if (infraredHasSelectedCommand())
+    {
+        renamePath = openPath;
+        nameInput = commands[selected].name;
+        nameModalError = ""; nameModal = NameModal::RenameCommand; drawInfrared();
+        return;
+    }
     if (!infraredHasSelectedFile()) return;
-    renamePath = view == View::Commands ? openPath : files[selected].path;
+    renamePath = files[selected].path;
     nameInput = renamePath.substring(renamePath.lastIndexOf('/') + 1);
     const int dot = nameInput.lastIndexOf('.');
     if (dot > 0) nameInput = nameInput.substring(0, dot);
@@ -202,19 +218,23 @@ void infraredRequestCapture()
 
 void infraredRequestDelete()
 {
-    if (!infraredHasSelectedFile()) return;
-    if (view == View::Commands)
+    if (infraredHasSelectedCommand())
     {
         deletePath = openPath;
-        deleteName = openName;
+        deleteName = commands[selected].name;
+        deleteCommand = true;
+        deleteCommandIndex = selected;
     }
     else
     {
+        if (!infraredHasSelectedFile()) return;
         deletePath = files[selected].path;
         deleteName = files[selected].name;
         const int dot = deleteName.lastIndexOf('.');
         if (dot > 0) deleteName = deleteName.substring(0, dot);
         deleteName.replace('_', ' ');
+        deleteCommand = false;
+        deleteCommandIndex = -1;
     }
     deleteConfirmVisible = true;
     drawInfrared();
@@ -227,7 +247,7 @@ void infraredCancelModal()
     if (captureActive) stopInfraredCapture();
     captureActive = false; capturedSignal = {};
     deleteConfirmVisible = false;
-    deletePath = deleteName = "";
+    deletePath = deleteName = ""; deleteCommand = false; deleteCommandIndex = -1;
     nameModal = NameModal::None;
     nameInput = nameModalError = renamePath = "";
     drawInfrared();

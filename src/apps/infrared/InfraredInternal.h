@@ -6,7 +6,7 @@
 namespace InfraredInternal
 {
 enum class View : uint8_t { Files, Commands };
-enum class NameModal : uint8_t { None, NewFolder, NewFile, RenameFile, CaptureCommand };
+enum class NameModal : uint8_t { None, NewFolder, NewFile, RenameFile, RenameCommand, CaptureCommand };
 struct RemoteFile { String name; String path; bool directory = false; };
 struct CommandSummary { String name; String type; bool supported = false; };
 
@@ -23,6 +23,8 @@ extern String currentDirectory;
 extern bool deleteConfirmVisible;
 extern String deletePath;
 extern String deleteName;
+extern bool deleteCommand;
+extern int deleteCommandIndex;
 extern NameModal nameModal;
 extern String nameInput;
 extern String nameModalError;
@@ -34,6 +36,8 @@ bool loadRemoteFiles(const String &directoryPath, String &error);
 bool loadRemoteCommands(const String &path, String &error);
 bool loadRemoteSignal(const String &path, int index, InfraredSignal &signal, String &name, String &error);
 bool appendRemoteSignal(const String &path, const String &name, const InfraredSignal &signal, String &error);
+bool renameRemoteCommand(const String &path, int index, const String &name, String &error);
+bool deleteRemoteCommand(const String &path, int index, String &error);
 void clampSelection();
 void moveSelection(int direction);
 void activateSelection();

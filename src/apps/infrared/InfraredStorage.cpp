@@ -216,4 +216,104 @@ bool appendRemoteSignal(const String &path, const String &name, const InfraredSi
     if (!ok) { error = "Write failed"; return false; }
     return true;
 }
+
+namespace
+{
+bool commitCommandEdit(const String &path, const String &temporary, String &error)
+{
+    const String backup = path + ".bak";
+    SD.remove(backup.c_str());
+    if (!SD.rename(path.c_str(), backup.c_str()))
+    {
+        SD.remove(temporary.c_str()); error = "Write failed"; return false;
+    }
+    if (!SD.rename(temporary.c_str(), path.c_str()))
+    {
+        SD.rename(backup.c_str(), path.c_str()); error = "Write failed"; return false;
+    }
+    SD.remove(backup.c_str());
+    return true;
+}
+
+bool editRemoteCommand(const String &path, int targetIndex, const String *newName, String &error)
+{
+    String lowerPath = path; lowerPath.toLowerCase();
+    if (!path.startsWith("/Infrared/") || !lowerPath.endsWith(".ir") ||
+        targetIndex < 0 || targetIndex >= static_cast<int>(commands.size()))
+    { error = "Invalid IR command"; return false; }
+    if (newName)
+    {
+        if (!printableName(*newName)) { error = "Invalid command name"; return false; }
+        for (int i = 0; i < static_cast<int>(commands.size()); ++i)
+            if (i != targetIndex && commands[i].name == *newName)
+            { error = "Name already exists"; return false; }
+    }
+
+    File source = SD.open(path.c_str(), FILE_READ);
+    if (!source) { error = "Read failed"; return false; }
+    const String temporary = path + ".tmp";
+    SD.remove(temporary.c_str());
+    File output = SD.open(temporary.c_str(), FILE_WRITE);
+    if (!output) { source.close(); error = "Write failed"; return false; }
+
+    for (int headerLine = 0; headerLine < 2; ++headerLine)
+    {
+        if (!source.available())
+        {
+            source.close(); output.close(); SD.remove(temporary.c_str());
+            error = "Invalid IR file"; return false;
+        }
+        const String line = source.readStringUntil('\n');
+        if (output.print(line) != line.length() || output.print('\n') != 1)
+        {
+            source.close(); output.close(); SD.remove(temporary.c_str());
+            error = "Write failed"; return false;
+        }
+    }
+
+    String block;
+    bool blockHasCommand = false;
+    int commandIndex = 0;
+    bool ok = true;
+    auto flushBlock = [&]()
+    {
+        if (!ok || !block.length()) return;
+        if (!blockHasCommand || newName || commandIndex != targetIndex)
+            ok = output.print(block) == block.length();
+        if (blockHasCommand) ++commandIndex;
+        block = ""; blockHasCommand = false;
+    };
+
+    while (source.available() && ok)
+    {
+        String line = source.readStringUntil('\n');
+        String trimmed = line; trimmed.trim();
+        if (trimmed == "#") flushBlock();
+        if (!ok) break;
+        if (trimmed.startsWith("name:"))
+        {
+            blockHasCommand = true;
+            if (newName && commandIndex == targetIndex) line = "name: " + *newName;
+        }
+        block += line + "\n";
+    }
+    flushBlock();
+    source.close(); output.close();
+    if (!ok || commandIndex != static_cast<int>(commands.size()))
+    {
+        SD.remove(temporary.c_str()); error = "Write failed"; return false;
+    }
+    return commitCommandEdit(path, temporary, error);
+}
+}
+
+bool renameRemoteCommand(const String &path, int index, const String &name, String &error)
+{
+    return editRemoteCommand(path, index, &name, error);
+}
+
+bool deleteRemoteCommand(const String &path, int index, String &error)
+{
+    return editRemoteCommand(path, index, nullptr, error);
+}
 }

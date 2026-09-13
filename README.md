@@ -430,7 +430,7 @@ press `Ok` to transmit it through the Cardputer ADV emitter on GPIO 44.
 | `Backspace` (`DEL`) | Return from a command list or move to the parent folder |
 | `R` | Reload `/Infrared/` from microSD |
 | `C` | Capture a raw command into the open IR file |
-| `Opt` | Configure hardware; capture; create, rename, or delete files |
+| `Opt` | Manage the current folder or the commands in an open IR file; configure hardware |
 
 Files may use the Flipper `Filetype: IR signals file` header or the compatible
 Bruce `Filetype: Bruce IR File` header with `Version: 1`. Parsed `NEC`, `NECext`,
@@ -443,6 +443,10 @@ as raw timings so long stateful signals, including typical AC remotes, can be
 replayed without needing a matching decoded protocol. The capture buffer holds
 up to 1,024 timings; the configured raw frequency and duty cycle are stored with
 each capture.
+In the file browser, Options starts with `New IR File`, `New Folder`, rename,
+delete, and reload actions. Inside an IR file, it starts with `Capture IR Signal`,
+`Rename Command`, and `Delete Command`. Renaming or deleting a command updates
+only that command and leaves the rest of the IR file intact.
 `Sent` confirms waveform transmission only; consumer IR has no acknowledgement.
 The built-in hardware transmits but does not receive. Capture needs an external
 receiver on GPIO 1 or GPIO 2.

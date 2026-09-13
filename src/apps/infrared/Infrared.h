@@ -8,6 +8,8 @@ void handleInfraredInput(Keyboard_Class::KeysState &keys);
 void tickInfrared();
 void infraredReload();
 bool infraredHasSelectedFile();
+bool infraredInCommandView();
+bool infraredHasSelectedCommand();
 void infraredRequestNewFolder();
 void infraredRequestNewFile();
 void infraredRequestRename();
