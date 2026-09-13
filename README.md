@@ -5,9 +5,9 @@ An audio player, web radio, quick notes, and utility shell for the **Cardputer A
 **Pro stands for Productivity**: fast access to music, radio, notes,
 calculations, and everyday utilities from one keyboard-driven interface.
 
-**Current release:** `v1.4.0`
+**Current release:** `v1.5.0`
 
-**Latest tagged release:** `v1.4.0`
+**Latest tagged release:** `v1.5.0`
 
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
 
@@ -17,7 +17,7 @@ BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt
 
 ## Current Status
 
-BrokenSignal Pro `v1.4.0` is organized as a small embedded shell runtime. A
+BrokenSignal Pro `v1.5.0` is organized as a small embedded shell runtime. A
 foreground app runs under shared Applications, Options, Control Panel, Help,
 Debug, quick-access, and modal surface layers.
 
@@ -33,19 +33,20 @@ Themes change color and mood, not layout. Music Player, Web Radio, Notes,
 Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives
 and keyboard routing rules.
 
-## v1.4.0 Release Highlights
+## v1.5.0 Release Highlights
 
-- Added the Expense Tracker with quick entry, date navigation, editing, moving,
-  deletion, default currency selection, and QR sharing.
-- Added stable expense IDs and local processed-state display for safe retries.
-- Added authenticated local WiFi upload from the Cardputer to the PC companion.
-- Added a PC companion that parses and validates expenses, uses Codex to
-  normalize titles and categories, and keeps duplicate/retry state in SQLite.
-- Added optional Notion page creation with locally generated, Git-ignored
-  configuration and an optional Account relation.
-- Added a `T` shortcut that shows the displayed day's currency-aware total.
-- Added automatic saved-network reconnection before expense upload, with WiFi
-  selection fallback and automatic upload resume after connection.
+- Added a bonded Bluetooth keyboard app with more reliable reconnection.
+- Added multi-screen gyroscope mouse controls and segment-based navigation.
+- Added a network thermal-printer app with text layout, media, feed, status,
+  and test-page controls.
+- Added Notion and Google Calendar synchronization for Notes, plus the Art
+  category and improved deletion behavior.
+- Added full-app keyboard shortcuts, improved shared-list navigation, and an
+  option to swap the `Alt` and `Opt` functions.
+- Added the Infrared app with nested folders, Flipper-compatible IR files,
+  signal transmission and capture, configurable hardware, and command-level
+  rename/delete actions.
+- Refined Expense Tracker totals, footer dates, and pending-upload behavior.
 
 ## Gallery
 
