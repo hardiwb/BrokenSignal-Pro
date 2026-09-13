@@ -63,7 +63,7 @@ String formatWholeAmount(const String &value) {
     return formatted;
 }
 
-void showDayTotal() {
+String dayTotalText() {
     std::vector<CurrencyTotal> totals;
     for (int actual : visible) {
         const ExpenseEntry &entry = entries[actual];
@@ -88,7 +88,11 @@ void showDayTotal() {
         if (i > 0) text += " + ";
         text += formatWholeAmount(totals[i].value) + " " + totals[i].currency;
     }
-    showToast(text, 2000);
+    return text;
+}
+
+void showDayTotal() {
+    showToast(dayTotalText(), 2000);
 }
 
 String makeExpenseId(const String &date) {
@@ -168,10 +172,10 @@ void loadEntries() {
     if (migrated) saveEntries();
     rebuildVisible();
 }
-String displayDate() {
+String footerDate() {
     struct tm date{}; if (!parseDate(currentDate, date)) return currentDate;
-    char prefix[24]; strftime(prefix, sizeof(prefix), "%A, %b ", &date);
-    return String(prefix) + String(date.tm_mday) + " " + String(date.tm_year + 1900);
+    char value[13]; strftime(value, sizeof(value), "%a %m/%d/%y", &date);
+    return String(value);
 }
 ListModel listModel() {
     ListModel model; model.selected = selected; model.scrollTop = scrollTop; model.marqueeStartMs = marqueeStart;
@@ -290,8 +294,8 @@ void drawExpenses() {
     if (modal == Modal::Currency) { drawTextModal("Edit Currency", "Default currency", currencyInput); return; }
     if (modal == Modal::Qr) { drawQr(); return; }
     if (modal == Modal::UploadResult) { drawUploadResult(); return; }
-    HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = displayDate(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[E]+ [R]- [T]Total"; footer.center = "[Ok]Edit";
+    HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = dayTotalText(); header.cursor = true; drawHeader(header);
+    drawList(listModel()); FooterModel footer; footer.left = "[E]+ [R]- [T]Total"; footer.center = footerDate();
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
