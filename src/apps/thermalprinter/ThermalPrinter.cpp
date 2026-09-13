@@ -471,7 +471,7 @@ void drawThermalPrinter()
     drawHeader(header);
     drawList(printerListModel());
     FooterModel footer;
-    footer.left = "[Ok]Run [,/]Set";
+    footer.left = "[P]Print [Ok]Run";
     footer.center = "[;/.]Move";
     footer.battery = footerBatteryText();
     drawFooter(footer);
