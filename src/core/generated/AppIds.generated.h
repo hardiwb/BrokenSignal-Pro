@@ -13,4 +13,5 @@ enum class HostApp : uint8_t
     BluetoothKeyboard = 5,
     ThermalPrinter = 6,
     Infrared = 7,
+    MacroPad = 8,
 };

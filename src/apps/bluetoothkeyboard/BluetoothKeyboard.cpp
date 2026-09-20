@@ -1,6 +1,7 @@
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 
 #include "apps/bluetoothkeyboard/BluetoothKeyboardInternal.h"
+#include "core/State.h"
 #include "module/service/Bluetooth.h"
 #include "module/shell/Help.h"
 #include "UI/List.h"
@@ -103,6 +104,7 @@ bool connectBluetoothKeyboardBond(int bondIndex)
 
 bool bluetoothKeyboardModalActive()
 {
-    return BluetoothService::keyboardSessionActive() ||
+    return (foregroundApp == HostApp::BluetoothKeyboard &&
+            BluetoothService::keyboardSessionActive()) ||
            BluetoothKeyboardInternal::renameModalActive();
 }

@@ -56,6 +56,9 @@ void sendKeyboardReport(const uint8_t report[8]);
 void sendMouseReport(
     uint8_t buttons, uint16_t x, uint16_t y,
     int8_t wheel, int8_t horizontalWheel = 0);
+// Sends mouse buttons without changing the service's remembered pointer
+// position. Bits 0-4 represent mouse buttons 1-5.
+void sendMouseButtons(uint8_t buttons);
 
 // Returns and clears the service-to-UI notification flag.
 bool takeUiDirty();

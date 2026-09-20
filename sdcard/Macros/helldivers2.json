@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "name": "Helldivers 2",
+  "activation": {"mouse_button": 5, "mode": "press"},
+  "press_ms": 55,
+  "gap_ms": 40,
+  "macros": [
+    {"name": "Reinforce", "hotkey": "1", "sequence": ["UP", "DOWN", "RIGHT", "LEFT", "UP"]},
+    {"name": "Resupply", "hotkey": "2", "sequence": ["DOWN", "DOWN", "UP", "RIGHT"]},
+    {"name": "Eagle Airstrike", "hotkey": "3", "sequence": ["UP", "RIGHT", "DOWN", "RIGHT"]},
+    {"name": "Eagle 500kg Bomb", "hotkey": "4", "sequence": ["UP", "RIGHT", "DOWN", "DOWN", "DOWN"]},
+    {"name": "Orbital Precision", "hotkey": "5", "sequence": ["RIGHT", "RIGHT", "UP"]},
+    {"name": "Orbital Laser", "hotkey": "6", "sequence": ["RIGHT", "DOWN", "UP", "RIGHT", "DOWN"]},
+    {"name": "Orbital Railcannon", "hotkey": "7", "sequence": ["RIGHT", "UP", "DOWN", "DOWN", "RIGHT"]},
+    {"name": "Autocannon", "hotkey": "8", "sequence": ["DOWN", "LEFT", "DOWN", "UP", "UP", "RIGHT"]},
+    {"name": "Guard Dog Rover", "hotkey": "9", "sequence": ["DOWN", "UP", "LEFT", "UP", "RIGHT", "RIGHT"]}
+  ]
+}

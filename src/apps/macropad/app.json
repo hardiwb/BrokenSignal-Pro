@@ -1,0 +1,29 @@
+{
+  "id": "MacroPad",
+  "persistent_id": 8,
+  "order": 8,
+  "name": "Macro Pad",
+  "header_tag": "MACRO PAD",
+  "full_app_key": "p",
+  "includes": [
+    "apps/macropad/MacroPad.h",
+    "apps/macropad/MacroPadMetadata.h"
+  ],
+  "callbacks": {
+    "open": "openMacroPadApp",
+    "draw": "drawMacroPadApp",
+    "input": "handleMacroPadAppInput",
+    "tick": "tickMacroPadApp"
+  },
+  "help": {
+    "title": "MACRO PAD KEYS",
+    "entries": "MACRO_PAD_HELP_ENTRIES",
+    "count": "MACRO_PAD_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildMacroPadOptions",
+    "enter_enabled": false,
+    "show_run_hint": false
+  },
+  "quick_access": null
+}

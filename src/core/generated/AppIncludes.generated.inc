@@ -10,6 +10,8 @@
 #include "apps/infrared/Infrared.h"
 #include "apps/infrared/InfraredApp.h"
 #include "apps/infrared/InfraredMetadata.h"
+#include "apps/macropad/MacroPad.h"
+#include "apps/macropad/MacroPadMetadata.h"
 #include "apps/music/MusicApp.h"
 #include "apps/music/MusicMetadata.h"
 #include "apps/notes/Notes.h"

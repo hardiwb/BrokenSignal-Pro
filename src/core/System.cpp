@@ -14,6 +14,7 @@
 #include "apps/notes/Notes.h"
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
+#include "apps/macropad/MacroPad.h"
 #include "module/shell/Settings.h"
 #include "module/shell/Applications.h"
 #include "module/shell/Options.h"
@@ -57,6 +58,12 @@ void drawCurrentScreen()
     if (bluetoothKeyboardModalActive())
     {
         drawBluetoothKeyboardApp();
+        return;
+    }
+
+    if (macroPadModalActive())
+    {
+        drawMacroPadApp();
         return;
     }
 
