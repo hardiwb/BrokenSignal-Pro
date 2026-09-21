@@ -165,6 +165,11 @@ arithmetic.
 between Applications, Options, and Control Panel without closing the current menu
 first. Modal editors and confirmation dialogs keep input until closed.
 
+Macro Pad's connected macro list is a host surface rather than a typing modal.
+It supports shell navigation, `Fn` app launch, brightness, and playback volume.
+Its printable A-Z bindings retain priority over global quick-access and utility
+letters. The connection and binding-editor overlays remain modal.
+
 Overlay/modal input rejects global launch and utility keys. For example, typing
 `n`, `c`, or `o` in a text editor must insert text or be handled by that editor;
 it must not open Notes, Calculator, or toggle the screen.

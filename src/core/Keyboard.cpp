@@ -103,6 +103,7 @@ bool foregroundAllowsGlobalVolumeHotkeys()
     return foregroundApp == HostApp::Music ||
            foregroundApp == HostApp::Radio ||
            foregroundApp == HostApp::Notes ||
+           foregroundApp == HostApp::MacroPad ||
            (foregroundApp == HostApp::Calculator && calculatorHistoryActive());
 }
 
@@ -110,7 +111,11 @@ bool handleGlobalQuickAccessHotkey(
     const ActiveSurface &surface,
     Keyboard_Class::KeysState &ks)
 {
-    if (!hostLikeGlobalHotkeysAllowed(surface))
+    // Macro Pad deliberately permits A-Z bindings. Keep printable quick-access
+    // letters local while still allowing its non-colliding shell, Fn, and
+    // hardware shortcuts through the normal host-app route.
+    if (!hostLikeGlobalHotkeysAllowed(surface) ||
+        foregroundApp == HostApp::MacroPad)
         return false;
 
     return appRuntimeHandleQuickAccess(ks);

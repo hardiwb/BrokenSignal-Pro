@@ -60,6 +60,12 @@ profile:
 - **Starter Input** selects None, left or right Ctrl held through the sequence,
   or Mouse Button 1-5 clicked before the sequence.
 - Press a configured hotkey or `Enter` to run a macro.
+- `Alt`, `Opt`, and `Ctrl` open Applications, Macro Pad Options, and Control
+  Panel. `Fn` app shortcuts, `[` / `]` brightness, and `-` / `+` volume remain
+  available from the connected macro list. Switching to another full app
+  disconnects the Macro Pad session cleanly.
+- Printable global quick-access keys do not override macro bindings on this
+  screen, so configured A-Z hotkeys remain usable.
 
 Every confirmed edit is saved immediately to the selected JSON file. Macro Pad
 writes a temporary file, backs up the original, and restores the backup if the

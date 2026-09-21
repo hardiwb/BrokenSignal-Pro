@@ -130,6 +130,9 @@ and keyboard routing rules.
   keys and disconnects the active typing session. Shared controller, security,
   bonding, and HID transport live in the Bluetooth service for reuse by future
   apps.
+- **Macro Pad**: Load game-specific BLE HID macros from MicroSD, edit version 2
+  bindings on-device, and retain normal shell, app-launch, brightness, and
+  volume shortcuts from the connected macro list.
 - **Thermal printer**: Compose and queue text jobs through the ESP32-C3 printer's
   versioned HTTP API, with label/continuous media settings and paper actions.
 - **Infrared remote**: Browse Flipper-format `.ir` files from microSD and send
@@ -260,6 +263,31 @@ Each saved device also has a persistent **Quick Connect** key. The defaults are
 to choose `Off`, another number, or an available letter. Letters already used
 by full-app shortcuts are skipped automatically.
 
+### Macro Pad
+
+Macro Pad loads profiles from `/Macros` on the MicroSD card. Select a game and
+Bluetooth device, then use a configured hotkey or `Ok` to run the highlighted
+macro. The connected macro list behaves like a normal host app instead of the
+Bluetooth Keyboard typing modal.
+
+| Key | Action |
+| --- | ------ |
+| Configured `0`-`9` or `A`-`Z` | Run macro |
+| `Ok` | Run highlighted macro |
+| `;` / `.` | Move selection up / down |
+| `Opt` | Edit bindings and starter input |
+| `Alt` | Open Applications |
+| `Ctrl` | Open Control Panel |
+| `[` / `]` | Brightness down / up |
+| `-` / `+` | Volume down / up |
+| `Fn+app key` | Switch to that app and disconnect Macro Pad |
+| `BtnG0` | Release reports and disconnect |
+
+Printable quick-access and utility letters do not override Macro Pad bindings,
+so every configured A-Z hotkey remains available. Connection and binding-editor
+overlays remain modal. See [Macro Pad JSON files](docs/MACRO_PAD.md) for the
+profile format and editing workflow.
+
 ### Global Host Shortcuts
 
 | Key | Action |
@@ -281,6 +309,7 @@ by full-app shortcuts are skipped automatically.
 | `Fn+T` | Thermal Printer (full app) |
 | `Fn+B` | Bluetooth Keyboard (full app) |
 | `Fn+I` | Infrared (full app) |
+| `Fn+P` | Macro Pad (full app) |
 | Assigned `Fn+key` | Quick-connect a saved Bluetooth device |
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
@@ -299,9 +328,9 @@ visible row immediately. Displayed item numbers remain absolute. Informational
 lists only move the highlight, and numeric text-entry overlays keep the number
 keys for input.
 
-Music, Radio, full-screen Notes, and Calculator history support playback volume
-with `-` / `+`. Volume and brightness changes are shown as transient header
-feedback, for example `VOL 50%` or `BRI 78%`.
+Music, Radio, full-screen Notes, Calculator history, and the connected Macro Pad
+list support playback volume with `-` / `+`. Volume and brightness changes are
+shown as transient header feedback, for example `VOL 50%` or `BRI 78%`.
 
 `Alt`, `Opt`, and `Ctrl` can switch directly between Applications, Options, and
 Control Panel. Modal editors and confirmations keep input until closed.

@@ -161,6 +161,11 @@ They reject global launch and utility hotkeys so normal text entry remains safe.
 `QuickPopup` is the exception by design: it is visual-only feedback, such as a
 header message, and does not own text input.
 
+Macro Pad's ready macro list follows host-surface routing for shell modifiers,
+`Fn` app shortcuts, brightness, and volume. Printable quick-access/utility
+letters stay app-local because all A-Z keys are valid macro bindings. Its
+connection and binding-editor overlays still use modal routing.
+
 Header transient messages are drawn by the `Header` primitive. Normal headers
 keep the title on the left and transient feedback on the right; value/result
 headers can right-align the title and the transient feedback moves to the left.

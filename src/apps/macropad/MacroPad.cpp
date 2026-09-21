@@ -1633,5 +1633,7 @@ bool macroPadModalActive()
 {
     return foregroundApp == HostApp::MacroPad &&
            BluetoothService::keyboardSessionActive() &&
-           !optionsMenuVisible;
+           !optionsMenuVisible &&
+           (!BluetoothService::keyboardReady() ||
+            editorMode != EditorMode::None);
 }

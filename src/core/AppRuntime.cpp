@@ -1,9 +1,18 @@
 #include "core/AppRuntime.h"
 
 #include "core/AppRegistry.h"
+#include "module/service/Bluetooth.h"
 
 void appRuntimeOpen(HostApp app)
 {
+    // A ready Macro Pad behaves like a normal host screen, including Fn/app
+    // switching. Do not leave its shared BLE HID session running without its
+    // foreground tick and local BtnG0 disconnect control.
+    if (foregroundApp == HostApp::MacroPad && app != HostApp::MacroPad &&
+        BluetoothService::keyboardSessionActive())
+    {
+        BluetoothService::stopKeyboardSession();
+    }
     rememberLastOpenedApp(app);
     appDescriptor(app).open();
 }

@@ -18,5 +18,7 @@ void macroPadMoveSelectedBinding(int direction);
 String macroPadStarterInputLabel();
 void macroPadAdjustStarterInput(int direction);
 
-// True while Macro Pad owns the keyboard matrix for its BLE HID session.
+// True only while Macro Pad is showing a connection or binding-editor modal.
+// The ready macro list is a normal host surface so shell and hardware hotkeys
+// remain available.
 bool macroPadModalActive();
