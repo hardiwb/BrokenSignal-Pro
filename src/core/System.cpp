@@ -264,6 +264,9 @@ void loadSettings()
         if (key == "swapaltopt")
             swapAltOpt = (val != 0);
 
+        if (key == "webauth")
+            localWebAuthEnabled = (val != 0);
+
         if (key == "brightness" && val >= 0 && val <= 255)
             screenBrightness = (uint8_t)val;
 
@@ -314,6 +317,7 @@ void saveSettings()
     f.printf("seek=%d\n", seekSeconds);
     f.printf("wifipowersave=%d\n", wifiPowerSave ? 1 : 0);
     f.printf("swapaltopt=%d\n", swapAltOpt ? 1 : 0);
+    f.printf("webauth=%d\n", localWebAuthEnabled ? 1 : 0);
     f.printf("brightness=%d\n", screenBrightness);
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
     f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);

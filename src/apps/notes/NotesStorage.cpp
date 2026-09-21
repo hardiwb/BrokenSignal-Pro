@@ -1,6 +1,7 @@
 #include "apps/notes/NotesInternal.h"
 
 #include <SD.h>
+#include <algorithm>
 #include <esp_system.h>
 #include <time.h>
 
@@ -186,6 +187,238 @@ String formatDateKey(const struct tm &date)
     char value[11];
     snprintf(value, sizeof(value), "%04d-%02d-%02d", date.tm_year + 1900, date.tm_mon + 1, date.tm_mday);
     return String(value);
+}
+
+bool shouldMovePastIncompleteNote(const NoteEntry &entry, const String &targetDate)
+{
+    struct tm entryDate{};
+    struct tm target{};
+    const String entryDateKey = entry.stamp.substring(0, 10);
+    return !entry.done &&
+           parseDateKey(entryDateKey, entryDate) &&
+           parseDateKey(targetDate, target) &&
+           entryDateKey < targetDate;
+}
+
+bool movePastIncompleteNotesToDate(const String &targetDate, size_t &movedCount)
+{
+    movedCount = 0;
+    struct tm parsedTarget{};
+    if (!parseDateKey(targetDate, parsedTarget))
+        return false;
+
+    struct PendingMove
+    {
+        NoteEntry entry;
+        String sourcePath;
+    };
+    struct Rewrite
+    {
+        String path;
+        String temporary;
+        String backup;
+        bool backupReady = false;
+        bool committed = false;
+    };
+
+    std::vector<String> notePaths;
+    File directory = SD.open("/Notes");
+    if (directory)
+    {
+        if (!directory.isDirectory())
+        {
+            directory.close();
+            return false;
+        }
+        File file = directory.openNextFile();
+        while (file)
+        {
+            const String name(file.name());
+            const int slash = name.lastIndexOf('/');
+            const String base = slash >= 0 ? name.substring(slash + 1) : name;
+            if (!file.isDirectory() && base.length() == 11 &&
+                base.charAt(4) == '-' && base.substring(7) == ".txt")
+                notePaths.push_back("/Notes/" + base);
+            file.close();
+            file = directory.openNextFile();
+        }
+        directory.close();
+    }
+
+    std::vector<PendingMove> pending;
+    for (const String &path : notePaths)
+    {
+        File input = SD.open(path, FILE_READ);
+        if (!input)
+            return false;
+        while (input.available())
+        {
+            String line = input.readStringUntil('\n');
+            line.trim();
+            if (!line.length())
+                continue;
+            NoteEntry entry;
+            bool parsed = parseNoteStorageLine(line, entry);
+            if (!parsed)
+            {
+                const int separator = line.indexOf('|');
+                if (separator >= 0)
+                {
+                    entry.stamp = line.substring(0, separator);
+                    entry.text = line.substring(separator + 1);
+                    entry.text.trim();
+                    parsed = entry.text.length() > 0;
+                }
+            }
+            if (!parsed || !shouldMovePastIncompleteNote(entry, targetDate))
+                continue;
+            const String timeSuffix = entry.stamp.length() > 10
+                                          ? entry.stamp.substring(10)
+                                          : " 00:00";
+            entry.stamp = targetDate + timeSuffix;
+            if (!entry.id.length())
+                entry.id = createNoteId();
+            pending.push_back({entry, path});
+        }
+        input.close();
+    }
+
+    movedCount = pending.size();
+    if (pending.empty())
+        return true;
+
+    const String targetPath = "/Notes/" + targetDate.substring(0, 7) + ".txt";
+    std::vector<String> affectedPaths;
+    for (const auto &move : pending)
+        if (std::find(affectedPaths.begin(), affectedPaths.end(), move.sourcePath) == affectedPaths.end())
+            affectedPaths.push_back(move.sourcePath);
+    if (std::find(affectedPaths.begin(), affectedPaths.end(), targetPath) == affectedPaths.end())
+        affectedPaths.push_back(targetPath);
+
+    SD.mkdir("/Notes");
+    std::vector<Rewrite> rewrites;
+    for (const String &path : affectedPaths)
+    {
+        Rewrite rewrite;
+        rewrite.path = path;
+        rewrite.temporary = path + ".tmp";
+        rewrite.backup = path + ".bak";
+        rewrites.push_back(rewrite);
+    }
+
+    const auto cleanTemporaryFiles = [&]()
+    {
+        for (const auto &rewrite : rewrites)
+            SD.remove(rewrite.temporary.c_str());
+    };
+
+    for (const auto &rewrite : rewrites)
+    {
+        SD.remove(rewrite.temporary.c_str());
+        File output = SD.open(rewrite.temporary, FILE_WRITE);
+        if (!output)
+        {
+            cleanTemporaryFiles();
+            return false;
+        }
+
+        if (SD.exists(rewrite.path.c_str()))
+        {
+            File input = SD.open(rewrite.path, FILE_READ);
+            if (!input)
+            {
+                output.close();
+                cleanTemporaryFiles();
+                return false;
+            }
+            while (input.available())
+            {
+                String rawLine = input.readStringUntil('\n');
+                String line = rawLine;
+                line.trim();
+                NoteEntry entry;
+                bool parsed = line.length() && parseNoteStorageLine(line, entry);
+                if (!parsed && line.length())
+                {
+                    const int separator = line.indexOf('|');
+                    if (separator >= 0)
+                    {
+                        entry.stamp = line.substring(0, separator);
+                        entry.text = line.substring(separator + 1);
+                        entry.text.trim();
+                        parsed = entry.text.length() > 0;
+                    }
+                }
+
+                if (parsed && shouldMovePastIncompleteNote(entry, targetDate))
+                {
+                    if (rewrite.path == targetPath)
+                    {
+                        const String timeSuffix = entry.stamp.length() > 10
+                                                      ? entry.stamp.substring(10)
+                                                      : " 00:00";
+                        entry.stamp = targetDate + timeSuffix;
+                        if (!entry.id.length())
+                            entry.id = createNoteId();
+                        output.printf("%s|%c|v2|%s|%s|%s|%s\n", entry.stamp.c_str(),
+                                      entry.done ? 'x' : '-', entry.id.c_str(), entry.category.c_str(),
+                                      entry.syncHash.c_str(), entry.text.c_str());
+                    }
+                }
+                else
+                {
+                    output.print(rawLine);
+                    output.print('\n');
+                }
+            }
+            input.close();
+        }
+
+        if (rewrite.path == targetPath)
+            for (const auto &move : pending)
+                if (move.sourcePath != targetPath)
+                    output.printf("%s|%c|v2|%s|%s|%s|%s\n", move.entry.stamp.c_str(),
+                                  move.entry.done ? 'x' : '-', move.entry.id.c_str(),
+                                  move.entry.category.c_str(), move.entry.syncHash.c_str(),
+                                  move.entry.text.c_str());
+        output.close();
+    }
+
+    const auto rollback = [&]()
+    {
+        for (auto &rewrite : rewrites)
+        {
+            if (rewrite.committed)
+                SD.remove(rewrite.path.c_str());
+            if (rewrite.backupReady)
+                SD.rename(rewrite.backup.c_str(), rewrite.path.c_str());
+            SD.remove(rewrite.temporary.c_str());
+        }
+    };
+
+    for (auto &rewrite : rewrites)
+    {
+        SD.remove(rewrite.backup.c_str());
+        if (SD.exists(rewrite.path.c_str()))
+        {
+            if (!SD.rename(rewrite.path.c_str(), rewrite.backup.c_str()))
+            {
+                rollback();
+                return false;
+            }
+            rewrite.backupReady = true;
+        }
+        if (!SD.rename(rewrite.temporary.c_str(), rewrite.path.c_str()))
+        {
+            rollback();
+            return false;
+        }
+        rewrite.committed = true;
+    }
+
+    for (const auto &rewrite : rewrites)
+        SD.remove(rewrite.backup.c_str());
+    return true;
 }
 
 bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey)

@@ -24,11 +24,13 @@ shared with that integration.
 
 1. Open **Control Panel > Notes & Notion** while near a trusted saved WiFi
    network, or select one when prompted.
-2. Wait for the setup address and one-time code.
+2. Wait for the setup address. If **Web authentication** is On in Control
+   Panel, the Cardputer also displays a one-time code.
 3. On another device on the same network, open
    `http://brokensignal.local/`. Use the numeric address shown on the Cardputer
    if mDNS is unavailable.
-4. Sign in as `admin` with the displayed six-digit one-time code.
+4. When Web authentication is On, sign in as `admin` with the displayed
+   six-digit one-time code. When it is Off, no sign-in is required.
 5. Enter the Notion integration token and either the Agenda database ID or its
    Notion URL, then save.
 
@@ -76,8 +78,50 @@ both versions changed since the previous successful sync, the Cardputer copy
 wins and the serial log reports a conflict count. Deleting a row is not yet
 propagated: a row missing on one side is restored from the other side. Up to 200
 local and 200 remote notes are accepted, and Notion results are fetched in
-pages of 25 to control memory use.
+pages of 5 and parsed directly from the HTTPS stream to control memory use.
 
 Monthly note files are replaced transactionally through `.tmp` and `.bak`
 files only after all required Notion requests succeed. A failed API request
 therefore leaves the original SD records untouched.
+
+## Transport and memory behavior
+
+Notion query responses are deliberately limited to five rows per request. The
+firmware requests HTTP/1.0 identity framing and passes the HTTPS response stream
+directly to ArduinoJson. Do not replace this with `HTTPClient::getString()` or
+another full-body `String` without re-evaluating peak heap use.
+
+This design addresses a failure observed with a 61-line monthly Notes file. A
+chunked Notion response grew to 7,182 bytes before `HTTPClient::getString()`
+silently stopped extending its buffer on a fragmented, no-PSRAM ESP32-S3 heap.
+ArduinoJson then correctly reported `IncompleteInput` because it received only
+the beginning of an otherwise valid JSON document. The note file itself was not
+malformed, and reducing or rewriting its lines was not the appropriate repair.
+
+Streaming avoids holding both the complete encoded response and the parsed JSON
+document in memory at the same time. This applies to database discovery, query,
+page creation, page updates, and Notion error responses.
+
+## Troubleshooting
+
+### `Notion JSON IncompleteInput`
+
+First install firmware containing the streaming response implementation in
+`NotesNotionSync.cpp`, then retry the sync on a stable WiFi connection. Older
+firmware may append a byte count such as `(7182 bytes)`; that number describes
+the truncated HTTP response held in memory, not the size or validity of the
+monthly Notes file.
+
+If current firmware still reports `IncompleteInput`, capture the full serial
+message and verify whether the network disconnected or timed out during the
+request. Keep the query page size at five while diagnosing the transport. Do
+not delete Notes files, reset the Notion database, or increase the page size as
+a first response.
+
+### Other Notion errors
+
+Errors beginning with `Notion 400`, `401`, `403`, or `404` are complete API
+responses rather than JSON truncation. Check the required property names and
+types, integration token, database sharing permissions, and configured database
+ID. A connection error with a negative status indicates HTTPS or WiFi transport
+failure before a valid Notion response was received.

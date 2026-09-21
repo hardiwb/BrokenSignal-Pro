@@ -119,7 +119,8 @@ and keyboard routing rules.
 - **Expense Tracker**: `E` opens a quick expense entry overlay from any other full-screen app.
 - **RTC clock**: DS3231 RTC support with optional NTP sync.
 - **WiFi service UI**: WiFi menu is handled by the WiFi service and accessible from Settings.
-- **OTA firmware updates**: Start a five-minute, one-time-code-protected browser upload from Control Panel.
+- **OTA firmware updates**: Start a five-minute browser upload from Control Panel, with optional one-time-code authentication.
+- **SD browser transfer**: Browse, download, and upload MicroSD files locally, with optional one-time-code authentication.
 - **Granular redraw**: Header, list rows, footer slots, progress bar, and overlay input can update independently.
 - **Themes**: Five visual themes with persistent settings.
 - **Toast primitive**: Small transient popups, currently used for theme name feedback.
@@ -358,6 +359,10 @@ Personal is the default category. Work notes show `#w` and Art notes show `#A`;
 pressing their category key again restores Personal. The Category option cycles
 through Personal, Work, and Art.
 
+Use **Options > Move Past to Today** to carry every unchecked note dated before
+today forward to today. Checked notes and notes dated today or later are left
+unchanged.
+
 Use **Options > Sync Notion** for two-way synchronization with an Agenda data
 source containing `Checkbox`, `Entry`, `Date`, `Category`, and `ID`. Configure
 the integration first under **Control Panel > Notes & Notion**. Remote rows
@@ -486,16 +491,31 @@ Settings include:
 | Sync Clock | NTP sync when WiFi is available |
 | Manual Clock | Time and date editor |
 | WiFi power save | Toggle WiFi modem sleep |
+| Web authentication | Require `admin` and a one-time code for local browser tools |
 | Debug | Runtime diagnostics |
 | Notes & Notion | Authenticated local setup page for the Notes integration |
+| SD Transfer | Authenticated local browser for MicroSD uploads and downloads |
 | OTA Update | Authenticated local firmware upload and reboot |
 | WiFi menu | Opens WiFi service menu |
+
+### SD card browser transfer
+
+Open **Control Panel > SD Transfer**. On a computer on the same WiFi network,
+open `http://brokensignal.local/`. When **Web authentication** is On, sign in
+as `admin` with the six-digit one-time code shown on the Cardputer. When it is
+Off, no sign-in is required. If `.local` is unavailable, use the
+numeric IP address shown on the device. Browse to an existing SD folder, choose
+a file, and upload it; selecting an existing file downloads it. A same-named
+upload replaces the old file transactionally. The local HTTP session expires
+after ten minutes, stops audio while active, and should be used only on a trusted
+network.
 
 ### OTA firmware update
 
 Open **Control Panel > OTA Update**. On a
-computer on the same network, open `http://brokensignal.local/` and sign in as
-`admin` with the six-digit one-time code shown on the Cardputer. If the `.local`
+computer on the same network, open `http://brokensignal.local/`. When **Web
+authentication** is On, sign in as `admin` with the six-digit one-time code
+shown on the Cardputer. When it is Off, no sign-in is required. If the `.local`
 name is unavailable on your network, use the numeric IP address displayed by
 the Cardputer instead. Upload:
 

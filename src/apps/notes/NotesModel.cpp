@@ -658,6 +658,36 @@ void notesPromptMoveSelectedToDate()
     drawNotesMoveDateEditor();
 }
 
+void notesMovePastIncompleteToToday()
+{
+    struct tm today{};
+    if (!getCurrentTime(today))
+    {
+        showHdrMsg("NO DATE");
+        return;
+    }
+
+    size_t movedCount = 0;
+    if (!movePastIncompleteNotesToDate(formatDateKey(today), movedCount))
+    {
+        showHdrMsg("SD ERROR");
+        return;
+    }
+
+    loadNote();
+    drawNotes();
+    if (movedCount == 0)
+    {
+        showHdrMsg("NO PAST");
+        return;
+    }
+
+    char status[9];
+    snprintf(status, sizeof(status), "MOVE %u",
+             static_cast<unsigned>(min(movedCount, static_cast<size_t>(999))));
+    showHdrMsg(status);
+}
+
 void notesEditSelected()
 {
     if (notesHasSelection())
@@ -799,7 +829,7 @@ void notesSyncWithNotion()
     NotesNotionConfig notionConfig;
     if (!loadNotesNotionConfig(notionConfig))
     {
-        showHdrMsg("NO CONFIG");
+        showHdrMsg("NO CFG");
         return;
     }
     notionSyncPendingWifi = true;

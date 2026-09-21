@@ -11,6 +11,7 @@
 #include "module/service/Clock.h"
 #include "module/service/OtaUpdate.h"
 #include "module/service/NotesNotion.h"
+#include "module/service/SdTransfer.h"
 #include "module/service/WiFi.h"
 #include "UI/Footer.h"
 #include "UI/Header.h"
@@ -26,7 +27,7 @@ static String manualClockDate = "";
 static int manualClockField = 0;
 static int manualClockTimeCursor = 0;
 static int manualClockDateCursor = 0;
-static const int SETTINGS_COUNT = 15;
+static const int SETTINGS_COUNT = 17;
 static int settingsScrollTop = 0;
 
 enum class PendingSettingsWifiAction : uint8_t
@@ -34,6 +35,7 @@ enum class PendingSettingsWifiAction : uint8_t
     None,
     SyncClock,
     NotesNotion,
+    SdTransfer,
     OtaUpdate
 };
 
@@ -52,8 +54,10 @@ enum SettingRow
     SettingManualClock,
     SettingWifiPowerSave,
     SettingSwapAltOpt,
+    SettingWebAuthentication,
     SettingDebug,
     SettingNotesNotion,
+    SettingSdTransfer,
     SettingOtaUpdate,
     SettingWifi
 };
@@ -98,8 +102,10 @@ static const char *settingsLabel(int index)
         "Manual Clock",
         "WiFi power save",
         "Swap Alt / Opt",
+        "Web authentication",
         "Debug",
         "Notes & Notion",
+        "SD Transfer",
         "OTA Update",
         "WiFi"};
 
@@ -137,6 +143,7 @@ static String settingsValue(int index)
     case SettingManualClock:
     case SettingDebug:
     case SettingNotesNotion:
+    case SettingSdTransfer:
     case SettingOtaUpdate:
     case SettingWifi:
         return "Enter";
@@ -144,6 +151,8 @@ static String settingsValue(int index)
         return wifiPowerSave ? "On" : "Off";
     case SettingSwapAltOpt:
         return swapAltOpt ? "On" : "Off";
+    case SettingWebAuthentication:
+        return localWebAuthEnabled ? "On" : "Off";
     default:
         return "";
     }
@@ -517,6 +526,10 @@ static void adjustSetting(int sel, int dir)
     {
         swapAltOpt = !swapAltOpt;
     }
+    else if (sel == SettingWebAuthentication)
+    {
+        localWebAuthEnabled = !localWebAuthEnabled;
+    }
     settingsDirty = true;
     settingsDirtyMs = millis();
 }
@@ -527,7 +540,7 @@ static bool settingSupportsAdjustment(int sel)
            sel == SettingScreenOff || sel == SettingDeepSleep ||
            sel == SettingPlaybackTimer || sel == SettingTheme ||
            sel == SettingTimezone || sel == SettingWifiPowerSave ||
-           sel == SettingSwapAltOpt;
+           sel == SettingSwapAltOpt || sel == SettingWebAuthentication;
 }
 
 void drawSettingsMenu()
@@ -544,6 +557,12 @@ void drawSettingsMenu()
         return;
     }
 
+    if (sdTransferActive())
+    {
+        drawSdTransferScreen();
+        return;
+    }
+
     if (manualClockVisible)
     {
         drawManualClockEditor();
@@ -557,7 +576,7 @@ void drawSettingsMenu()
 
 bool settingsInputOverlayActive()
 {
-    return manualClockVisible || otaUpdateActive() || notesNotionSetupActive();
+    return manualClockVisible || otaUpdateActive() || notesNotionSetupActive() || sdTransferActive();
 }
 
 void cancelSettingsInputOverlay()
@@ -566,6 +585,8 @@ void cancelSettingsInputOverlay()
         stopNotesNotionSetup();
     if (otaUpdateActive())
         stopOtaUpdate();
+    if (sdTransferActive())
+        stopSdTransfer();
     manualClockVisible = false;
     drawSettingsMenu();
 }
@@ -588,6 +609,7 @@ void exitSettingsMenu()
     pendingWifiAction = PendingSettingsWifiAction::None;
     stopNotesNotionSetup();
     stopOtaUpdate();
+    stopSdTransfer();
     settingsMenuVisible = false;
     manualClockVisible = false;
     saveSettings();
@@ -613,12 +635,16 @@ static void performSettingsWifiAction(PendingSettingsWifiAction action)
     stopRadioStream();
     const bool started = action == PendingSettingsWifiAction::NotesNotion
                              ? beginNotesNotionSetup()
+                         : action == PendingSettingsWifiAction::SdTransfer
+                             ? beginSdTransfer()
                              : beginOtaUpdate();
     if (!started)
     {
         drawSettingsMenu();
         showHdrMsg(action == PendingSettingsWifiAction::NotesNotion
                        ? "SETUP START FAIL"
+                   : action == PendingSettingsWifiAction::SdTransfer
+                       ? "TRANSFER START FAIL"
                        : "OTA START FAIL");
     }
 }
@@ -667,6 +693,16 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
         if (keyboardBackPressed(ks) && !otaUpdateInProgress())
         {
             stopOtaUpdate();
+            drawSettingsMenu();
+        }
+        return;
+    }
+
+    if (sdTransferActive())
+    {
+        if (keyboardBackPressed(ks) && !sdTransferInProgress())
+        {
+            stopSdTransfer();
             drawSettingsMenu();
         }
         return;
@@ -769,10 +805,13 @@ void handleSettingsInput(Keyboard_Class::KeysState &ks)
             openWifiMenu();
             return;
         }
-        else if (settingsSel == SettingNotesNotion || settingsSel == SettingOtaUpdate)
+        else if (settingsSel == SettingNotesNotion || settingsSel == SettingSdTransfer ||
+                 settingsSel == SettingOtaUpdate)
         {
             requestSettingsWifiAction(settingsSel == SettingNotesNotion
                                           ? PendingSettingsWifiAction::NotesNotion
+                                      : settingsSel == SettingSdTransfer
+                                          ? PendingSettingsWifiAction::SdTransfer
                                           : PendingSettingsWifiAction::OtaUpdate);
             return;
         }

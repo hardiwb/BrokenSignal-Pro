@@ -37,13 +37,14 @@ $functions = @(
     Get-FunctionSource 'src/apps/notes/NotesModel.cpp' 'refreshViewedDate'
     Get-FunctionSource 'src/apps/notes/NotesStorage.cpp' 'parseDateKey'
     Get-FunctionSource 'src/apps/notes/NotesStorage.cpp' 'formatDateKey'
+    Get-FunctionSource 'src/apps/notes/NotesStorage.cpp' 'shouldMovePastIncompleteNote'
     Get-FunctionSource 'src/apps/notes/NotesModel.cpp' 'notesSendViewedDayToXteink'
 )
 $harness = Get-Content -LiteralPath (Join-Path $projectRoot 'tests/notes_date_regression.cpp') -Raw
 $translationUnit = $harness.Replace('// INSERT_PRODUCTION_FUNCTIONS', ($functions -join "`n"))
-$buildDirectory = Join-Path $projectRoot '.pio/notes-date-tests'
+$buildDirectory = Join-Path $projectRoot 'build/notes-date-tests'
 New-Item -ItemType Directory -Path $buildDirectory -Force | Out-Null
-$testExecutable = Join-Path $buildDirectory 'notes-date-regression.exe'
+$testExecutable = Join-Path $buildDirectory "notes-date-regression-$PID.exe"
 $translationUnit | & $Compiler -std=c++17 -Wall -Wextra -I (Join-Path $projectRoot 'src') -x c++ -o $testExecutable -
 if ($LASTEXITCODE -ne 0) { throw 'Host test compilation failed' }
 & $testExecutable

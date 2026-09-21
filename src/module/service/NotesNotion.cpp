@@ -1,5 +1,6 @@
 #include "module/service/NotesNotion.h"
 
+#include "core/State.h"
 #include "UI/Overlay.h"
 
 #include <ESPmDNS.h>
@@ -67,7 +68,7 @@ String normalizedUuid(String value)
 
 bool authenticated()
 {
-    if (server.authenticate("admin", password.c_str()))
+    if (!localWebAuthEnabled || server.authenticate("admin", password.c_str()))
         return true;
     server.requestAuthentication(BASIC_AUTH, "BrokenSignal Notes", "One-time code required");
     return false;
@@ -116,7 +117,6 @@ void configureHandlers()
         sessionActivityMs = millis();
         if (!authenticated())
             return;
-
         NotesNotionConfig current;
         loadNotesNotionConfig(current);
         String token = server.arg("token");
@@ -206,7 +206,8 @@ bool beginNotesNotionSetup()
     configureHandlers();
     if (serverRunning)
         server.stop();
-    password = String(100000UL + (esp_random() % 900000UL));
+    password = localWebAuthEnabled
+        ? String(100000UL + (esp_random() % 900000UL)) : String();
     statusText = "";
     sessionActivityMs = millis();
     sessionActive = true;
@@ -273,10 +274,12 @@ void drawNotesNotionSetupScreen()
     }
     else
     {
-        model.items = {
-            mdnsRunning ? "http://brokensignal.local/" : "http://" + WiFi.localIP().toString() + "/",
-            "User: admin",
-            "Code: " + password};
+        const String address = mdnsRunning ? "http://brokensignal.local/"
+                                           : "http://" + WiFi.localIP().toString() + "/";
+        if (localWebAuthEnabled)
+            model.items = {address, "User: admin", "Code: " + password};
+        else
+            model.items = {address, "No sign-in required"};
         model.confirmText = "5 min window  [Esc]Cancel";
     }
     drawOverlay(model);

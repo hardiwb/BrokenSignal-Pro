@@ -26,6 +26,7 @@ String notesFilterLabel();
 void notesAdjustFilter(int direction);
 void notesMoveSelectedToTomorrow();
 void notesPromptMoveSelectedToDate();
+void notesMovePastIncompleteToToday();
 void notesEditSelected();
 void notesDeleteSelected();
 void notesToggleSelectedCategory();

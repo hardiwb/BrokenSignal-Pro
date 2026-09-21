@@ -67,7 +67,7 @@
         HostApp::MacroPad, "Macro Pad", "MACRO PAD",
         openMacroPadApp, drawMacroPadApp, handleMacroPadAppInput, tickMacroPadApp,
         "MACRO PAD KEYS", MACRO_PAD_HELP_ENTRIES, MACRO_PAD_HELP_COUNT,
-        buildMacroPadOptions, false, false,
+        buildMacroPadOptions, true, true,
         'p',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },

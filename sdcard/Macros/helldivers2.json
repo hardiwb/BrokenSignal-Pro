@@ -1,18 +1,1113 @@
 {
-  "version": 1,
+  "version": 2,
   "name": "Helldivers 2",
-  "activation": {"mouse_button": 5, "mode": "press"},
+  "activation": {
+    "mouse_button": 5,
+    "mode": "press"
+  },
   "press_ms": 55,
   "gap_ms": 40,
   "macros": [
-    {"name": "Reinforce", "hotkey": "1", "sequence": ["UP", "DOWN", "RIGHT", "LEFT", "UP"]},
-    {"name": "Resupply", "hotkey": "2", "sequence": ["DOWN", "DOWN", "UP", "RIGHT"]},
-    {"name": "Eagle Airstrike", "hotkey": "3", "sequence": ["UP", "RIGHT", "DOWN", "RIGHT"]},
-    {"name": "Eagle 500kg Bomb", "hotkey": "4", "sequence": ["UP", "RIGHT", "DOWN", "DOWN", "DOWN"]},
-    {"name": "Orbital Precision", "hotkey": "5", "sequence": ["RIGHT", "RIGHT", "UP"]},
-    {"name": "Orbital Laser", "hotkey": "6", "sequence": ["RIGHT", "DOWN", "UP", "RIGHT", "DOWN"]},
-    {"name": "Orbital Railcannon", "hotkey": "7", "sequence": ["RIGHT", "UP", "DOWN", "DOWN", "RIGHT"]},
-    {"name": "Autocannon", "hotkey": "8", "sequence": ["DOWN", "LEFT", "DOWN", "UP", "UP", "RIGHT"]},
-    {"name": "Guard Dog Rover", "hotkey": "9", "sequence": ["DOWN", "UP", "LEFT", "UP", "RIGHT", "RIGHT"]}
-  ]
+    {
+      "id": "meltagun_40k",
+      "name": "40-K Meltagun",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "LEFT",
+        "LEFT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "airburst_rocket_launcher",
+      "name": "Airburst Rocket Launcher",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "anti_materiel_rifle",
+      "name": "Anti-Materiel Rifle",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "UP",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "arc_thrower",
+      "name": "Arc Thrower",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "LEFT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "autocannon",
+      "name": "Autocannon",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "belt_fed_grenade_launcher",
+      "name": "Belt-Fed Grenade Launcher",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "LEFT",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "breaching_hammer",
+      "name": "Breaching Hammer",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "LEFT",
+        "UP"
+      ]
+    },
+    {
+      "id": "bullet_storm",
+      "name": "Bullet Storm",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "commando",
+      "name": "Commando",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "cremator",
+      "name": "Cremator",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "de_escalator",
+      "name": "De-Escalator",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "defoliation_tool",
+      "name": "Defoliation Tool",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "eagle_110mm_rocket_pods",
+      "name": "Eagle 110mm Rocket Pods",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "eagle_500kg_bomb",
+      "name": "Eagle 500kg Bomb",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "eagle_airstrike",
+      "name": "Eagle Airstrike",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "eagle_cluster_bomb",
+      "name": "Eagle Cluster Bomb",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "eagle_gas_airstrike",
+      "name": "Eagle Gas Airstrike",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "eagle_napalm_airstrike",
+      "name": "Eagle Napalm Airstrike",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "eagle_smoke_strike",
+      "name": "Eagle Smoke Strike",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "UP",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "eagle_strafing_run",
+      "name": "Eagle Strafing Run",
+      "sequence": [
+        "UP",
+        "RIGHT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "emplacement_anti_tank",
+      "name": "Emplacement - Anti-Tank",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT",
+        "RIGHT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "emplacement_grenadier",
+      "name": "Emplacement - Grenadier",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "hmg_emplacement",
+      "name": "Emplacement - HMG",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT",
+        "RIGHT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "epoch",
+      "name": "Epoch",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "exosuit_breakthrough",
+      "name": "Exosuit - Breakthrough",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "LEFT",
+        "RIGHT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "emancipator_exosuit",
+      "name": "Exosuit - Emancipator",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "LEFT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "exosuit_lumberer",
+      "name": "Exosuit - Lumberer",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "RIGHT",
+        "LEFT",
+        "UP"
+      ]
+    },
+    {
+      "id": "patriot_exosuit",
+      "name": "Exosuit - Patriot",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "LEFT",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "expendable_anti_tank",
+      "name": "Expendable Anti-Tank",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "LEFT",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "expendable_napalm",
+      "name": "Expendable Napalm",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "LEFT",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "flamethrower",
+      "name": "Flamethrower",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "frv_gunner",
+      "name": "FRV - Gunner",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "frv_incinerator",
+      "name": "FRV - Incinerator",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "frv_supply",
+      "name": "FRV - Supply",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "LEFT",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "grenade_launcher",
+      "name": "Grenade Launcher",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "LEFT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "heavy_machine_gun",
+      "name": "Heavy Machine Gun",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "hellbomb",
+      "name": "Hellbomb",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "laser_cannon",
+      "name": "Laser Cannon",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "leveller",
+      "name": "Leveller",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "LEFT",
+        "UP",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "machine_gun",
+      "name": "Machine Gun",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "maxigun",
+      "name": "Maxigun",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "anti_personnel_minefield",
+      "name": "Mine - Anti-Personnel",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "mine_anti_tank",
+      "name": "Mine - Anti-Tank",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "mine_gas",
+      "name": "Mine - Gas",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "incendiary_mines",
+      "name": "Mine - Incendiary",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "LEFT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "one_true_flag",
+      "name": "One True Flag",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "orbital_120mm_barrage",
+      "name": "Orbital 120mm HE Barrage",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "orbital_380mm_barrage",
+      "name": "Orbital 380mm HE Barrage",
+      "sequence": [
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "UP",
+        "LEFT",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "orbital_airburst_strike",
+      "name": "Orbital Airburst Strike",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "orbital_ems_strike",
+      "name": "Orbital EMS Strike",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "LEFT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "orbital_gas_strike",
+      "name": "Orbital Gas Strike",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "orbital_gatling_barrage",
+      "name": "Orbital Gatling Barrage",
+      "sequence": [
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "orbital_laser",
+      "name": "Orbital Laser",
+      "sequence": [
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "orbital_napalm_barrage",
+      "name": "Orbital Napalm Barrage",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "orbital_precision_strike",
+      "name": "Orbital Precision Strike",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "orbital_railcannon_strike",
+      "name": "Orbital Railcannon Strike",
+      "sequence": [
+        "RIGHT",
+        "UP",
+        "DOWN",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "orbital_smoke_strike",
+      "name": "Orbital Smoke Strike",
+      "sequence": [
+        "RIGHT",
+        "RIGHT",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "orbital_walking_barrage",
+      "name": "Orbital Walking Barrage",
+      "sequence": [
+        "RIGHT",
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "ballistic_shield",
+      "name": "Pack - Ballistic Shield",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "DOWN",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "pack_c4",
+      "name": "Pack - C4",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "UP",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "pack_directional_shield",
+      "name": "Pack - Directional Shield",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "pack_dog_breath",
+      "name": "Pack - Dog Breath",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "UP",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "guard_dog",
+      "name": "Pack - Guard Dog",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "UP",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "pack_hot_dog",
+      "name": "Pack - Hot Dog",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "UP",
+        "LEFT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "pack_hover",
+      "name": "Pack - Hover",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "UP",
+        "DOWN",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "jump_pack",
+      "name": "Pack - Jump",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "UP",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "pack_k9",
+      "name": "Pack - K-9",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "UP",
+        "RIGHT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "pack_portable_hellbomb",
+      "name": "Pack - Portable Hellbomb",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "UP",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "guard_dog_rover",
+      "name": "Pack - Rover",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "UP",
+        "RIGHT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "shield_generator_pack",
+      "name": "Pack - Shield Generator",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "supply_pack",
+      "name": "Pack - Supply",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "UP",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "pack_warp",
+      "name": "Pack - Warp",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "quasar_cannon",
+      "name": "Quasar Cannon",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "railgun",
+      "name": "Railgun",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "recoilless_rifle",
+      "name": "Recoilless Rifle",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "RIGHT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "reinforce",
+      "name": "Reinforce",
+      "sequence": [
+        "UP",
+        "DOWN",
+        "RIGHT",
+        "LEFT",
+        "UP"
+      ]
+    },
+    {
+      "id": "shield_generator_relay",
+      "name": "Relay - Shield Generator",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "LEFT",
+        "RIGHT",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "resupply",
+      "name": "Resupply",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "autocannon_sentry",
+      "name": "Sentry - Autocannon",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "UP",
+        "LEFT",
+        "UP"
+      ]
+    },
+    {
+      "id": "ems_mortar_sentry",
+      "name": "Sentry - EMS Mortar",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "sentry_flame",
+      "name": "Sentry - Flame",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "UP"
+      ]
+    },
+    {
+      "id": "sentry_gas_mortar",
+      "name": "Sentry - Gas Mortar",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "gatling_sentry",
+      "name": "Sentry - Gatling",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "sentry_laser",
+      "name": "Sentry - Laser",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "machine_gun_sentry",
+      "name": "Sentry - Machine Gun",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "mortar_sentry",
+      "name": "Sentry - Mortar",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "RIGHT",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "rocket_sentry",
+      "name": "Sentry - Rocket",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "RIGHT",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "tesla_tower",
+      "name": "Sentry - Tesla Tower",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "UP",
+        "LEFT",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "solo_silo",
+      "name": "Solo Silo",
+      "sequence": [
+        "DOWN",
+        "UP",
+        "RIGHT",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "sos_beacon",
+      "name": "SOS Beacon",
+      "sequence": [
+        "UP",
+        "DOWN",
+        "RIGHT",
+        "UP"
+      ]
+    },
+    {
+      "id": "spear",
+      "name": "Spear",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "UP",
+        "DOWN",
+        "DOWN"
+      ]
+    },
+    {
+      "id": "speargun",
+      "name": "Speargun",
+      "sequence": [
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "UP",
+        "RIGHT"
+      ]
+    },
+    {
+      "id": "stalwart",
+      "name": "Stalwart",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "UP",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "sterilizer",
+      "name": "Sterilizer",
+      "sequence": [
+        "DOWN",
+        "LEFT",
+        "UP",
+        "DOWN",
+        "LEFT"
+      ]
+    },
+    {
+      "id": "vehicle_bastion",
+      "name": "Vehicle - Bastion Mk XVI",
+      "sequence": [
+        "LEFT",
+        "DOWN",
+        "RIGHT",
+        "DOWN",
+        "LEFT",
+        "DOWN",
+        "UP",
+        "DOWN",
+        "UP"
+      ]
+    },
+    {
+      "id": "wasp_launcher",
+      "name": "W.A.S.P. Launcher",
+      "sequence": [
+        "DOWN",
+        "DOWN",
+        "UP",
+        "DOWN",
+        "RIGHT"
+      ]
+    }
+  ],
+  "bindings": {
+    "1": "reinforce",
+    "2": "resupply",
+    "3": "eagle_airstrike",
+    "4": "eagle_500kg_bomb",
+    "5": "orbital_precision_strike",
+    "6": "orbital_laser",
+    "7": "orbital_railcannon_strike",
+    "8": "autocannon",
+    "9": "guard_dog_rover"
+  }
 }

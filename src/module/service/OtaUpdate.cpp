@@ -1,5 +1,6 @@
 #include "module/service/OtaUpdate.h"
 
+#include "core/State.h"
 #include "UI/Overlay.h"
 
 #include <ESPmDNS.h>
@@ -43,7 +44,8 @@ main{border:1px solid #777;padding:1.5rem}input,button{font:inherit;margin-top:1
 
 bool requestAuthenticated()
 {
-    if (otaServer.authenticate("admin", otaPassword.c_str()))
+    if (!localWebAuthEnabled ||
+        otaServer.authenticate("admin", otaPassword.c_str()))
         return true;
 
     otaServer.requestAuthentication(BASIC_AUTH, "BrokenSignal OTA", "One-time code required");
@@ -76,7 +78,6 @@ void configureHandlers()
         sessionActivityMs = millis();
         if (!requestAuthenticated())
             return;
-
         if (!uploadSucceeded)
         {
             const String message = otaError.length() > 0 ? otaError : "Firmware upload failed";
@@ -92,9 +93,9 @@ void configureHandlers()
         drawOtaUpdateScreen();
     }, []()
     {
-        if (!otaServer.authenticate("admin", otaPassword.c_str()))
+        if (localWebAuthEnabled &&
+            !otaServer.authenticate("admin", otaPassword.c_str()))
             return;
-
         HTTPUpload &upload = otaServer.upload();
         sessionActivityMs = millis();
 
@@ -173,7 +174,8 @@ bool beginOtaUpdate()
     if (serverRunning)
         otaServer.stop();
 
-    otaPassword = String(100000UL + (esp_random() % 900000UL));
+    otaPassword = localWebAuthEnabled
+        ? String(100000UL + (esp_random() % 900000UL)) : String();
     otaError = "";
     uploadActive = false;
     uploadSucceeded = false;
@@ -275,11 +277,12 @@ void drawOtaUpdateScreen()
     }
     else
     {
-        model.items = {
-            mdnsRunning ? "http://brokensignal.local/"
-                        : "http://" + WiFi.localIP().toString() + "/",
-            "User: admin",
-            "Code: " + otaPassword};
+        const String address = mdnsRunning ? "http://brokensignal.local/"
+                                           : "http://" + WiFi.localIP().toString() + "/";
+        if (localWebAuthEnabled)
+            model.items = {address, "User: admin", "Code: " + otaPassword};
+        else
+            model.items = {address, "No sign-in required"};
         model.confirmText = "5 min window  [Esc]Cancel";
     }
 

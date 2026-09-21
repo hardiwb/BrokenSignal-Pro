@@ -26,6 +26,17 @@ struct RemoteNote
     NotesInternal::NoteEntry entry;
 };
 
+enum NoteProperty : uint8_t
+{
+    NotePropertyCheckbox = 1 << 0,
+    NotePropertyEntry = 1 << 1,
+    NotePropertyDate = 1 << 2,
+    NotePropertyCategory = 1 << 3,
+    NotePropertyId = 1 << 4,
+    NotePropertyAll = NotePropertyCheckbox | NotePropertyEntry | NotePropertyDate |
+                      NotePropertyCategory | NotePropertyId,
+};
+
 bool uuidLike(const String &value)
 {
     if (value.length() != 36)
@@ -45,13 +56,19 @@ bool uuidLike(const String &value)
 
 bool notionRequest(const NotesNotionConfig &config, const char *method,
                    const String &path, const String &body,
-                   String &response, String &error)
+                   JsonDocument &response, String &error)
 {
     WiFiClientSecure client;
     client.setCACertBundle(x509_crt_bundle_start);
     HTTPClient http;
     http.setConnectTimeout(10000);
     http.setTimeout(30000);
+    // Notion normally uses chunked HTTP/1.1 responses. HTTPClient::getString()
+    // cannot reserve those up front and may silently return a truncated String
+    // when the ESP32 heap is fragmented. Request identity framing and parse the
+    // body straight from the TLS stream so a second full response buffer is not
+    // needed alongside ArduinoJson's document.
+    http.useHTTP10(true);
     if (!http.begin(client, String(NOTION_HOST) + path))
     {
         error = "Invalid Notion address";
@@ -67,19 +84,26 @@ bool notionRequest(const NotesNotionConfig &config, const char *method,
         status = http.GET();
     else
         status = http.sendRequest(method, body);
-    response = status > 0 ? http.getString() : "";
-    http.end();
-    if (status >= 200 && status < 300)
-        return true;
 
     if (status <= 0)
     {
+        http.end();
         error = "Notion connection failed " + String(status);
         return false;
     }
-    JsonDocument detail;
-    const DeserializationError jsonError = deserializeJson(detail, response);
-    const char *notionMessage = jsonError ? nullptr : detail["message"].as<const char *>();
+
+    const DeserializationError jsonError = deserializeJson(response, http.getStream());
+    http.end();
+    if (jsonError)
+    {
+        error = "Notion JSON ";
+        error += jsonError.c_str();
+        return false;
+    }
+    if (status >= 200 && status < 300)
+        return true;
+
+    const char *notionMessage = response["message"].as<const char *>();
     error = "Notion " + String(status);
     if (notionMessage && strlen(notionMessage))
         error += ": " + String(notionMessage);
@@ -90,16 +114,10 @@ bool discoverDataSource(NotesNotionConfig &config, String &error)
 {
     if (uuidLike(config.dataSourceId))
         return true;
-    String response;
+    JsonDocument response;
     if (!notionRequest(config, "GET", "/v1/databases/" + config.databaseId, "", response, error))
         return false;
-    JsonDocument document;
-    if (deserializeJson(document, response))
-    {
-        error = "Invalid database response";
-        return false;
-    }
-    JsonArrayConst sources = document["data_sources"].as<JsonArrayConst>();
+    JsonArrayConst sources = response["data_sources"].as<JsonArrayConst>();
     if (sources.size() != 1)
     {
         error = sources.size() == 0 ? "Database has no data source" : "Choose a data source in Notion";
@@ -169,26 +187,17 @@ bool queryRemoteNotes(const NotesNotionConfig &config, std::vector<RemoteNote> &
     while (hasMore)
     {
         JsonDocument request;
-        // Notion page objects are verbose. Keep each response small enough that
-        // the response String and ArduinoJson document can coexist in ESP32 RAM.
+        // Notion page objects are verbose. Keep each parsed page small enough
+        // for the JSON document and accumulated RemoteNote records to coexist.
         request["page_size"] = NOTION_QUERY_PAGE_SIZE;
         if (cursor.length())
             request["start_cursor"] = cursor;
         String body;
         serializeJson(request, body);
-        String response;
-        if (!notionRequest(config, "POST", "/v1/data_sources/" + config.dataSourceId + "/query",
-                           body, response, error))
-            return false;
         JsonDocument result;
-        const DeserializationError jsonError = deserializeJson(result, response);
-        if (jsonError)
-        {
-            error = "Notion JSON ";
-            error += jsonError.c_str();
-            error += " (" + String(response.length()) + " bytes)";
+        if (!notionRequest(config, "POST", "/v1/data_sources/" + config.dataSourceId + "/query",
+                           body, result, error))
             return false;
-        }
         for (JsonVariantConst page : result["results"].as<JsonArrayConst>())
         {
             RemoteNote note;
@@ -214,29 +223,61 @@ bool queryRemoteNotes(const NotesNotionConfig &config, std::vector<RemoteNote> &
     return true;
 }
 
-String notePropertiesJson(const NotesInternal::NoteEntry &entry)
+uint8_t changedProperties(const NotesInternal::NoteEntry &local,
+                          const NotesInternal::NoteEntry &remote)
+{
+    uint8_t changed = 0;
+    if (local.done != remote.done)
+        changed |= NotePropertyCheckbox;
+    if (local.text != remote.text)
+        changed |= NotePropertyEntry;
+    if (local.stamp.substring(0, 10) != remote.stamp.substring(0, 10))
+        changed |= NotePropertyDate;
+    if (local.category != remote.category)
+        changed |= NotePropertyCategory;
+    if (local.id != remote.id)
+        changed |= NotePropertyId;
+    return changed;
+}
+
+String notePropertiesJson(const NotesInternal::NoteEntry &entry,
+                          uint8_t included = NotePropertyAll)
 {
     JsonDocument document;
     JsonObject properties = document["properties"].to<JsonObject>();
-    JsonObject checkbox = properties["Checkbox"].to<JsonObject>();
-    checkbox["checkbox"] = entry.done;
-    JsonArray title = properties["Entry"]["title"].to<JsonArray>();
-    title.add<JsonObject>()["text"]["content"] = entry.text;
-    properties["Date"]["date"]["start"] = entry.stamp.substring(0, 10);
-    properties["Category"]["select"]["name"] = entry.category;
-    JsonArray id = properties["ID"]["rich_text"].to<JsonArray>();
-    id.add<JsonObject>()["text"]["content"] = entry.id;
+    if (included & NotePropertyCheckbox)
+    {
+        JsonObject checkbox = properties["Checkbox"].to<JsonObject>();
+        checkbox["checkbox"] = entry.done;
+    }
+    if (included & NotePropertyEntry)
+    {
+        JsonArray title = properties["Entry"]["title"].to<JsonArray>();
+        title.add<JsonObject>()["text"]["content"] = entry.text;
+    }
+    if (included & NotePropertyDate)
+        properties["Date"]["date"]["start"] = entry.stamp.substring(0, 10);
+    if (included & NotePropertyCategory)
+        properties["Category"]["select"]["name"] = entry.category;
+    if (included & NotePropertyId)
+    {
+        JsonArray id = properties["ID"]["rich_text"].to<JsonArray>();
+        id.add<JsonObject>()["text"]["content"] = entry.id;
+    }
     String body;
     serializeJson(document, body);
     return body;
 }
 
 bool updateRemoteNote(const NotesNotionConfig &config, const String &pageId,
-                      const NotesInternal::NoteEntry &entry, String &error)
+                      const NotesInternal::NoteEntry &entry, uint8_t properties,
+                      String &error)
 {
-    String response;
+    if (properties == 0)
+        return true;
+    JsonDocument response;
     return notionRequest(config, "PATCH", "/v1/pages/" + pageId,
-                         notePropertiesJson(entry), response, error);
+                         notePropertiesJson(entry, properties), response, error);
 }
 
 bool createRemoteNote(const NotesNotionConfig &config, const NotesInternal::NoteEntry &entry,
@@ -246,7 +287,7 @@ bool createRemoteNote(const NotesNotionConfig &config, const NotesInternal::Note
     document["parent"]["type"] = "data_source_id";
     document["parent"]["data_source_id"] = config.dataSourceId;
     JsonDocument properties;
-    if (deserializeJson(properties, notePropertiesJson(entry)))
+    if (deserializeJson(properties, notePropertiesJson(entry, NotePropertyAll)))
     {
         error = "Could not build Notes request";
         return false;
@@ -254,7 +295,7 @@ bool createRemoteNote(const NotesNotionConfig &config, const NotesInternal::Note
     document["properties"] = properties["properties"];
     String body;
     serializeJson(document, body);
-    String response;
+    JsonDocument response;
     return notionRequest(config, "POST", "/v1/pages", body, response, error);
 }
 
@@ -449,7 +490,8 @@ bool syncNotesWithNotion(String &message)
             }
             if (!remoteNote.entry.id.length())
                 remoteNote.entry.id = NotesInternal::createNoteId();
-            if (!updateRemoteNote(config, remoteNote.pageId, remoteNote.entry, message))
+            if (!updateRemoteNote(config, remoteNote.pageId, remoteNote.entry,
+                                  NotePropertyId, message))
                 return false;
         }
         const String remoteHash = NotesInternal::noteContentHash(remoteNote.entry);
@@ -471,7 +513,8 @@ bool syncNotesWithNotion(String &message)
             // First match: preserve the Cardputer record and establish the baseline.
             if (localHash != remoteHash)
             {
-                if (!updateRemoteNote(config, remoteNote.pageId, localNote, message))
+                if (!updateRemoteNote(config, remoteNote.pageId, localNote,
+                                      changedProperties(localNote, remoteNote.entry), message))
                     return false;
                 ++pushed;
             }
@@ -479,7 +522,8 @@ bool syncNotesWithNotion(String &message)
         }
         else if (localChanged)
         {
-            if (!updateRemoteNote(config, remoteNote.pageId, localNote, message))
+            if (!updateRemoteNote(config, remoteNote.pageId, localNote,
+                                  changedProperties(localNote, remoteNote.entry), message))
                 return false;
             localNote.syncHash = localHash;
             ++pushed;

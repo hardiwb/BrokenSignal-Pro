@@ -101,6 +101,7 @@ extern const Theme *T;
 extern uint8_t seekSeconds;       // seek step in seconds (music mode)
 extern bool wifiPowerSave;        // WiFi modem sleep for battery
 extern bool swapAltOpt;           // exchange Applications and Options shortcuts
+extern bool localWebAuthEnabled;  // require one-time credentials for local web tools
 extern uint8_t screenBrightness;  // display brightness 0..255
 extern uint16_t autoScreenOffSec; // 0 = off, else idle seconds before screen off
 extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep sleep

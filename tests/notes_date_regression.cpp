@@ -163,6 +163,11 @@ int main() {
     assert(parseDateKey("2028-02-29", parsed));
     assert(!parseDateKey("2026-02-29", parsed));
     assert(!parseDateKey("2026-09-31", parsed));
+    assert(shouldMovePastIncompleteNote({"2026-08-31 09:00", false, "overdue"}, "2026-09-01"));
+    assert(!shouldMovePastIncompleteNote({"2026-08-31 09:00", true, "completed"}, "2026-09-01"));
+    assert(!shouldMovePastIncompleteNote({"2026-09-01 09:00", false, "today"}, "2026-09-01"));
+    assert(!shouldMovePastIncompleteNote({"2026-09-02 09:00", false, "future"}, "2026-09-01"));
+    assert(!shouldMovePastIncompleteNote({"bad date", false, "invalid"}, "2026-09-01"));
     noteEntries.clear(); loadNote();
     notesSendViewedDayToXteink(false);
     assert(statusMessage == "NO NOTES");

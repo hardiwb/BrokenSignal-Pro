@@ -60,6 +60,8 @@ bool parseDateKey(const String &dateKey, struct tm &date);
 String formatDateKey(const struct tm &date);
 bool appendEntryToMonth(const NoteEntry &entry, const String &dateKey);
 bool moveSelectedNoteToDate(const String &dateKey);
+bool shouldMovePastIncompleteNote(const NoteEntry &entry, const String &targetDate);
+bool movePastIncompleteNotesToDate(const String &targetDate, size_t &movedCount);
 void toggleSelectedNoteDone();
 void toggleSelectedNoteCategory();
 void toggleSelectedNoteArtCategory();

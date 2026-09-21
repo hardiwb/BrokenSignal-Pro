@@ -47,6 +47,11 @@ void moveToDate(int)
     notesPromptMoveSelectedToDate();
 }
 
+void movePastToToday(int)
+{
+    notesMovePastIncompleteToToday();
+}
+
 void toggleCategory(int)
 {
     notesToggleSelectedCategory();
@@ -68,6 +73,7 @@ void buildNotesOptions(std::vector<AppOption> &options)
     const bool hasNote = notesHasSelection();
     const bool mutationsAllowed = !notesCalendarSyncActive();
     options.push_back({"Filter", notesFilterLabel(), true, true, false, adjustFilter});
+    options.push_back({"Move Past to Today", "", mutationsAllowed, false, true, movePastToToday});
     options.push_back({"Move to Tomorrow", "", hasNote && mutationsAllowed, false, true, moveTomorrow});
     options.push_back({"Move to Date", "", hasNote && mutationsAllowed, false, true, moveToDate});
     options.push_back({"Category", notesSelectedCategoryLabel(), hasNote && mutationsAllowed, false, true, toggleCategory});

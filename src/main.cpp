@@ -26,6 +26,7 @@
 #include "module/service/EspNowNotes.h"
 #include "module/service/OtaUpdate.h"
 #include "module/service/NotesNotion.h"
+#include "module/service/SdTransfer.h"
 #include "module/service/Bluetooth.h"
 #include "apps/notes/Notes.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
@@ -179,6 +180,7 @@ void loop()
     tickNotesCalendarSync(takeEspNowNotesResult());
   tickOtaUpdate();
   tickNotesNotionSetup();
+  tickSdTransfer();
   BluetoothService::tick();
 
   bool anyPlaying = isPlaying || radioIsPlaying;
@@ -318,6 +320,7 @@ void loop()
 
   if (deepSleepSec > 0 && !isPlaying && !radioIsPlaying && !espNowNotesBusy() &&
       !otaUpdateActive() && !notesNotionSetupActive() &&
+      !sdTransferActive() &&
       !bluetoothKeyboardModalActive() &&
       millis() - lastActivityMs >= (unsigned long)deepSleepSec * 1000UL)
   {
