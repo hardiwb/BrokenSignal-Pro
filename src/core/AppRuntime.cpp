@@ -8,7 +8,9 @@ void appRuntimeOpen(HostApp app)
     // A ready Macro Pad behaves like a normal host screen, including Fn/app
     // switching. Do not leave its shared BLE HID session running without its
     // foreground tick and local BtnG0 disconnect control.
-    if (foregroundApp == HostApp::MacroPad && app != HostApp::MacroPad &&
+    if ((foregroundApp == HostApp::MacroPad ||
+         foregroundApp == HostApp::MediaControl) &&
+        app != foregroundApp &&
         BluetoothService::keyboardSessionActive())
     {
         BluetoothService::stopKeyboardSession();

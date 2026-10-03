@@ -20,6 +20,7 @@
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "apps/macropad/MacroPad.h"
+#include "apps/mediacontrol/MediaControl.h"
 #include "apps/thermalprinter/ThermalPrinter.h"
 #include "apps/infrared/Infrared.h"
 #include "module/service/WiFi.h"
@@ -523,6 +524,13 @@ void keyboardLoop()
     {
         lastActivityMs = millis();
         handleMacroPadAppInput(ks);
+        return;
+    }
+
+    if (mediaControlModalActive())
+    {
+        lastActivityMs = millis();
+        handleMediaControlAppInput(ks);
         return;
     }
 

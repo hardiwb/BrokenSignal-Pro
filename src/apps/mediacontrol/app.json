@@ -1,0 +1,29 @@
+{
+  "id": "MediaControl",
+  "persistent_id": 9,
+  "order": 9,
+  "name": "Media Control",
+  "header_tag": "MEDIA",
+  "full_app_key": "v",
+  "includes": [
+    "apps/mediacontrol/MediaControl.h",
+    "apps/mediacontrol/MediaControlMetadata.h"
+  ],
+  "callbacks": {
+    "open": "openMediaControlApp",
+    "draw": "drawMediaControlApp",
+    "input": "handleMediaControlAppInput",
+    "tick": "tickMediaControlApp"
+  },
+  "help": {
+    "title": "MEDIA CONTROL KEYS",
+    "entries": "MEDIA_CONTROL_HELP_ENTRIES",
+    "count": "MEDIA_CONTROL_HELP_COUNT"
+  },
+  "options": {
+    "build": "buildMediaControlOptions",
+    "enter_enabled": true,
+    "show_run_hint": true
+  },
+  "quick_access": null
+}

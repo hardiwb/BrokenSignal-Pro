@@ -59,6 +59,9 @@ void sendMouseReport(
 // Sends mouse buttons without changing the service's remembered pointer
 // position. Bits 0-4 represent mouse buttons 1-5.
 void sendMouseButtons(uint8_t buttons);
+// Sends one HID Consumer Control usage, or zero to release it. Common media
+// usages include play/pause (0x00CD), mute (0x00E2), and volume up (0x00E9).
+void sendConsumerControl(uint16_t usage);
 
 // Returns and clears the service-to-UI notification flag.
 bool takeUiDirty();

@@ -38,13 +38,20 @@ const uint8_t HID_REPORT_MAP[] = {
     0x81, 0x02, 0x09, 0x38, 0x15, 0x81, 0x25, 0x7F,
     0x75, 0x08, 0x95, 0x01, 0x81, 0x06,
     0x05, 0x0C, 0x0A, 0x38, 0x02, 0x15, 0x81, 0x25, 0x7F,
-    0x75, 0x08, 0x95, 0x01, 0x81, 0x06, 0xC0, 0xC0
+    0x75, 0x08, 0x95, 0x01, 0x81, 0x06, 0xC0, 0xC0,
+
+    // Report 3: one 16-bit Consumer Control usage at a time. Keeping this as
+    // an array report supports standard media usages without a fixed bitmap.
+    0x05, 0x0C, 0x09, 0x01, 0xA1, 0x01, 0x85, 0x03,
+    0x15, 0x00, 0x26, 0xFF, 0x03, 0x19, 0x00, 0x2A, 0xFF, 0x03,
+    0x75, 0x10, 0x95, 0x01, 0x81, 0x00, 0xC0
 };
 
 BLEServer *server = nullptr;
 BLEHIDDevice *hid = nullptr;
 BLECharacteristic *inputReport = nullptr;
 BLECharacteristic *mouseInputReport = nullptr;
+BLECharacteristic *consumerInputReport = nullptr;
 BLEAdvertising *advertising = nullptr;
 BLESecurity *security = nullptr;
 Preferences preferences;
@@ -95,6 +102,7 @@ void setInputNotifications(bool enabled)
 {
     setReportNotifications(inputReport, enabled);
     setReportNotifications(mouseInputReport, enabled);
+    setReportNotifications(consumerInputReport, enabled);
 }
 
 bool addWhitelistAddress(const uint8_t *address)
@@ -361,6 +369,7 @@ void sendReleaseReport()
     const uint8_t empty[8] = {};
     sendKeyboardReport(empty);
     sendMouseReport(0, lastMouseX, lastMouseY, 0);
+    sendConsumerControl(0);
 }
 } // namespace
 
@@ -381,6 +390,7 @@ void begin()
     hid = new BLEHIDDevice(server);
     inputReport = hid->inputReport(1);
     mouseInputReport = hid->inputReport(2);
+    consumerInputReport = hid->inputReport(3);
     hid->outputReport(1);
     hid->manufacturer()->setValue("BrokenSignal Pro");
     hid->pnp(0x02, 0x303A, 0x4001, 0x0100);
@@ -770,6 +780,20 @@ void sendMouseReport(
 void sendMouseButtons(uint8_t buttons)
 {
     sendMouseReport(buttons & 0x1F, lastMouseX, lastMouseY, 0, 0);
+}
+
+void sendConsumerControl(uint16_t usage)
+{
+    if (!consumerInputReport || !keyboardReady())
+        return;
+
+    const uint8_t report[2] = {
+        static_cast<uint8_t>(usage & 0xFF),
+        static_cast<uint8_t>(usage >> 8)
+    };
+    consumerInputReport->setValue(
+        const_cast<uint8_t *>(report), sizeof(report));
+    consumerInputReport->notify();
 }
 
 bool takeUiDirty()

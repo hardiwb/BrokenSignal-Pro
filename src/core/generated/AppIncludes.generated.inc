@@ -12,6 +12,8 @@
 #include "apps/infrared/InfraredMetadata.h"
 #include "apps/macropad/MacroPad.h"
 #include "apps/macropad/MacroPadMetadata.h"
+#include "apps/mediacontrol/MediaControl.h"
+#include "apps/mediacontrol/MediaControlMetadata.h"
 #include "apps/music/MusicApp.h"
 #include "apps/music/MusicMetadata.h"
 #include "apps/notes/Notes.h"

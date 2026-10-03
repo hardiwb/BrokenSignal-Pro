@@ -124,7 +124,11 @@ static String settingsValue(int index)
     case SettingVolume:
         return String(((int)volume * 100 + 127) / 255) + "%";
     case SettingScreenOff:
-        return autoScreenOffSec == 0 ? String("Off") : String(autoScreenOffSec) + "s";
+        if (autoScreenOffSec == 0)
+            return "Off";
+        if (autoScreenOffSec < 60)
+            return String(autoScreenOffSec) + "s";
+        return String(autoScreenOffSec / 60) + "m";
     case SettingDeepSleep:
     case SettingPlaybackTimer:
     {
@@ -468,7 +472,7 @@ static void adjustSetting(int sel, int dir)
     }
     else if (sel == SettingScreenOff)
     {
-        static const uint16_t opts[] = {0, 15, 30, 60, 120};
+        static const uint16_t opts[] = {0, 15, 30, 60, 120, 300};
         const int n = sizeof(opts) / sizeof(opts[0]);
         int idx = 0;
         for (int i = 0; i < n; i++)

@@ -8,6 +8,7 @@
 #include "apps/radio/Radio.h"
 #include "apps/bluetoothkeyboard/BluetoothKeyboard.h"
 #include "apps/macropad/MacroPad.h"
+#include "apps/mediacontrol/MediaControl.h"
 #include "apps/thermalprinter/ThermalPrinter.h"
 #include "apps/infrared/Infrared.h"
 #include "module/service/WiFi.h"
@@ -34,7 +35,7 @@ ActiveSurface resolveActiveSurface()
         removeConfirmVisible || settingsInputOverlayActive() ||
         notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
         appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive() ||
-        macroPadModalActive() ||
+        macroPadModalActive() || mediaControlModalActive() ||
         thermalPrinterModalActive() || infraredModalActive())
     {
         return {SurfaceKind::OverlayModal, owner};

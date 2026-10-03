@@ -71,3 +71,11 @@
         'p',
         {0, nullptr, nullptr, nullptr, nullptr, nullptr}
     },
+    {
+        HostApp::MediaControl, "Media Control", "MEDIA",
+        openMediaControlApp, drawMediaControlApp, handleMediaControlAppInput, tickMediaControlApp,
+        "MEDIA CONTROL KEYS", MEDIA_CONTROL_HELP_ENTRIES, MEDIA_CONTROL_HELP_COUNT,
+        buildMediaControlOptions, true, true,
+        'v',
+        {0, nullptr, nullptr, nullptr, nullptr, nullptr}
+    },

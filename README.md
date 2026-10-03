@@ -133,6 +133,8 @@ and keyboard routing rules.
 - **Macro Pad**: Load game-specific BLE HID macros from MicroSD, edit version 2
   bindings on-device, and retain normal shell, app-launch, brightness, and
   volume shortcuts from the connected macro list.
+- **Media Control**: Connect to a saved or new PC and send standard BLE media
+  controls from a visible hotkey list.
 - **Thermal printer**: Compose and queue text jobs through the ESP32-C3 printer's
   versioned HTTP API, with label/continuous media settings and paper actions.
 - **Infrared remote**: Browse Flipper-format `.ir` files from microSD and send
@@ -288,6 +290,27 @@ so every configured A-Z hotkey remains available. Connection and binding-editor
 overlays remain modal. See [Macro Pad JSON files](docs/MACRO_PAD.md) for the
 profile format and editing workflow.
 
+### Media Control
+
+Select a saved PC (or pair a new one), then use the displayed hotkeys or move
+the cursor and press `Ok`. The app sends standard BLE HID Consumer Control
+commands to the connected host.
+
+| Key | Action |
+| --- | ------ |
+| `Space` | Play / pause |
+| `,` / `/` | Previous / next track |
+| `S` | Stop |
+| `0` | Mute |
+| `-` / `=` | Remote volume down / up |
+| `;` / `.` | Move selection up / down |
+| `Ok` | Send highlighted command |
+| `BtnG0` | Release and disconnect |
+
+Hosts that paired with older firmware may cache the previous HID report map.
+If media commands are not discovered after updating, forget BrokenSignal on
+the host and pair it again once.
+
 ### Global Host Shortcuts
 
 | Key | Action |
@@ -310,6 +333,7 @@ profile format and editing workflow.
 | `Fn+B` | Bluetooth Keyboard (full app) |
 | `Fn+I` | Infrared (full app) |
 | `Fn+P` | Macro Pad (full app) |
+| `Fn+V` | Media Control (full app) |
 | Assigned `Fn+key` | Quick-connect a saved Bluetooth device |
 
 Global host shortcuts are ignored by modal text inputs and confirmation overlays.
@@ -512,7 +536,7 @@ Settings include:
 | ------ | ----- |
 | Brightness | Display brightness |
 | Volume | System playback volume |
-| Screen off timer | Idle screen timeout |
+| Screen off timer | Idle screen timeout: Off, 15s, 30s, 1m, 2m, or 5m |
 | Deep Sleep timer | Idle deep-sleep timeout |
 | Playback timer | Stop playback after a selected interval |
 | Theme | Active color theme |

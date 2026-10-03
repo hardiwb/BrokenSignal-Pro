@@ -14,4 +14,5 @@ enum class HostApp : uint8_t
     ThermalPrinter = 6,
     Infrared = 7,
     MacroPad = 8,
+    MediaControl = 9,
 };
