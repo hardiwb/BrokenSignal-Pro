@@ -617,6 +617,7 @@ Available themes:
 | Corpo Chrome |
 | Miami Vice |
 | Ash |
+| Bruce Orange |
 
 Theme selection and the optional Alt/Opt shell-function swap are available from
 Control Panel and saved to `/Music/settings.cfg`.

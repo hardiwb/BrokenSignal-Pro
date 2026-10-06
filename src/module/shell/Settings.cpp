@@ -514,7 +514,7 @@ static void adjustSetting(int sel, int dir)
     }
     else if (sel == SettingTheme)
     {
-        themeIdx = (themeIdx + dir + 5) % 5;
+        themeIdx = (themeIdx + dir + THEME_COUNT) % THEME_COUNT;
         T = THEMES[themeIdx];
     }
     else if (sel == SettingTimezone)

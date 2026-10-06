@@ -55,7 +55,7 @@ bool loadBootThemeFrom(
     String key = line.substring(0, eq);
     int val = line.substring(eq + 1).toInt();
 
-    if (key == "theme" && val >= 0 && val < 5)
+    if (key == "theme" && val >= 0 && val < THEME_COUNT)
     {
       themeIdx = val;
       T = THEMES[val];

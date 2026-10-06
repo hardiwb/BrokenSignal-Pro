@@ -187,7 +187,7 @@ void adjustSystemBrightness(int direction)
 
 void setTheme(uint8_t idx)
 {
-    if (idx >= 5)
+    if (idx >= THEME_COUNT)
         return;
     themeIdx = idx;
     T = THEMES[idx];
@@ -237,7 +237,7 @@ void loadSettings()
         String key = line.substring(0, eq);
         int val = line.substring(eq + 1).toInt();
 
-        if (key == "theme" && val >= 0 && val < 5)
+        if (key == "theme" && val >= 0 && val < THEME_COUNT)
         {
             themeIdx = val;
             T = THEMES[val];

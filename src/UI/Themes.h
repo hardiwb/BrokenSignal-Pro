@@ -78,4 +78,19 @@ static const Theme T_ASH = {
     rgb(30, 30, 30),    // selRow
     "ASH"};
 
-static const Theme *THEMES[5] = {&T_NEON, &T_TERM, &T_CORP, &T_MIAMI, &T_ASH};
+static const Theme T_BRUCE_ORANGE = {
+    rgb(3, 2, 1),       // bg         warm black
+    rgb(15, 8, 2),      // hdrBg      near-black orange tint
+    rgb(255, 130, 0),   // accent1    Bruce orange
+    rgb(255, 222, 184), // accent2    warm orange-white
+    rgb(255, 177, 74),  // accent3    soft amber
+    rgb(255, 241, 224), // textBright warm white
+    rgb(198, 119, 47),  // textMid    muted orange
+    rgb(91, 44, 12),    // textDim    dark burnt orange
+    rgb(27, 13, 4),     // barBg      dark orange-black
+    rgb(43, 20, 5),     // selRow     warm selection row
+    "BRUCE ORANGE"};
+
+static const Theme *THEMES[] = {
+    &T_NEON, &T_TERM, &T_CORP, &T_MIAMI, &T_ASH, &T_BRUCE_ORANGE};
+static constexpr uint8_t THEME_COUNT = sizeof(THEMES) / sizeof(THEMES[0]);
