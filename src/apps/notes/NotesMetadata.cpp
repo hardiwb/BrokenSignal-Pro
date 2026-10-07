@@ -6,16 +6,15 @@ const HelpEntry NOTES_HELP_ENTRIES[] = {
     {"[Opt]", "Toggle Options"},
     {"[Alt]", "Toggle Applications"},
     {"[Ctrl]", "Toggle Control Panel"},
-    {"[N]", "Add note"},
+    {"[A]", "Add note"},
     {"[C]", "Quick calculator"},
     {"[E]", "Quick expense"},
     {"[-/+]", "Volume"},
     {"[Del]", "Delete note"},
     {"[S]", "Send active to Xteink"},
-    {"[Shift+S]", "Send all to Xteink"},
+    {"[Shift+S]", "Sync ESP-NOW range"},
     {"[X]", "Toggle done"},
-    {"[W]", "Toggle Personal / Work"},
-    {"[A]", "Toggle Personal / Art"},
+    {"[Space]", "Cycle category"},
     {"[Ok]", "Edit note"},
     {"[;/.]", "Cursor up / down"},
     {"[,/]", "Previous / next date"},
@@ -62,6 +61,11 @@ void syncCalendar(int)
     notesSyncCalendarToXteink();
 }
 
+void adjustCalendarScope(int direction)
+{
+    notesAdjustCalendarSyncScope(direction);
+}
+
 void syncNotion(int)
 {
     notesSyncWithNotion();
@@ -78,5 +82,6 @@ void buildNotesOptions(std::vector<AppOption> &options)
     options.push_back({"Move to Date", "", hasNote && mutationsAllowed, false, true, moveToDate});
     options.push_back({"Category", notesSelectedCategoryLabel(), hasNote && mutationsAllowed, false, true, toggleCategory});
     options.push_back({"Sync Notion", "", mutationsAllowed, false, true, syncNotion});
-    options.push_back({"Sync Calendar", "", mutationsAllowed, false, true, syncCalendar});
+    options.push_back({"ESP-NOW Range", notesCalendarSyncScopeLabel(), mutationsAllowed, true, false, adjustCalendarScope});
+    options.push_back({"Sync ESP-NOW", "", mutationsAllowed, false, true, syncCalendar});
 }

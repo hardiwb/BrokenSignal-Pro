@@ -1,5 +1,6 @@
 #include "apps/expenses/Expenses.h"
 #include "apps/expenses/ExpenseSyncTransport.h"
+#include <algorithm>
 #include <SD.h>
 #include <esp_system.h>
 #include <qrcode.h>
@@ -63,10 +64,11 @@ String formatWholeAmount(const String &value) {
     return formatted;
 }
 
-String dayTotalText() {
+String totalText(const std::vector<int> *entryIndexes, const String &prefix) {
     std::vector<CurrencyTotal> totals;
-    for (int actual : visible) {
-        const ExpenseEntry &entry = entries[actual];
+    const int count = entryIndexes ? entryIndexes->size() : entries.size();
+    for (int i = 0; i < count; ++i) {
+        const ExpenseEntry &entry = entries[entryIndexes ? (*entryIndexes)[i] : i];
         bool wholeAmount = entry.value.length() > 0;
         for (int i = 0; i < (int)entry.value.length(); ++i)
             if (entry.value[i] < '0' || entry.value[i] > '9') { wholeAmount = false; break; }
@@ -82,7 +84,7 @@ String dayTotalText() {
         total->value = addWholeAmounts(total->value, entry.value);
     }
 
-    String text = "Total: ";
+    String text = prefix;
     if (totals.empty()) text += "0 " + defaultCurrency;
     for (int i = 0; i < (int)totals.size(); ++i) {
         if (i > 0) text += " + ";
@@ -91,8 +93,12 @@ String dayTotalText() {
     return text;
 }
 
-void showDayTotal() {
-    showToast(dayTotalText(), 2000);
+String dayTotalText() {
+    return totalText(&visible, "Total: ");
+}
+
+void showMonthTotal() {
+    showToast(totalText(nullptr, "Month: "), 2000);
 }
 
 String makeExpenseId(const String &date) {
@@ -124,6 +130,100 @@ void updateDate() {
 String cleanField(String value) {
     value.replace("|", " "); value.replace("\r", " "); value.replace("\n", " "); value.trim(); return value;
 }
+bool parseExpenseLine(String line, ExpenseEntry &entry, bool &migrated) {
+    line.trim();
+    int p1 = line.indexOf('|'), p2 = line.indexOf('|', p1 + 1);
+    int p3 = line.indexOf('|', p2 + 1), p4 = line.indexOf('|', p3 + 1), p5 = line.indexOf('|', p4 + 1);
+    if (p1 < 0 || p2 < 0 || p3 < 0 || p4 < 0) return false;
+    entry = {};
+    entry.date = line.substring(0, p1);
+    entry.shared = line.substring(p1 + 1, p2).equalsIgnoreCase("X");
+    if (p5 >= 0) {
+        entry.id = line.substring(p2 + 1, p3); entry.name = line.substring(p3 + 1, p4);
+        entry.value = line.substring(p4 + 1, p5); entry.currency = line.substring(p5 + 1);
+    } else {
+        entry.id = makeExpenseId(entry.date); entry.name = line.substring(p2 + 1, p3);
+        entry.value = line.substring(p3 + 1, p4); entry.currency = line.substring(p4 + 1); migrated = true;
+    }
+    entry.currency.trim();
+    return true;
+}
+bool saveExpenseFile(const String &path, const std::vector<ExpenseEntry> &fileEntries) {
+    SD.mkdir("/Expenses"); SD.remove(path.c_str()); File f = SD.open(path, FILE_WRITE);
+    if (!f) return false;
+    for (const auto &e : fileEntries)
+        f.printf("%s|%c|%s|%s|%s|%s\n", e.date.c_str(), e.shared ? 'X' : '-', e.id.c_str(), e.name.c_str(), e.value.c_str(), e.currency.c_str());
+    f.close(); return true;
+}
+bool loadExpenseFile(const String &path, std::vector<ExpenseEntry> &fileEntries, bool &migrated) {
+    fileEntries.clear(); migrated = false; File f = SD.open(path, FILE_READ);
+    if (!f) return false;
+    while (f.available()) {
+        ExpenseEntry entry;
+        if (parseExpenseLine(f.readStringUntil('\n'), entry, migrated)) fileEntries.push_back(entry);
+    }
+    f.close(); return true;
+}
+bool expenseMonthFilename(const String &path, String &month) {
+    const int slash = path.lastIndexOf('/');
+    const String name = slash >= 0 ? path.substring(slash + 1) : path;
+    if (name.length() != 11 || name.charAt(4) != '-' || name.substring(7) != ".txt") return false;
+    for (int i = 0; i < 7; ++i)
+        if (i != 4 && !isDigit(name.charAt(i))) return false;
+    const int year = name.substring(0, 4).toInt(), monthNumber = name.substring(5, 7).toInt();
+    if (year < 2000 || year > 2099 || monthNumber < 1 || monthNumber > 12) return false;
+    month = name.substring(0, 7); return true;
+}
+bool listExpenseFiles(std::vector<String> &paths, String &error) {
+    paths.clear(); File directory = SD.open("/Expenses");
+    if (!directory) return true;
+    if (!directory.isDirectory()) { directory.close(); error = "/Expenses is not a directory"; return false; }
+    File file = directory.openNextFile();
+    while (file) {
+        String month;
+        if (!file.isDirectory() && expenseMonthFilename(String(file.name()), month))
+            paths.push_back("/Expenses/" + month + ".txt");
+        file.close(); file = directory.openNextFile();
+    }
+    directory.close(); std::sort(paths.begin(), paths.end()); return true;
+}
+bool collectPendingExpenses(const String &throughDate, std::vector<ExpenseSyncEntry> &pending,
+                            bool &morePending, String &error) {
+    constexpr size_t MAX_BATCH = 50;
+    pending.clear(); morePending = false;
+    std::vector<String> paths;
+    if (!listExpenseFiles(paths, error)) return false;
+    for (const String &path : paths) {
+        String month;
+        if (!expenseMonthFilename(path, month) || month > throughDate.substring(0, 7)) continue;
+        std::vector<ExpenseEntry> fileEntries; bool migrated = false;
+        if (!loadExpenseFile(path, fileEntries, migrated)) { error = "Cannot read " + path; return false; }
+        if (migrated && !saveExpenseFile(path, fileEntries)) { error = "Cannot update " + path; return false; }
+        for (const auto &entry : fileEntries) {
+            if (entry.shared || entry.date > throughDate) continue;
+            if (pending.size() < MAX_BATCH)
+                pending.push_back({entry.id, entry.name, entry.value, entry.currency, entry.date});
+            else
+                morePending = true;
+        }
+    }
+    return true;
+}
+bool markAcceptedExpenses(const std::vector<String> &acceptedIds, String &error) {
+    std::vector<String> paths;
+    if (!listExpenseFiles(paths, error)) return false;
+    for (const String &path : paths) {
+        std::vector<ExpenseEntry> fileEntries; bool migrated = false, changed = false;
+        if (!loadExpenseFile(path, fileEntries, migrated)) { error = "Cannot read " + path; return false; }
+        for (auto &entry : fileEntries) {
+            if (entry.shared) continue;
+            for (const String &acceptedId : acceptedIds)
+                if (entry.id == acceptedId) { entry.shared = true; changed = true; break; }
+        }
+        if ((changed || migrated) && !saveExpenseFile(path, fileEntries)) { error = "Cannot update " + path; return false; }
+    }
+    return true;
+}
 void rebuildVisible() {
     visible.clear();
     for (int i = 0; i < (int)entries.size(); ++i) if (entries[i].date == currentDate) visible.push_back(i);
@@ -142,30 +242,14 @@ void saveDefaultCurrency() {
     if (f) { f.println(defaultCurrency); f.close(); } else showHdrMsg("SD ERROR");
 }
 void saveEntries() {
-    SD.mkdir("/Expenses"); SD.remove(filePath.c_str()); File f = SD.open(filePath, FILE_WRITE);
-    if (!f) { showHdrMsg("SD ERROR"); return; }
-    for (const auto &e : entries)
-        f.printf("%s|%c|%s|%s|%s|%s\n", e.date.c_str(), e.shared ? 'X' : '-', e.id.c_str(), e.name.c_str(), e.value.c_str(), e.currency.c_str());
-    f.close();
+    if (!saveExpenseFile(filePath, entries)) showHdrMsg("SD ERROR");
 }
 void loadEntries() {
     entries.clear(); updateDate(); bool migrated = false; File f = SD.open(filePath, FILE_READ);
     if (f) {
         while (f.available()) {
-            String line = f.readStringUntil('\n'); line.trim();
-            int p1 = line.indexOf('|'), p2 = line.indexOf('|', p1 + 1);
-            int p3 = line.indexOf('|', p2 + 1), p4 = line.indexOf('|', p3 + 1), p5 = line.indexOf('|', p4 + 1);
-            if (p1 < 0 || p2 < 0 || p3 < 0 || p4 < 0) continue;
-            ExpenseEntry e; e.date = line.substring(0, p1);
-            e.shared = line.substring(p1 + 1, p2).equalsIgnoreCase("X");
-            if (p5 >= 0) {
-                e.id = line.substring(p2 + 1, p3); e.name = line.substring(p3 + 1, p4);
-                e.value = line.substring(p4 + 1, p5); e.currency = line.substring(p5 + 1);
-            } else {
-                e.id = makeExpenseId(e.date); e.name = line.substring(p2 + 1, p3);
-                e.value = line.substring(p3 + 1, p4); e.currency = line.substring(p4 + 1); migrated = true;
-            }
-            e.currency.trim(); entries.push_back(e);
+            ExpenseEntry entry;
+            if (parseExpenseLine(f.readStringUntil('\n'), entry, migrated)) entries.push_back(entry);
         }
         f.close();
     }
@@ -295,7 +379,7 @@ void drawExpenses() {
     if (modal == Modal::Qr) { drawQr(); return; }
     if (modal == Modal::UploadResult) { drawUploadResult(); return; }
     HeaderModel header; header.appHeaderTag = "EXPENSE"; header.appHeaderTitle = dayTotalText(); header.cursor = true; drawHeader(header);
-    drawList(listModel()); FooterModel footer; footer.left = "[E]Add [R]Rm"; footer.center = footerDate();
+    drawList(listModel()); FooterModel footer; footer.left = "[A]Add [R]Rm"; footer.center = footerDate();
     footer.battery = footerBatteryText(); drawFooter(footer);
 }
 void expensesNew() { beginEditor(-1); }
@@ -321,18 +405,18 @@ void expensesEditDefaultCurrency() {
     currencyInput = defaultCurrency; invalidInput = false; modal = Modal::Currency; drawExpenses();
 }
 void expensesUploadPending() {
-    if (visible.empty()) return;
+    struct tm today{}; String throughDate = currentDate;
+    if (getCurrentTime(today)) throughDate = dateKey(today);
     std::vector<ExpenseSyncEntry> pending;
-    for (int actual : visible) {
-        const ExpenseEntry &entry = entries[actual];
-        if (!entry.shared)
-            pending.push_back({entry.id, entry.name, entry.value, entry.currency, entry.date});
+    bool morePending = false; String error;
+    if (!collectPendingExpenses(throughDate, pending, morePending, error)) {
+        uploadResult = error; modal = Modal::UploadResult; drawExpenses(); return;
     }
     if (pending.empty()) {
-        uploadResult = "All expenses already processed";
+        uploadResult = "All past expenses already processed";
         modal = Modal::UploadResult; drawExpenses(); return;
     }
-    ExpenseSyncConfig config; String error;
+    ExpenseSyncConfig config;
     if (!loadExpenseSyncConfig(config, error)) {
         uploadResult = error; modal = Modal::UploadResult; drawExpenses(); return;
     }
@@ -345,10 +429,12 @@ void expensesUploadPending() {
     progress.items.push_back("Uploading " + String(pending.size()) + " expenses..."); progress.confirmText = "Please wait"; drawOverlay(progress);
     std::vector<String> acceptedIds;
     uploadExpenseBatch(config, pending, acceptedIds, uploadResult);
-    for (int actual : visible)
-        for (const auto &acceptedId : acceptedIds)
-            if (entries[actual].id == acceptedId) { entries[actual].shared = true; break; }
-    if (!acceptedIds.empty()) saveEntries();
+    if (!acceptedIds.empty()) {
+        String saveError;
+        if (!markAcceptedExpenses(acceptedIds, saveError)) uploadResult += "; " + saveError;
+        loadEntries();
+    }
+    if (morePending && acceptedIds.size() == pending.size()) uploadResult += "; more pending";
     modal = Modal::UploadResult; drawExpenses();
 }
 bool expensesResumePendingUpload() {
@@ -438,9 +524,9 @@ void handleExpensesInput(Keyboard_Class::KeysState &ks) {
             selected = shortcutTarget; marqueeStart = millis();
             expensesEdit(); return;
         }
-        if (c == 'e' || c == 'E') { expensesNew(); return; }
+        if (c == 'a' || c == 'A' || c == 'e' || c == 'E') { expensesNew(); return; }
         if (c == 'r' || c == 'R') { expensesDelete(); return; }
-        if (c == 't' || c == 'T') { showDayTotal(); return; }
+        if (c == 't' || c == 'T') { showMonthTotal(); return; }
         if (c == 'x' || c == 'X') { expensesToggleSynced(); return; }
         if (c == ',' || c == '/') {
             dayOffset += c == ',' ? -1 : 1; selected = scrollTop = 0; loadEntries(); drawExpenses(); return;

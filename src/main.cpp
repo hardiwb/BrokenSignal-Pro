@@ -94,6 +94,9 @@ void setup()
   Serial.println();
   Serial.println("=== BOOT START ===");
 
+  const bool g0Wake = wokeFromG0DeepSleep();
+  Serial.printf("Wake source: %s\n", g0Wake ? "BtnG0 deep sleep" : "normal boot");
+
   Serial.println("[1] WiFi OFF");
   WiFi.persistent(false);
   WiFi.mode(WIFI_OFF);
@@ -158,7 +161,7 @@ void setup()
   batteryLevel = (int)min((int32_t)99, M5.Power.getBatteryLevel());
   batteryLastMs = millis();
   const HostApp bootApp =
-      esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0
+      g0Wake
           ? lastOpenedApp
           : HostApp::Notes;
   appRuntimeOpen(bootApp);

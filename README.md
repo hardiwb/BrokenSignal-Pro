@@ -390,11 +390,10 @@ Control Panel. Modal editors and confirmations keep input until closed.
 
 | Key | Action |
 | --- | ------ |
-| `N` | Add note |
+| `A` (or `N`) | Add note |
 | `R` | Remove note |
 | `X` | Toggle done |
-| `W` | Toggle category between Personal and Work |
-| `A` | Toggle category between Personal and Art |
+| `Space` | Cycle category through Personal, Work, and Art |
 | `Ok` | Edit selected note |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
@@ -408,9 +407,9 @@ Notes use monthly files under `/Notes/`.
 
 In the note editor, `Tab` switches between note text and date. `Fn+Up/Down`
 changes the date, while `Fn+Left/Right` moves the active field cursor.
-Personal is the default category. Work notes show `#w` and Art notes show `#A`;
-pressing their category key again restores Personal. The Category option cycles
-through Personal, Work, and Art.
+Personal is the default category. Work notes show `#w` and Art notes show `#A`.
+Press `Space` or use the Category option to cycle through Personal, Work, and
+Art.
 
 Use **Options > Move Past to Today** to carry every unchecked note dated before
 today forward to today. Checked notes and notes dated today or later are left
@@ -432,17 +431,17 @@ upload to the PC companion.
 
 | Key | Action |
 | --- | ------ |
-| `E` | Add expense |
+| `A` (or `E`) | Add expense |
 | `R` | Remove selected expense |
-| `T` | Show the displayed day's total as a toast |
+| `T` | Show the displayed month's total as a toast |
 | `X` | Toggle the selected expense's shared/processed display state |
 | `Ok` | Edit selected expense |
 | `;` / `.` | Cursor up / down |
 | `,` / `/` | Previous / next date |
 | `Opt` | Open expense actions |
 
-Expense Options include moving an entry, editing/deleting it, syncing all
-unmarked entries for the displayed day to the PC, sharing the day's entries as QR pages, and changing
+Expense Options include moving an entry, editing/deleting it, syncing up to 50
+unmarked entries from today and earlier dates to the PC, sharing the day's entries as QR pages, and changing
 the default currency. Upload automatically opens the WiFi connection flow when
 the Cardputer is offline and resumes after a successful connection.
 New and existing expense editors put the amount first and the expense name

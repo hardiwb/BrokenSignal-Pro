@@ -87,8 +87,13 @@ bool notionRequest(const NotesNotionConfig &config, const char *method,
 
     if (status <= 0)
     {
+        char tlsError[160] = {};
+        const int tlsCode = client.lastError(tlsError, sizeof(tlsError));
+        Serial.printf("[NOTION] connection failed http=%d tls=%d detail=%s heap=%u\n",
+                      status, tlsCode, tlsError[0] ? tlsError : "none",
+                      static_cast<unsigned>(ESP.getFreeHeap()));
         http.end();
-        error = "Notion connection failed " + String(status);
+        error = "Notion connection failed " + String(status) + " TLS " + String(tlsCode);
         return false;
     }
 
@@ -180,44 +185,55 @@ bool parseRemotePage(JsonVariantConst page, RemoteNote &remote)
     return remote.pageId.length() && remote.entry.text.length() && remote.entry.stamp.length() >= 10;
 }
 
-bool queryRemoteNotes(const NotesNotionConfig &config, std::vector<RemoteNote> &notes, String &error)
+template <typename Handler>
+bool forEachRemoteNote(const NotesNotionConfig &config, Handler handler, String &error)
 {
     String cursor;
     bool hasMore = true;
+    size_t noteCount = 0;
     while (hasMore)
     {
-        JsonDocument request;
-        // Notion page objects are verbose. Keep each parsed page small enough
-        // for the JSON document and accumulated RemoteNote records to coexist.
-        request["page_size"] = NOTION_QUERY_PAGE_SIZE;
-        if (cursor.length())
-            request["start_cursor"] = cursor;
-        String body;
-        serializeJson(request, body);
-        JsonDocument result;
-        if (!notionRequest(config, "POST", "/v1/data_sources/" + config.dataSourceId + "/query",
-                           body, result, error))
-            return false;
-        for (JsonVariantConst page : result["results"].as<JsonArrayConst>())
+        std::vector<RemoteNote> pageNotes;
+        pageNotes.reserve(NOTION_QUERY_PAGE_SIZE);
         {
-            RemoteNote note;
-            if (parseRemotePage(page, note))
+            JsonDocument request;
+            // Notion page objects are verbose. Keep each parsed page small and
+            // release its JSON document before issuing any nested update request.
+            request["page_size"] = NOTION_QUERY_PAGE_SIZE;
+            if (cursor.length())
+                request["start_cursor"] = cursor;
+            String body;
+            serializeJson(request, body);
+            JsonDocument result;
+            if (!notionRequest(config, "POST", "/v1/data_sources/" + config.dataSourceId + "/query",
+                               body, result, error))
+                return false;
+            for (JsonVariantConst page : result["results"].as<JsonArrayConst>())
             {
-                if (notes.size() >= MAX_SYNC_NOTES)
+                RemoteNote note;
+                if (parseRemotePage(page, note))
                 {
-                    error = "More than 200 Notion notes";
-                    return false;
+                    if (noteCount >= MAX_SYNC_NOTES)
+                    {
+                        error = "More than 200 Notion notes";
+                        return false;
+                    }
+                    pageNotes.push_back(note);
+                    ++noteCount;
                 }
-                notes.push_back(note);
             }
+            hasMore = result["has_more"] | false;
+            cursor = String(result["next_cursor"] | "");
         }
-        hasMore = result["has_more"] | false;
-        cursor = String(result["next_cursor"] | "");
+
         if (hasMore && !cursor.length())
         {
             error = "Missing Notion cursor";
             return false;
         }
+        for (auto &note : pageNotes)
+            if (!handler(note))
+                return false;
         delay(1);
     }
     return true;
@@ -430,13 +446,6 @@ int findLocal(const std::vector<NotesInternal::NoteEntry> &notes, const String &
     return -1;
 }
 
-int findRemote(const std::vector<RemoteNote> &notes, const String &id)
-{
-    for (size_t i = 0; i < notes.size(); ++i)
-        if (notes[i].entry.id == id)
-            return static_cast<int>(i);
-    return -1;
-}
 } // namespace
 
 bool syncNotesWithNotion(String &message)
@@ -457,30 +466,32 @@ bool syncNotesWithNotion(String &message)
 
     std::vector<NotesInternal::NoteEntry> local;
     std::vector<String> months;
+    // Avoid heap fragmentation when remote-only notes expand this vector while
+    // repeated TLS handshakes still require a large contiguous allocation.
+    local.reserve(MAX_SYNC_NOTES);
     if (!loadLocalNotes(local, months, message))
-        return false;
-    std::vector<RemoteNote> remote;
-    if (!queryRemoteNotes(config, remote, message))
         return false;
 
     int pulled = 0;
     int pushed = 0;
     int conflicts = 0;
-    for (auto &remoteNote : remote)
+    std::vector<uint8_t> remoteSeen(local.size(), 0);
+    remoteSeen.reserve(MAX_SYNC_NOTES);
+    const bool queried = forEachRemoteNote(config, [&](RemoteNote &remoteNote)
     {
         if (!remoteNote.entry.id.length())
         {
             // Pair an exported/legacy Notion row with an identical local note
             // before allocating a new ID. This makes the first migration
             // idempotent instead of duplicating the same note on both sides.
-            for (auto &localNote : local)
+            for (size_t localIndex = 0; localIndex < local.size(); ++localIndex)
             {
+                auto &localNote = local[localIndex];
                 const bool sameLegacyNote =
                     localNote.stamp.substring(0, 10) == remoteNote.entry.stamp.substring(0, 10) &&
                     localNote.done == remoteNote.entry.done &&
                     localNote.text == remoteNote.entry.text;
-                if (sameLegacyNote &&
-                    findRemote(remote, localNote.id) < 0)
+                if (sameLegacyNote && !remoteSeen[localIndex])
                 {
                     remoteNote.entry.id = localNote.id;
                     if (!localNote.syncHash.length())
@@ -500,10 +511,12 @@ bool syncNotesWithNotion(String &message)
         {
             remoteNote.entry.syncHash = remoteHash;
             local.push_back(remoteNote.entry);
+            remoteSeen.push_back(1);
             ++pulled;
-            continue;
+            return true;
         }
 
+        remoteSeen[localIndex] = 1;
         auto &localNote = local[localIndex];
         const String localHash = NotesInternal::noteContentHash(localNote);
         const bool localChanged = localNote.syncHash.length() && localHash != localNote.syncHash;
@@ -538,12 +551,16 @@ bool syncNotesWithNotion(String &message)
             localNote.syncHash = remoteHash;
             ++pulled;
         }
-    }
+        return true;
+    }, message);
+    if (!queried)
+        return false;
 
-    for (auto &localNote : local)
+    for (size_t localIndex = 0; localIndex < local.size(); ++localIndex)
     {
-        if (findRemote(remote, localNote.id) >= 0)
+        if (remoteSeen[localIndex])
             continue;
+        auto &localNote = local[localIndex];
         if (!createRemoteNote(config, localNote, message))
             return false;
         localNote.syncHash = NotesInternal::noteContentHash(localNote);

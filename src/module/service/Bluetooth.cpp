@@ -459,6 +459,21 @@ void tick()
     }
 }
 
+void shutdown()
+{
+    if (!initialized)
+        return;
+
+    stopKeyboardSession();
+    if (preferencesOpen)
+    {
+        preferences.end();
+        preferencesOpen = false;
+    }
+    BLEDevice::deinit(true);
+    initialized = false;
+}
+
 void refreshBonds()
 {
     storedBondCount = 0;

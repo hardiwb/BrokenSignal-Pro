@@ -1,6 +1,7 @@
 #include <SD.h>
 #include <M5Cardputer.h>
 #include <esp_sleep.h>
+#include <driver/rtc_io.h>
 #include "core/System.h"
 #include "core/State.h"
 #include "core/AppRegistry.h"
@@ -22,6 +23,7 @@
 #include "module/shell/Debug.h"
 #include "module/service/WiFi.h"
 #include "module/service/Clock.h"
+#include "module/service/Bluetooth.h"
 
 void drawCurrentScreen()
 {
@@ -332,11 +334,27 @@ void saveSettings()
 
 void enterDeepSleep()
 {
-    // Cardputer ADV exposes the keyboard controller interrupt on GPIO 11.
-    // A key press pulls it low and wakes the ESP32 from deep sleep.
-    pinMode(11, INPUT_PULLUP);
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_11, 0);
-    M5Cardputer.Display.sleep();
+    // BtnG0 is GPIO0 on both Cardputer and Cardputer ADV. It is normally
+    // pulled high; pressing it pulls the RTC-capable pin low.
+    pinMode(GPIO_NUM_0, INPUT_PULLUP);
+    rtc_gpio_pulldown_dis(GPIO_NUM_0);
+    rtc_gpio_pullup_en(GPIO_NUM_0);
+    esp_sleep_enable_ext0_wakeup(GPIO_NUM_0, 0);
+
+    // Release active transports and peripherals before removing the display.
+    BluetoothService::shutdown();
+    WiFi.disconnect(true, true);
     WiFi.mode(WIFI_OFF);
+    M5Cardputer.Speaker.end();
+    SD.end();
+
+    M5Cardputer.Display.setBrightness(0);
+    M5Cardputer.Display.sleep();
+    delay(20);
     esp_deep_sleep_start();
+}
+
+bool wokeFromG0DeepSleep()
+{
+    return esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0;
 }

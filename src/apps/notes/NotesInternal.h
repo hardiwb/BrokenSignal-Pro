@@ -36,6 +36,10 @@ extern bool noteEditorVisible;
 extern bool noteEditorDateInvalid;
 extern bool noteMoveDateVisible;
 extern bool noteMoveDateInvalid;
+extern bool notionSyncResultVisible;
+extern String notionSyncResult;
+extern bool calendarSyncResultVisible;
+extern String calendarSyncResult;
 extern int noteEditorField;
 extern int noteEditTextCursor;
 extern int noteEditDateCursor;
@@ -81,4 +85,6 @@ ListModel buildNotesListModel();
 void drawNotesList();
 void redrawNotesSelection(int oldSelected, int oldScrollTop);
 void drawNotesFooter();
+void drawNotionSyncResult();
+void drawCalendarSyncResult();
 } // namespace NotesInternal

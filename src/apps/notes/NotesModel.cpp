@@ -51,6 +51,11 @@ int noteEditDateCursor = 0;
 bool noteMoveDateVisible = false;
 bool noteMoveDateInvalid = false;
 String noteMoveDateInput;
+bool notionSyncResultVisible = false;
+String notionSyncResult;
+bool notionSyncInProgress = false;
+bool calendarSyncResultVisible = false;
+String calendarSyncResult;
 int noteEditIndex = -1;
 NotesViewMode notesViewMode = NotesViewMode::Day;
 int notesDayOffset = 0;
@@ -548,6 +553,8 @@ void notesClose()
     notesMode = false;
     noteEditorVisible = false;
     noteMoveDateVisible = false;
+    notionSyncResultVisible = false;
+    calendarSyncResultVisible = false;
     noteEditIndex = -1;
 
     Serial.println("Notes: CLOSE");
@@ -559,6 +566,18 @@ void drawNotes()
 {
     if (!notesMode)
         return;
+
+    if (notionSyncResultVisible)
+    {
+        drawNotionSyncResult();
+        return;
+    }
+
+    if (calendarSyncResultVisible)
+    {
+        drawCalendarSyncResult();
+        return;
+    }
 
     clampNotesSelection();
     drawNotesHeader();
@@ -598,9 +617,30 @@ void drawNotesMoveDateEditor()
     drawOverlay(model);
 }
 
+void NotesInternal::drawNotionSyncResult()
+{
+    OverlayModel model;
+    model.type = OverlayType::Message;
+    model.title = "NOTION SYNC";
+    model.items.push_back(notionSyncResult);
+    model.confirmText = notionSyncInProgress ? "Please wait" : "[Esc/Ok] Close";
+    drawOverlay(model);
+}
+
+void NotesInternal::drawCalendarSyncResult()
+{
+    OverlayModel model;
+    model.type = OverlayType::Message;
+    model.title = "NOTES SYNC";
+    model.items.push_back(calendarSyncResult);
+    model.confirmText = notesCalendarSyncActive() ? "Please wait" : "[Esc/Ok] Close";
+    drawOverlay(model);
+}
+
 bool notesInputActive()
 {
-    return notesMode || noteEditorVisible || noteMoveDateVisible;
+    return notesMode || noteEditorVisible || noteMoveDateVisible ||
+           notionSyncResultVisible || calendarSyncResultVisible;
 }
 
 bool notesEditorVisible()
@@ -611,6 +651,20 @@ bool notesEditorVisible()
 bool notesMoveDateInputActive()
 {
     return noteMoveDateVisible;
+}
+
+bool notesSyncResultActive()
+{
+    return notionSyncResultVisible || calendarSyncResultVisible;
+}
+
+void closeNotesSyncResult()
+{
+    if (notionSyncInProgress || notesCalendarSyncActive())
+        return;
+    notionSyncResultVisible = false;
+    calendarSyncResultVisible = false;
+    drawNotes();
 }
 
 bool notesHasSelection()
@@ -839,15 +893,26 @@ void notesSyncWithNotion()
     notionSyncPendingWifi = false;
     stopAudio();
     stopRadioStream();
-    showHdrMsg("SYNCING");
+    notionSyncResult = "Syncing...";
+    notionSyncResultVisible = true;
+    notionSyncInProgress = true;
+    drawNotes();
     String message;
     const bool synced = syncNotesWithNotion(message);
+    notionSyncInProgress = false;
     Serial.print("Notes Notion: ");
     Serial.println(message);
     NotesInternal::loadNote();
     if (notesMode)
+    {
+        notionSyncResult = synced ? message : "FAILED: " + message;
+        notionSyncResultVisible = true;
         drawNotes();
-    showHdrMsg(synced ? "SYNCED" : "SYNC ERR");
+    }
+    else
+    {
+        showHdrMsg(synced ? "SYNCED" : "SYNC ERR");
+    }
 }
 
 bool notesResumePendingWifiAction()
@@ -897,6 +962,8 @@ void notesLoop()
 
     const bool notesScreenVisible =
         notesMode && !noteEditorVisible && !noteMoveDateVisible &&
+        !notionSyncResultVisible && !calendarSyncResultVisible &&
+        !notesCalendarSyncActive() &&
         !optionsMenuVisible && !applicationsMenuVisible &&
         !settingsMenuVisible && !helpVisible &&
         !debugOverlayVisible && !calculatorVisible;

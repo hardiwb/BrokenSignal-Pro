@@ -62,10 +62,9 @@ the database ID is changed in the setup page, that cached ID is cleared.
 Open Notes and choose **Options > Sync Notion**. Playback stops to leave enough
 memory for HTTPS and JSON processing. The first sync:
 
-Press `W` on a selected Cardputer note to toggle between Personal and Work, or
-press `A` to toggle between Personal and Art. Work notes display `#w` and Art
-notes display `#A`; the next sync writes `Personal`, `Work`, or `Art` to
-Notion's `Category` property.
+Press `Space` on a selected Cardputer note to cycle through Personal, Work, and
+Art. Work notes display `#w` and Art notes display `#A`; the next sync writes
+`Personal`, `Work`, or `Art` to Notion's `Category` property.
 
 - assigns stable IDs to legacy Cardputer notes;
 - assigns an ID to Notion rows whose `ID` property is blank;
@@ -88,8 +87,12 @@ therefore leaves the original SD records untouched.
 
 Notion query responses are deliberately limited to five rows per request. The
 firmware requests HTTP/1.0 identity framing and passes the HTTPS response stream
-directly to ArduinoJson. Do not replace this with `HTTPClient::getString()` or
-another full-body `String` without re-evaluating peak heap use.
+directly to ArduinoJson. Each page is normalized and reconciled before the next
+page is requested, so remote rows do not accumulate in a second in-memory
+collection. The local collection is preallocated to avoid fragmenting the heap
+while later TLS handshakes still need a large contiguous allocation. Do not
+replace this with `HTTPClient::getString()` or another full-body `String`, or
+restore an all-remote-rows vector, without re-evaluating peak heap use.
 
 This design addresses a failure observed with a 61-line monthly Notes file. A
 chunked Notion response grew to 7,182 bytes before `HTTPClient::getString()`
@@ -99,8 +102,9 @@ the beginning of an otherwise valid JSON document. The note file itself was not
 malformed, and reducing or rewriting its lines was not the appropriate repair.
 
 Streaming avoids holding both the complete encoded response and the parsed JSON
-document in memory at the same time. This applies to database discovery, query,
-page creation, page updates, and Notion error responses.
+document in memory at the same time. Page-at-a-time reconciliation also avoids
+retaining a duplicate copy of every remote note. This applies to database
+discovery, query, page creation, page updates, and Notion error responses.
 
 ## Troubleshooting
 
@@ -117,6 +121,14 @@ message and verify whether the network disconnected or timed out during the
 request. Keep the query page size at five while diagnosing the transport. Do
 not delete Notes files, reset the Notion database, or increase the page size as
 a first response.
+
+### `Notion connection failed -1 TLS -32512`
+
+This TLS code means the SSL client could not allocate enough memory for the next
+connection. Install firmware with page-at-a-time reconciliation and retry. A
+large Notion database must not be accumulated in a second `RemoteNote` vector;
+doing so can leave too little contiguous heap for a later TLS handshake even
+when total note counts remain within the documented limit.
 
 ### Other Notion errors
 

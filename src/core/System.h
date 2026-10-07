@@ -15,3 +15,4 @@ void setTheme(uint8_t idx);
 void toggleScreen();
 void wakeScreen();
 void enterDeepSleep();
+bool wokeFromG0DeepSleep();

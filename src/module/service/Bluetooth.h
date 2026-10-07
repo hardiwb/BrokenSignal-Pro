@@ -21,6 +21,7 @@ enum class KeyboardLinkState : uint8_t
 // not initialize or compete for the ESP32 Bluetooth controller independently.
 void begin();
 void tick();
+void shutdown();
 
 void refreshBonds();
 int bondCount();

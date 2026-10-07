@@ -410,6 +410,12 @@ void handleModalSurfaceInput(Keyboard_Class::KeysState &ks)
         return;
     }
 
+    if (notesSyncResultActive())
+    {
+        handleNotesInput(ks);
+        return;
+    }
+
     if (expensesModalActive())
     {
         handleExpensesInput(ks);

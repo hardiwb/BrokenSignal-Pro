@@ -42,6 +42,19 @@ The sender should package visible notes for the selected day and transmit them
 to a paired/broadcast receiver. The receiver can render a simple daily note page
 on e-ink.
 
+The Notes options now expose an **ESP-NOW Range** selector with four modes:
+
+- **Today** sends the current local calendar day.
+- **This Week** sends Monday through Sunday of the current local week.
+- **This Month** sends the current local calendar month.
+- **All** sends every stored Notes day.
+
+**All** uses the version 3 begin/note/commit snapshot transaction and replaces
+the receiver calendar only after its count and digest validate. The three
+partial ranges send compatible per-day updates without a snapshot commit, so
+dates outside the range are preserved. With the current protocol an empty day
+cannot clear an existing receiver day; scoped modes update non-empty days only.
+
 ## Protocol Sketch
 
 Use a small application-level packet on top of ESP-NOW.

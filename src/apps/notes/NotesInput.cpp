@@ -14,6 +14,24 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
     if (!notesInputActive())
         return;
 
+    if (calendarSyncResultVisible)
+    {
+        if (keyboardBackPressed(ks) || ks.enter)
+        {
+            closeNotesSyncResult();
+        }
+        return;
+    }
+
+    if (notionSyncResultVisible)
+    {
+        if (keyboardBackPressed(ks) || ks.enter)
+        {
+            closeNotesSyncResult();
+        }
+        return;
+    }
+
     if (noteMoveDateVisible)
     {
         if (keyboardBackPressed(ks))
@@ -184,15 +202,15 @@ void handleNotesInput(Keyboard_Class::KeysState &ks)
         switch (c)
         {
         case 'h': case 'H': toggleHelp(); return;
+        case 'a': case 'A':
         case 'n': case 'N': beginNoteEditor(-1); return;
-        case 'a': case 'A': toggleSelectedNoteArtCategory(); return;
+        case ' ': cycleSelectedNoteCategory(); return;
         case 't': case 'T': jumpToToday(); return;
         case 'u': case 'U': selectTopNote(); return;
         case 'b': case 'B': selectBottomNote(); return;
         case 's': notesSendViewedDayToXteink(false); return;
         case 'S': notesSyncCalendarToXteink(); return;
         case 'x': case 'X': toggleSelectedNoteDone(); return;
-        case 'w': case 'W': toggleSelectedNoteCategory(); return;
         case ';':
         case '.':
             if (visibleNoteCount() > 0)

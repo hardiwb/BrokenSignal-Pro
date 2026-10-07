@@ -5,6 +5,7 @@
 #include "apps/notes/NotesInternal.h"
 #include "core/State.h"
 #include "core/System.h"
+#include "module/service/Clock.h"
 #include "module/service/EspNowNotes.h"
 
 namespace
@@ -34,7 +35,19 @@ enum class NextNoteResult : uint8_t
     InvalidDate
 };
 
+enum class CalendarSyncScope : uint8_t
+{
+    Today,
+    ThisWeek,
+    ThisMonth,
+    All,
+    Count
+};
+
 CalendarSyncState syncState = CalendarSyncState::Idle;
+CalendarSyncScope syncScope = CalendarSyncScope::Today;
+String syncStartDate;
+String syncEndDate;
 String syncMonth;
 uint32_t syncDayMask = 0;
 uint8_t syncNextDay = 1;
@@ -43,6 +56,57 @@ uint16_t syncCompletedEntries = 0;
 uint32_t syncDigest = 0;
 uint32_t syncSequence = 0;
 static char syncMessage[sticky_note::MAX_MESSAGE_BYTES + 1] = {};
+
+bool usesSnapshotProtocol()
+{
+    return syncScope == CalendarSyncScope::All;
+}
+
+bool prepareSyncRange()
+{
+    syncStartDate = "";
+    syncEndDate = "";
+    if (syncScope == CalendarSyncScope::All)
+        return true;
+
+    struct tm today{};
+    if (!getCurrentTime(today))
+        return false;
+
+    if (syncScope == CalendarSyncScope::Today)
+    {
+        syncStartDate = NotesInternal::formatDateKey(today);
+        syncEndDate = syncStartDate;
+        return true;
+    }
+
+    if (syncScope == CalendarSyncScope::ThisWeek)
+    {
+        const int daysSinceMonday = (today.tm_wday + 6) % 7;
+        today.tm_mday -= daysSinceMonday;
+        mktime(&today);
+        syncStartDate = NotesInternal::formatDateKey(today);
+        today.tm_mday += 6;
+        mktime(&today);
+        syncEndDate = NotesInternal::formatDateKey(today);
+        return true;
+    }
+
+    today.tm_mday = 1;
+    mktime(&today);
+    syncStartDate = NotesInternal::formatDateKey(today);
+    today.tm_mon += 1;
+    today.tm_mday = 0;
+    mktime(&today);
+    syncEndDate = NotesInternal::formatDateKey(today);
+    return true;
+}
+
+bool dateInSyncRange(const String &dateKey)
+{
+    return syncScope == CalendarSyncScope::All ||
+           (dateKey >= syncStartDate && dateKey <= syncEndDate);
+}
 
 bool parseMonthFilename(const String &path, String &month)
 {
@@ -205,6 +269,8 @@ NextNoteResult loadNextSnapshotNote(sticky_note::Note &note)
         char dateBuffer[11];
         snprintf(dateBuffer, sizeof(dateBuffer), "%s-%02u", syncMonth.c_str(), static_cast<unsigned>(day));
         const String dateKey(dateBuffer);
+        if (!dateInSyncRange(dateKey))
+            continue;
         size_t messageLength = 0;
         const ComposeResult composeResult = composeDay(dateKey, messageLength);
         if (composeResult == ComposeResult::Empty)
@@ -231,7 +297,30 @@ void finishSync(const char *message)
     syncState = CalendarSyncState::Idle;
     resetCalendarCursor();
     syncSequence = 0;
-    showHdrMsg(message);
+    if (notesMode)
+    {
+        NotesInternal::calendarSyncResult = message;
+        NotesInternal::calendarSyncResultVisible = true;
+        drawNotes();
+    }
+    else
+    {
+        showHdrMsg(message);
+    }
+}
+
+void showSyncModal(const String &message)
+{
+    if (notesMode)
+    {
+        NotesInternal::calendarSyncResult = message;
+        NotesInternal::calendarSyncResultVisible = true;
+        drawNotes();
+    }
+    else
+    {
+        showHdrMsg(message.c_str());
+    }
 }
 
 bool handleSnapshotReadError(NextNoteResult result)
@@ -280,14 +369,14 @@ void showSyncProgress()
 {
     if (syncEntryCount > 999)
     {
-        showHdrMsg("SYNCING");
+        showSyncModal("Syncing...");
         return;
     }
     char status[9];
     snprintf(status, sizeof(status), "%u/%u",
              static_cast<unsigned>(syncCompletedEntries + 1),
              static_cast<unsigned>(syncEntryCount));
-    showHdrMsg(status);
+    showSyncModal("Syncing " + String(status));
 }
 
 void startCommit()
@@ -297,7 +386,7 @@ void startCommit()
     if (result == EspNowNotesStartResult::Started)
     {
         syncState = CalendarSyncState::WaitingForCommit;
-        showHdrMsg("COMMIT");
+        showSyncModal("Finalizing...");
         return;
     }
     finishSync(result == EspNowNotesStartResult::RadioPlaying ? "RADIO ON" : "ERROR");
@@ -310,7 +399,13 @@ void startNextCalendarDay()
     const NextNoteResult next = loadNextSnapshotNote(note);
     if (next == NextNoteResult::Done)
     {
-        startCommit();
+        if (usesSnapshotProtocol())
+            startCommit();
+        else
+        {
+            cancelEspNowNotes();
+            finishSync(syncEntryCount == 0 ? "NO NOTES" : "SYNCED");
+        }
         return;
     }
     if (handleSnapshotReadError(next))
@@ -333,6 +428,26 @@ void startNextCalendarDay()
 }
 } // namespace
 
+String notesCalendarSyncScopeLabel()
+{
+    switch (syncScope)
+    {
+    case CalendarSyncScope::Today: return "Today";
+    case CalendarSyncScope::ThisWeek: return "This Week";
+    case CalendarSyncScope::ThisMonth: return "This Month";
+    case CalendarSyncScope::All: return "All";
+    case CalendarSyncScope::Count: break;
+    }
+    return "Today";
+}
+
+void notesAdjustCalendarSyncScope(int direction)
+{
+    const int count = static_cast<int>(CalendarSyncScope::Count);
+    const int current = static_cast<int>(syncScope);
+    syncScope = static_cast<CalendarSyncScope>((current + (direction < 0 ? -1 : 1) + count) % count);
+}
+
 void notesSyncCalendarToXteink()
 {
     if (syncState != CalendarSyncState::Idle || espNowNotesBusy())
@@ -340,17 +455,33 @@ void notesSyncCalendarToXteink()
         showHdrMsg("BUSY");
         return;
     }
+    if (!prepareSyncRange())
+    {
+        showHdrMsg("NO DATE");
+        return;
+    }
     if (!prepareSnapshot())
         return;
 
     syncCompletedEntries = 0;
+    if (!usesSnapshotProtocol())
+    {
+        if (syncEntryCount == 0)
+        {
+            finishSync("NO NOTES");
+            return;
+        }
+        resetCalendarCursor();
+        startNextCalendarDay();
+        return;
+    }
     syncSequence = createEspNowNotesSequence();
     const EspNowNotesStartResult result = startEspNowSnapshotControl(
         sticky_note::TYPE_SNAPSHOT_BEGIN, syncSequence, syncEntryCount, syncDigest);
     if (result == EspNowNotesStartResult::Started)
     {
         syncState = CalendarSyncState::WaitingForBegin;
-        showHdrMsg("BEGIN");
+        showSyncModal("Starting...");
         return;
     }
     finishSync(result == EspNowNotesStartResult::RadioPlaying ? "RADIO ON" : "ERROR");

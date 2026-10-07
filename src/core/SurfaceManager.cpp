@@ -33,7 +33,8 @@ ActiveSurface resolveActiveSurface()
 
     if (wifiPassOverlayVisible || addUrlOverlayVisible || addNameOverlayVisible ||
         removeConfirmVisible || settingsInputOverlayActive() ||
-        notesMoveDateInputActive() || expensesModalActive() || calculatorEditActive() ||
+        notesMoveDateInputActive() || notesSyncResultActive() ||
+        expensesModalActive() || calculatorEditActive() ||
         appRuntimeQuickAccessActive() || bluetoothKeyboardModalActive() ||
         macroPadModalActive() || mediaControlModalActive() ||
         thermalPrinterModalActive() || infraredModalActive())
@@ -91,6 +92,12 @@ bool closeTopmostSurface(const ActiveSurface &surface)
         if (notesMoveDateInputActive())
         {
             cancelNotesMoveDateInput();
+            return true;
+        }
+
+        if (notesSyncResultActive())
+        {
+            closeNotesSyncResult();
             return true;
         }
 
