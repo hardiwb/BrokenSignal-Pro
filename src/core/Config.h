@@ -34,9 +34,13 @@ constexpr int SCREEN_H = 135;
 // Battery
 #define BATTERY_INTERVAL (2UL * 60 * 1000)
 
-// Settings (persisted in settings.cfg)
+// Settings persisted in settings.cfg
 #define SEEK_SECONDS_DEFAULT 10
 #define SCREEN_BRIGHTNESS_DEFAULT 128
 #define AUTO_SCREEN_OFF_DEFAULT 0
 #define DEEP_SLEEP_DEFAULT 0
 #define PLAYBACK_OFF_DEFAULT 0
+#define TURN_OFF_REMINDER_DEFAULT true
+
+// Session-only settings
+#define CHARGING_MODE_DEFAULT false

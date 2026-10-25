@@ -266,16 +266,16 @@ void tickGyroMouse(const Keyboard_Class::KeysState &keys)
     lastSegmentKey = segmentKey;
 }
 
-uint8_t fnMappedKey(uint8_t key)
+uint8_t typingMappedKey(uint8_t key, bool fn)
 {
     switch (key)
     {
-    case 0x35: return 0x29; // ` -> Escape
-    case 0x33: return 0x52; // ; -> Up
-    case 0x37: return 0x51; // . -> Down
-    case 0x36: return 0x50; // , -> Left
-    case 0x38: return 0x4F; // / -> Right
-    case 0x2A: return 0x4C; // Backspace -> Forward Delete
+    case 0x33: return fn ? 0x33 : 0x52; // ; / Fn+; -> Up / ;
+    case 0x37: return fn ? 0x37 : 0x51; // . / Fn+. -> Down / .
+    case 0x36: return fn ? 0x36 : 0x50; // , / Fn+, -> Left / ,
+    case 0x38: return fn ? 0x38 : 0x4F; // / / Fn+/ -> Right / /
+    case 0x35: return fn ? 0x29 : key;  // Fn+` -> Escape
+    case 0x2A: return fn ? 0x4C : key;  // Fn+Backspace -> Forward Delete
     default: return key;
     }
 }
@@ -292,7 +292,7 @@ void buildKeyboardReport(const Keyboard_Class::KeysState &keys, uint8_t report[8
     {
         if (outputIndex >= 8)
             break;
-        report[outputIndex++] = keys.fn ? fnMappedKey(key) : key;
+        report[outputIndex++] = typingMappedKey(key, keys.fn);
     }
 }
 

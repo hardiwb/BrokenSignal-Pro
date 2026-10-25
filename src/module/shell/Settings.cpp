@@ -27,7 +27,7 @@ static String manualClockDate = "";
 static int manualClockField = 0;
 static int manualClockTimeCursor = 0;
 static int manualClockDateCursor = 0;
-static const int SETTINGS_COUNT = 17;
+static const int SETTINGS_COUNT = 19;
 static int settingsScrollTop = 0;
 
 enum class PendingSettingsWifiAction : uint8_t
@@ -48,6 +48,8 @@ enum SettingRow
     SettingScreenOff,
     SettingDeepSleep,
     SettingPlaybackTimer,
+    SettingTurnOffReminder,
+    SettingChargingMode,
     SettingTheme,
     SettingTimezone,
     SettingSyncClock,
@@ -96,6 +98,8 @@ static const char *settingsLabel(int index)
         "Screen off timer",
         "Deep Sleep timer",
         "Playback timer",
+        "Turn-off reminder",
+        "Charging mode",
         "Theme",
         "Time Zone",
         "Sync Clock",
@@ -139,6 +143,10 @@ static String settingsValue(int index)
             return String(timer / 60) + "m";
         return String(timer / 3600) + "h";
     }
+    case SettingTurnOffReminder:
+        return turnOffReminderEnabled ? "On" : "Off";
+    case SettingChargingMode:
+        return chargingModeEnabled ? "On" : "Off";
     case SettingTheme:
         return String(themeIdx + 1);
     case SettingTimezone:
@@ -512,6 +520,14 @@ static void adjustSetting(int sel, int dir)
         idx = (idx + dir + n) % n;
         playbackOffSec = opts[idx];
     }
+    else if (sel == SettingTurnOffReminder)
+    {
+        turnOffReminderEnabled = !turnOffReminderEnabled;
+    }
+    else if (sel == SettingChargingMode)
+    {
+        chargingModeEnabled = !chargingModeEnabled;
+    }
     else if (sel == SettingTheme)
     {
         themeIdx = (themeIdx + dir + THEME_COUNT) % THEME_COUNT;
@@ -542,7 +558,9 @@ static bool settingSupportsAdjustment(int sel)
 {
     return sel == SettingBrightness || sel == SettingVolume ||
            sel == SettingScreenOff || sel == SettingDeepSleep ||
-           sel == SettingPlaybackTimer || sel == SettingTheme ||
+           sel == SettingPlaybackTimer || sel == SettingTurnOffReminder ||
+           sel == SettingChargingMode ||
+           sel == SettingTheme ||
            sel == SettingTimezone || sel == SettingWifiPowerSave ||
            sel == SettingSwapAltOpt || sel == SettingWebAuthentication;
 }

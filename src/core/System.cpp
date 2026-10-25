@@ -1,6 +1,9 @@
 #include <SD.h>
+#include <SPI.h>
+#include <Wire.h>
 #include <M5Cardputer.h>
 #include <esp_sleep.h>
+#include <driver/gpio.h>
 #include <driver/rtc_io.h>
 #include "core/System.h"
 #include "core/State.h"
@@ -24,6 +27,71 @@
 #include "module/service/WiFi.h"
 #include "module/service/Clock.h"
 #include "module/service/Bluetooth.h"
+
+namespace
+{
+constexpr uint8_t CARDPUTER_ADV_CODEC_ADDR = 0x18;
+constexpr gpio_num_t CARDPUTER_BACKLIGHT_PIN = GPIO_NUM_38;
+
+void shutdownCardputerAdvCodec()
+{
+    if (M5.getBoard() != m5::board_t::board_M5CardputerADV)
+        return;
+
+    // M5Unified 0.2.21 / M5Cardputer 1.1.1 leaves the ADV speaker's
+    // ES8311 disable sequence empty. Mute first, then use the shutdown
+    // sequence already used by M5Unified for the same codec's microphone.
+    M5Cardputer.In_I2C.writeRegister8(
+        CARDPUTER_ADV_CODEC_ADDR, 0x32, 0x00, 100000);
+    delay(2);
+    M5Cardputer.In_I2C.writeRegister8(
+        CARDPUTER_ADV_CODEC_ADDR, 0x0D, 0xFC, 100000);
+    M5Cardputer.In_I2C.writeRegister8(
+        CARDPUTER_ADV_CODEC_ADDR, 0x0E, 0x6A, 100000);
+    M5Cardputer.In_I2C.writeRegister8(
+        CARDPUTER_ADV_CODEC_ADDR, 0x00, 0x00, 100000);
+}
+
+void preparePeripheralPinsForDeepSleep()
+{
+    // Keep the SD card deselected. Let the data pins float instead of
+    // driving against the card's pull-ups while the ESP32 sleeps.
+    SPI.end();
+    pinMode(SD_CS, OUTPUT);
+    digitalWrite(SD_CS, HIGH);
+    pinMode(SD_CLK, INPUT);
+    pinMode(SD_MOSI, INPUT);
+    pinMode(SD_MISO, INPUT);
+
+    // Release the external RTC bus. Its module may have its own pull-ups.
+    Wire.end();
+    pinMode(RTC_SDA, INPUT);
+    pinMode(RTC_SCL, INPUT);
+
+    // GPIO38 controls both the LCD backlight and the ADV RGB power switch.
+    // Hold it low, and hold SD CS high, throughout deep sleep.
+    pinMode(CARDPUTER_BACKLIGHT_PIN, OUTPUT);
+    digitalWrite(CARDPUTER_BACKLIGHT_PIN, LOW);
+    gpio_hold_en(CARDPUTER_BACKLIGHT_PIN);
+    gpio_hold_en(static_cast<gpio_num_t>(SD_CS));
+    gpio_deep_sleep_hold_en();
+}
+}
+
+void playPowerOffReminder(uint8_t beepCount)
+{
+    // A muted device stays silent even when the reminder setting is enabled.
+    if (volume == 0 || beepCount == 0)
+        return;
+
+    constexpr uint32_t TONE_MS = 120;
+    constexpr uint32_t GAP_MS = 100;
+    for (uint8_t i = 0; i < beepCount; ++i)
+    {
+        M5Cardputer.Speaker.tone(2000, TONE_MS, 0, true);
+        delay(TONE_MS + (i + 1 < beepCount ? GAP_MS : 30));
+    }
+}
 
 void drawCurrentScreen()
 {
@@ -199,29 +267,46 @@ void setTheme(uint8_t idx)
     showToast(T->name);
 }
 
+void sleepScreen()
+{
+    if (!screenOn)
+        return;
+
+    screenOn = false;
+    M5Cardputer.Display.setBrightness(0);
+    M5Cardputer.Display.sleep();
+}
+
 void toggleScreen()
 {
-    screenOn = !screenOn;
-    M5Cardputer.Display.setBrightness(screenOn ? screenBrightness : 0);
     if (screenOn)
-    {
-        lastActivityMs = millis();
-        drawAll();
-    }
+        sleepScreen();
+    else
+        wakeScreen();
 }
 
 void wakeScreen()
 {
+    M5Cardputer.Display.wakeup();
     screenOn = true;
     M5Cardputer.Display.setBrightness(screenBrightness);
     lastActivityMs = millis();
     drawAll();
 }
 
+void releaseDeepSleepPinHolds()
+{
+    gpio_deep_sleep_hold_dis();
+    gpio_hold_dis(CARDPUTER_BACKLIGHT_PIN);
+    gpio_hold_dis(static_cast<gpio_num_t>(SD_CS));
+}
+
 void loadSettings()
 {
     themeIdx = 0;
     T = THEMES[0];
+    turnOffReminderEnabled = TURN_OFF_REMINDER_DEFAULT;
+    chargingModeEnabled = CHARGING_MODE_DEFAULT;
 
     File f = SD.open("/Music/settings.cfg", FILE_READ);
     if (!f)
@@ -281,6 +366,9 @@ void loadSettings()
         if (key == "playbackoff" && val >= 0 && val <= 10800)
             playbackOffSec = (uint32_t)val;
 
+        if (key == "turnoffreminder")
+            turnOffReminderEnabled = (val != 0);
+
         if (key == "lastapp" && val >= 0 && val <= 255)
         {
             const HostApp savedApp = (HostApp)val;
@@ -324,6 +412,7 @@ void saveSettings()
     f.printf("autoscreenoff=%d\n", autoScreenOffSec);
     f.printf("deepsleep=%lu\n", (unsigned long)deepSleepSec);
     f.printf("playbackoff=%lu\n", (unsigned long)playbackOffSec);
+    f.printf("turnoffreminder=%d\n", turnOffReminderEnabled ? 1 : 0);
     f.printf("lastapp=%d\n", (int)lastOpenedApp);
     f.printf("calcdecimals=%d\n", (int)calculatorDecimalPlaces);
     f.printf("calcrounding=%d\n", calculatorRoundingMode);
@@ -346,10 +435,12 @@ void enterDeepSleep()
     WiFi.disconnect(true, true);
     WiFi.mode(WIFI_OFF);
     M5Cardputer.Speaker.end();
+    shutdownCardputerAdvCodec();
     SD.end();
 
     M5Cardputer.Display.setBrightness(0);
     M5Cardputer.Display.sleep();
+    preparePeripheralPinsForDeepSleep();
     delay(20);
     esp_deep_sleep_start();
 }

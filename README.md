@@ -5,9 +5,9 @@ An audio player, web radio, quick notes, and utility shell for the **Cardputer A
 **Pro stands for Productivity**: fast access to music, radio, notes,
 calculations, and everyday utilities from one keyboard-driven interface.
 
-**Current release:** `v1.5.0`
+**Current release:** `v1.6.0`
 
-**Latest tagged release:** `v1.5.0`
+**Latest tagged release:** `v1.6.0`
 
 BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt around a compact Glitch Terminal UI for small-screen daily use.
 
@@ -17,7 +17,7 @@ BrokenSignal Pro is a fork of the **BrokenSignal-Next** fork by Rythlan, rebuilt
 
 ## Current Status
 
-BrokenSignal Pro `v1.5.0` is organized as a small embedded shell runtime. A
+BrokenSignal Pro `v1.6.0` is organized as a small embedded shell runtime. A
 foreground app runs under shared Applications, Options, Control Panel, Help,
 Debug, quick-access, and modal surface layers.
 
@@ -32,6 +32,18 @@ The main UI is built from reusable primitives:
 Themes change color and mood, not layout. Music Player, Web Radio, Notes,
 Calculator, Control Panel, Help, Debug, and WiFi share the same UI primitives
 and keyboard routing rules.
+
+## v1.6.0 Release Highlights
+
+- Added an SD-configured Bluetooth Macro Pad with on-device editing and global
+  shortcuts, plus a BLE Media Control app.
+- Improved Bluetooth multi-PC pairing with persistent identities and direct
+  arrow-key navigation while typing.
+- Added turn-off reminders, a temporary charging-mode override, and automatic
+  charging detection from battery-voltage trends.
+- Improved display sleep and Cardputer ADV peripheral shutdown during deep sleep.
+- Expanded Notes synchronization and device-management workflows.
+- Added the Bruce Orange theme.
 
 ## v1.5.0 Release Highlights
 
@@ -233,6 +245,12 @@ PC`, then press `Ok`. Paired PCs can be given persistent friendly names from
 the Options menu. While the connection overlay is open, all matrix keys
 belong to the remote host and global firmware shortcuts are blocked.
 
+Each newly added PC after the first receives its own persistent BLE peripheral
+identity. Saved PCs therefore do not recognize another slot's pairing
+advertisement and cannot automatically take the connection while a new PC is
+being added. Bonds created by older firmware keep the original public identity
+so upgrading does not require pairing those PCs again.
+
 | Key | Action |
 | --- | ------ |
 | `;` / `.` | Select paired device |
@@ -241,8 +259,9 @@ belong to the remote host and global firmware shortcuts are blocked.
 | Assigned `Fn+key` | Connect directly to a saved device |
 | `BtnG0` | Release all keys, disconnect, and close typing mode |
 | `Fn` + `` ` `` | Send Escape |
-| `Fn` + `;` / `.` | Send Up / Down |
-| `Fn` + `,` / `/` | Send Left / Right |
+| `;` / `.` | Send Up / Down |
+| `,` / `/` | Send Left / Right |
+| `Fn` + `;` / `.` / `,` / `/` | Send the original punctuation |
 | `Fn` + `M` | Enter gyroscope mouse mode |
 | `` ` `` (mouse mode) | Return to keyboard mode |
 | `Ok` (mouse mode) | Hold left mouse button |
@@ -538,6 +557,8 @@ Settings include:
 | Screen off timer | Idle screen timeout: Off, 15s, 30s, 1m, 2m, or 5m |
 | Deep Sleep timer | Idle deep-sleep timeout |
 | Playback timer | Stop playback after a selected interval |
+| Turn-off reminder | Before deep sleep: one beep, another after 1 minute, then two beeps and sleep after another minute |
+| Charging mode | Temporary manual override that suspends reminders and deep sleep; playback timer still stops audio; resets to Off on startup |
 | Theme | Active color theme |
 | Time Zone | UTC offset |
 | Sync Clock | NTP sync when WiFi is available |
@@ -549,6 +570,12 @@ Settings include:
 | SD Transfer | Authenticated local browser for MicroSD uploads and downloads |
 | OTA Update | Authenticated local firmware upload and reboot |
 | WiFi menu | Opens WiFi service menu |
+
+The firmware also samples battery voltage every 30 seconds. After five minutes,
+a rise of at least 30 mV is treated as probable charging and automatically
+suspends reminders and deep sleep. Use Charging mode as the manual override
+when the battery is near full and its voltage has stopped rising. Charging mode
+is session-only and resets to Off whenever the device restarts.
 
 ### SD card browser transfer
 

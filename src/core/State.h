@@ -106,6 +106,8 @@ extern uint8_t screenBrightness;  // display brightness 0..255
 extern uint16_t autoScreenOffSec; // 0 = off, else idle seconds before screen off
 extern uint32_t deepSleepSec;     // 0 = off, else idle seconds before deep sleep
 extern uint32_t playbackOffSec;   // 0 = off, else playback seconds before deep sleep
+extern bool turnOffReminderEnabled; // audible warning before deep sleep
+extern bool chargingModeEnabled; // suppress reminders and deep sleep while charging
 extern HostApp lastOpenedApp;
 extern HostApp foregroundApp;
 extern AudioSource audioSource;

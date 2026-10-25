@@ -5,7 +5,9 @@
 const HelpEntry BLUETOOTH_KEYBOARD_HELP_ENTRIES[] = {
     {"[Ok]", "Connect / pair"},
     {"[Fn+key]", "Quick-connect saved PC"},
-    {"[;/.]", "Cursor up / down"},
+    {"[;/.]", "Select or send Up / Down"},
+    {"[,//]", "Send Left / Right"},
+    {"[Fn+;.,/]", "Send punctuation"},
     {"[Opt]", "Manage pairings"},
     {"[BtnG0]", "Disconnect typing mode"},
     {"[Fn+M]", "Enter gyroscope mouse"},

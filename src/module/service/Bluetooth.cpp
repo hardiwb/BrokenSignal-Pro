@@ -81,6 +81,9 @@ bool selectedTarget = false;
 esp_ble_bond_dev_t selectedBond = {};
 esp_bd_addr_t targetAddress = {};
 esp_bd_addr_t peerAddress = {};
+esp_bd_addr_t sessionIdentityAddress = {};
+esp_bd_addr_t publicIdentityScratchAddress = {};
+bool sessionUsesPrivateIdentity = false;
 
 bool addressesEqual(const uint8_t *a, const uint8_t *b)
 {
@@ -202,6 +205,103 @@ String bondQuickKeyPreference(const uint8_t *address)
              address[0], address[1], address[2],
              address[3], address[4], address[5]);
     return String(key);
+}
+
+String bondIdentityPreference(const uint8_t *address)
+{
+    char key[14];
+    snprintf(key, sizeof(key), "i%02X%02X%02X%02X%02X%02X",
+             address[0], address[1], address[2],
+             address[3], address[4], address[5]);
+    return String(key);
+}
+
+void createStaticRandomAddress(esp_bd_addr_t address)
+{
+    bool randomPartAllZero;
+    bool randomPartAllOne;
+    do
+    {
+        esp_fill_random(address, sizeof(esp_bd_addr_t));
+
+        // A static random BLE address has its two most-significant bits set.
+        address[0] |= 0xC0;
+        randomPartAllZero = (address[0] & 0x3F) == 0;
+        randomPartAllOne = (address[0] & 0x3F) == 0x3F;
+        for (size_t i = 1; i < sizeof(esp_bd_addr_t); ++i)
+        {
+            randomPartAllZero = randomPartAllZero && address[i] == 0;
+            randomPartAllOne = randomPartAllOne && address[i] == 0xFF;
+        }
+    } while (randomPartAllZero || randomPartAllOne);
+}
+
+bool loadBondIdentity(const uint8_t *peerAddress,
+                      esp_bd_addr_t identityAddress)
+{
+    if (!preferencesOpen)
+        return false;
+
+    const String key = bondIdentityPreference(peerAddress);
+    return preferences.getBytesLength(key.c_str()) == sizeof(esp_bd_addr_t) &&
+           preferences.getBytes(
+               key.c_str(), identityAddress, sizeof(esp_bd_addr_t)) ==
+               sizeof(esp_bd_addr_t);
+}
+
+void saveBondIdentity(const uint8_t *peerAddress,
+                      const uint8_t *identityAddress)
+{
+    if (!preferencesOpen)
+        return;
+
+    preferences.putBytes(
+        bondIdentityPreference(peerAddress).c_str(),
+        identityAddress, sizeof(esp_bd_addr_t));
+}
+
+void selectPublicIdentity()
+{
+    sessionUsesPrivateIdentity = false;
+
+    // setDeviceAddress also selects the advertising address type. The random
+    // value is ignored while PUBLIC is selected, but must itself be valid for
+    // esp_ble_gap_set_rand_addr() inside the Arduino BLE wrapper.
+    advertising->setDeviceAddress(
+        publicIdentityScratchAddress, BLE_ADDR_TYPE_PUBLIC);
+}
+
+void selectPrivateIdentity(const uint8_t *address)
+{
+    memcpy(sessionIdentityAddress, address, sizeof(sessionIdentityAddress));
+    sessionUsesPrivateIdentity = true;
+    advertising->setDeviceAddress(
+        sessionIdentityAddress, BLE_ADDR_TYPE_RANDOM);
+}
+
+void configureAdvertisingIdentity(int bondIndex)
+{
+    esp_bd_addr_t storedIdentity = {};
+    if (bondIndex >= 0 &&
+        loadBondIdentity(bonds[bondIndex].bd_addr, storedIdentity))
+    {
+        selectPrivateIdentity(storedIdentity);
+        return;
+    }
+
+    if (bondIndex < 0 && storedBondCount > 0)
+    {
+        // Each new Easy-Switch slot gets a distinct peripheral identity. A PC
+        // bonded to another slot does not recognize this advertiser and will
+        // therefore not auto-connect while the new PC is being paired.
+        createStaticRandomAddress(sessionIdentityAddress);
+        selectPrivateIdentity(sessionIdentityAddress);
+        return;
+    }
+
+    // Preserve the public identity for the first and for pre-existing bonds,
+    // so a firmware update does not force those PCs to pair again.
+    selectPublicIdentity();
 }
 
 char normalizeQuickKey(char key)
@@ -351,6 +451,8 @@ public:
         }
 
         memcpy(peerAddress, result.bd_addr, sizeof(peerAddress));
+        if (!selectedTarget && sessionUsesPrivateIdentity)
+            saveBondIdentity(result.bd_addr, sessionIdentityAddress);
         authenticated = true;
         authenticationFailed = false;
         targetMismatch = false;
@@ -417,6 +519,8 @@ void begin()
     advertising->setScanResponse(true);
     advertising->setMinPreferred(0x06);
     advertising->setMaxPreferred(0x12);
+
+    createStaticRandomAddress(publicIdentityScratchAddress);
 
     initialized = true;
     refreshBonds();
@@ -595,6 +699,7 @@ bool forgetBond(int index)
     {
         preferences.remove(bondNameKey(bonds[index].bd_addr).c_str());
         preferences.remove(bondQuickKeyPreference(bonds[index].bd_addr).c_str());
+        preferences.remove(bondIdentityPreference(bonds[index].bd_addr).c_str());
     }
     const bool removed = esp_ble_remove_bond_device(bonds[index].bd_addr) == ESP_OK;
     refreshBonds();
@@ -611,6 +716,7 @@ void forgetAllBonds()
         {
             preferences.remove(bondNameKey(bonds[i].bd_addr).c_str());
             preferences.remove(bondQuickKeyPreference(bonds[i].bd_addr).c_str());
+            preferences.remove(bondIdentityPreference(bonds[i].bd_addr).c_str());
         }
         esp_ble_remove_bond_device(bonds[i].bd_addr);
     }
@@ -661,6 +767,7 @@ bool startKeyboardSession(int bondIndex)
         return false;
     if (!configureAdvertisingTarget(bondIndex))
         return false;
+    configureAdvertisingIdentity(bondIndex);
 
     selectedTarget = bondIndex >= 0;
     if (selectedTarget)
